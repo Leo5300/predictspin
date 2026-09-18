@@ -1,0 +1,28 @@
+# Java / Spring
+target/
+*.class
+.mvn/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Node / React Native
+node_modules/
+.expo/
+npm-debug.log
+
+# Ambiente
+.env
+*.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# SO
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
