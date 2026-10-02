@@ -1,3 +1,4 @@
+#include <Arduino.h>
 // Leitura de um ADXL345 por SPI a 1600 Hz, com referencia de rotacao (HW-006),
 // enviada pela serial em CSV: t_us,ax,ay,az,ir
 //
