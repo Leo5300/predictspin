@@ -1,10 +1,10 @@
 package br.senai.predictspin.seguranca;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,7 +21,6 @@ import br.senai.predictspin.comum.Pagina;
 import br.senai.predictspin.seguranca.dto.NovoUsuarioRequisicao;
 import br.senai.predictspin.seguranca.dto.UsuarioResposta;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
@@ -43,8 +43,10 @@ public class UsuarioController {
 
     @GetMapping
     @Operation(summary = "Lista usuários, paginado (page, size)")
-    public Pagina<UsuarioResposta> listar(@Parameter(hidden = true) @PageableDefault(size = 20) Pageable pageable) {
-        return servico.listar(PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
+    public Pagina<UsuarioResposta> listar(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size) {
+        return servico.listar(PageRequest.of(page, size));
     }
 
     @PostMapping("/{id}/desativar")
