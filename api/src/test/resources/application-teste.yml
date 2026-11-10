@@ -1,0 +1,23 @@
+# Perfil dos testes de integração. O banco vem do Testcontainers (@ServiceConnection).
+predictspin:
+  seguranca:
+    jwt:
+      segredo: segredo-dos-testes-de-integracao-com-mais-de-32-caracteres
+      validade-ms: 3600000
+    cors-origens: http://localhost:3000
+    login:
+      max-tentativas-email: 3
+      max-tentativas-ip: 6
+      janela-segundos: 900
+    dispositivo-sal: sal-de-teste
+  carga-inicial:
+    admin-nome: Admin dos Testes
+    admin-email: admin@teste.local
+    admin-senha: SenhaAdmin123
+    chave-dispositivo-real: chave-real-teste
+    chave-dispositivo-simulado: chave-sim-teste
+
+logging:
+  level:
+    root: WARN
+    br.senai.predictspin: INFO
