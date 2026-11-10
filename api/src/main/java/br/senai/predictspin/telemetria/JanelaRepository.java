@@ -20,4 +20,26 @@ public interface JanelaRepository extends JpaRepository<Janela, Long> {
             """)
     List<Janela> maisRecentes(@Param("maquinaId") Long maquinaId, @Param("simulado") Boolean simulado,
                               Pageable pageable);
+
+    @Query("""
+            select count(j) as janelas,
+                   coalesce(sum(case when j.saturou = true then 1 else 0 end), 0) as saturadas,
+                   avg(j.rotacaoRpm) as rotacaoMedia,
+                   min(j.medidoEm) as primeira,
+                   max(j.medidoEm) as ultima
+            from Janela j where j.ensaio.id = :ensaioId
+            """)
+    ResumoJanelas resumoDoEnsaio(@Param("ensaioId") Long ensaioId);
+
+    interface ResumoJanelas {
+        Long getJanelas();
+
+        Number getSaturadas();
+
+        Double getRotacaoMedia();
+
+        java.time.Instant getPrimeira();
+
+        java.time.Instant getUltima();
+    }
 }
