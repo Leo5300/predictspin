@@ -169,8 +169,9 @@
         <!--
             Varredura de vulnerabilidades conhecidas nas dependências (OWASP dependency-check).
             Fica fora do build normal porque baixa a base do NVD (lento na primeira vez).
-            Uso: mvnw.cmd -P seguranca-dependencias verify
-            Com chave da API do NVD (recomendado): defina a variável de ambiente NVD_API_KEY.
+            Uso: mvnw.cmd -P seguranca-dependencias -DskipTests verify
+            Defina antes a variável de ambiente NVD_API_KEY (chave gratuita da API do NVD):
+            sem ela a atualização da base falhou e a verificação não concluiu.
         -->
         <profile>
             <id>seguranca-dependencias</id>
