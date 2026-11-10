@@ -120,23 +120,65 @@ def test_ordens_2x_e_3x_acompanham_a_1x_no_acionamento():
     assert media_de("o3x", "A") == pytest.approx(o1x * sim.RAZAO_3X["normal"], rel=0.08)
 
 
-def test_maquina_parada_so_tem_ruido_de_fundo():
+def test_toda_etapa_tem_descricao():
+    assert set(sim.DESCRICAO_ETAPA) == set(sim.ETAPAS) == set(sim.CARGA_DE_CORTE)
+    assert "sem contato" in sim.DESCRICAO_ETAPA["T2"]
+    assert sim.DESCRICAO_ETAPA["T3"] == "corte"
+
+
+def test_maquina_desligada_so_tem_ruido_de_fundo():
     p = gerar(etapa="T0")
     assert p["rotacao_rpm"] == 0
     assert p["saturou"] is False
     for medida in p["pontos"].values():
         assert medida["o1x"] == medida["o2x"] == medida["o3x"] == 0
         assert medida["rms_g"] < 3 * sim.RUIDO_FUNDO_G
-    assert p["canais"]["corrente_a"] < 1.0
-    # rotação alvo zero dá no mesmo, em qualquer etapa
-    assert gerar(etapa="T2", rotacao_alvo_rpm=0)["rotacao_rpm"] == 0
+    assert p["canais"]["corrente_a"] < 0.1
+    assert p["canais"]["temp_cabecote_c"] == pytest.approx(p["canais"]["amb_temp_c"], abs=2.0)
 
 
-def test_corte_aumenta_a_vibracao_na_ferramenta():
+def test_rotacao_alvo_zero_deixa_o_eixo_parado_em_qualquer_etapa():
+    for etapa in ("T1", "T2", "T3"):
+        p = gerar(etapa=etapa, rotacao_alvo_rpm=0)
+        assert p["rotacao_rpm"] == 0
+        assert all(m["o1x"] == 0 for m in p["pontos"].values())
+        # máquina ligada com o eixo parado: sobra a corrente do painel, maior que a de T0
+        assert 0.3 < p["canais"]["corrente_a"] < 0.5
+
+
+def test_so_a_etapa_de_corte_usa_esforco_de_corte():
+    assert sim.CARGA_DE_CORTE == {"T0": 0.0, "T1": 0.0, "T2": 0.0, "T3": 1.0}
+
+
+@pytest.mark.parametrize("ponto", sim.PONTOS)
+@pytest.mark.parametrize("campo", ["rms_g", "pico_g", "curtose", "o1x", "o2x", "o3x"])
+def test_aproximacao_sem_contato_vibra_como_em_vazio(ponto, campo):
+    assert media_de(campo, ponto, etapa="T2") == pytest.approx(media_de(campo, ponto, etapa="T1"), rel=0.05)
+
+
+def test_aproximacao_sem_contato_nao_freia_o_eixo_nem_aquece_a_ferramenta():
+    for semente in range(20):
+        vazio = gerar(semente=semente, etapa="T1")
+        aproximacao = gerar(semente=semente, etapa="T2")
+        assert aproximacao["rotacao_rpm"] == pytest.approx(vazio["rotacao_rpm"], rel=0.01)
+        assert aproximacao["canais"]["corrente_a"] == pytest.approx(vazio["canais"]["corrente_a"], rel=0.05)
+        assert aproximacao["canais"]["temp_ferramenta_c"] \
+            == pytest.approx(aproximacao["canais"]["amb_temp_c"], abs=4.0)
+
+
+def test_so_o_corte_aumenta_a_vibracao_na_ferramenta():
     vazio = media_de("rms_g", "B", etapa="T1")
-    leve = media_de("rms_g", "B", etapa="T2")
-    pleno = media_de("rms_g", "B", etapa="T3")
-    assert vazio < leve < pleno
+    aproximacao = media_de("rms_g", "B", etapa="T2")
+    corte = media_de("rms_g", "B", etapa="T3")
+    assert corte > 2 * vazio
+    assert corte > 2 * aproximacao
+    # no acionamento o corte quase não aparece
+    assert media_de("rms_g", "A", etapa="T3") == pytest.approx(media_de("rms_g", "A", etapa="T1"), rel=0.10)
+
+
+def test_etapa_padrao_e_o_corte():
+    assert gerar() == gerar(etapa="T3")
+    assert sim.criar_argumentos().parse_args(["continuo"]).etapa == "T3"
 
 
 @pytest.mark.parametrize("condicao", [c for c in sim.CONDICOES if c != "normal"])
@@ -149,10 +191,14 @@ def test_condicao_aparece_na_ferramenta_e_quase_nao_no_acionamento(condicao):
     assert alterada_a == pytest.approx(normal_a, rel=0.05)
 
 
+@pytest.mark.parametrize("etapa", ["T1", "T2"])
 @pytest.mark.parametrize("condicao", [c for c in sim.CONDICOES if c != "normal"])
-def test_sem_corte_a_condicao_nao_muda_o_sinal(condicao):
-    assert media_de("rms_g", "B", etapa="T1", condicao=condicao) \
-        == pytest.approx(media_de("rms_g", "B", etapa="T1"), rel=0.05)
+def test_sem_corte_a_condicao_nao_muda_o_sinal(etapa, condicao):
+    for ponto in sim.PONTOS:
+        assert media_de("rms_g", ponto, etapa=etapa, condicao=condicao) \
+            == pytest.approx(media_de("rms_g", ponto, etapa=etapa), rel=0.05)
+    assert media_de("curtose", "B", etapa=etapa, condicao=condicao) \
+        == pytest.approx(media_de("curtose", "B", etapa=etapa), rel=0.05)
 
 
 def test_desgaste_eleva_a_curtose_na_ferramenta():
@@ -190,7 +236,11 @@ def test_canais_respondem_a_carga_e_a_condicao():
         return mean(sim.gerar_payload("ps-sim-01", INICIO, 1200, rng=rng, **kwargs)["canais"][nome]
                     for _ in range(200))
 
-    assert canal("corrente_a", etapa="T1") < canal("corrente_a", etapa="T3")
+    assert canal("corrente_a", etapa="T0") < canal("corrente_a", etapa="T1") < canal("corrente_a", etapa="T3")
+    assert canal("corrente_a", etapa="T2") == pytest.approx(canal("corrente_a", etapa="T1"), rel=0.05)
+    assert canal("corrente_a", etapa="T2", condicao="avanco_excessivo") \
+        == pytest.approx(canal("corrente_a", etapa="T2"), rel=0.05)
+    assert canal("temp_ferramenta_c", etapa="T2") < canal("temp_ferramenta_c", etapa="T3") - 20
     assert canal("corrente_a", etapa="T3") < canal("corrente_a", etapa="T3", condicao="avanco_excessivo")
     assert canal("temp_ferramenta_c", etapa="T3") < canal("temp_ferramenta_c", etapa="T3",
                                                            condicao="ferramenta_desgastada")
@@ -249,7 +299,7 @@ class ClienteFalso:
 
 def test_roteiro_abre_envia_e_encerra_cada_ensaio():
     cliente = ClienteFalso()
-    roteiro = sim.montar_roteiro(("T1", "T2"), ("normal",), (800,))
+    roteiro = sim.montar_roteiro(("T2", "T3"), ("normal",), (800,))
     linhas = []
 
     total = sim.executar_roteiro(cliente, random.Random(1), 1, roteiro, 3, INICIO, "aço SAE 1045", linhas.append)
@@ -281,7 +331,7 @@ def test_continuo_envia_a_quantidade_pedida_e_espera_entre_janelas():
     esperas = []
     relogio = iter(sim.instantes(INICIO, 3))
 
-    total = sim.executar_continuo(cliente, random.Random(1), "atencao", 1200, "T2", "normal", 5, quantidade=3,
+    total = sim.executar_continuo(cliente, random.Random(1), "atencao", 1200, "T3", "normal", 5, quantidade=3,
                                   agora=lambda: next(relogio), dormir=esperas.append, escrever=lambda _: None)
 
     assert total == 3

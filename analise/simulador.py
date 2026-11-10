@@ -24,8 +24,9 @@ Modelo usado (simplificado, só para ter dados com forma plausível):
   - a ordem 1X (desbalanceamento) cresce com o quadrado da rotação; 2X e 3X acompanham a 1X;
   - o ponto A (acionamento) sente a máquina, o ponto B (ferramenta) soma o esforço de corte e o
     ponto C (estrutura) recebe uma parte dos dois;
-  - etapa: T0 máquina parada (só ruído de fundo), T1 girando em vazio, T2 corte leve, T3 corte
-    pleno. A condição só muda o sinal quando há corte (T2 e T3);
+  - etapa: T0 máquina desligada (só ruído de fundo), T1 girando em vazio, T2 ferramenta se
+    aproximando da peça sem contato (vibração próxima da de T1), T3 corte. Só em T3 há esforço
+    de corte, e só nele a condição muda o sinal;
   - todo valor leva ruído multiplicativo; com --semente a sequência é reproduzível.
 """
 import argparse
@@ -52,8 +53,21 @@ INTERVALO_JANELAS_S = 5
 FUNDO_ESCALA_G = 16.0  # ADXL345 em +/-16 g
 RUIDO_FUNDO_G = 0.004
 
-# Quanto do esforço de corte existe em cada etapa (0 = sem corte)
-CARGA_DE_CORTE = {"T0": 0.0, "T1": 0.0, "T2": 0.5, "T3": 1.0}
+# O que é cada etapa do protocolo de ensaios
+DESCRICAO_ETAPA = {
+    "T0": "máquina desligada",
+    "T1": "girando em vazio",
+    "T2": "ferramenta se aproximando da peça, sem contato",
+    "T3": "corte",
+}
+
+# Quanto do esforço de corte existe em cada etapa (0 = sem corte). Em T2 a ferramenta ainda não
+# toca a peça: o modelo é o mesmo de T1 e as duas etapas só diferem pelo ruído.
+CARGA_DE_CORTE = {"T0": 0.0, "T1": 0.0, "T2": 0.0, "T3": 1.0}
+
+# Corrente lida sem o motor girar (A): máquina desligada (T0) e eixo parado com o painel ligado
+CORRENTE_DESLIGADA_A = 0.03
+CORRENTE_PAINEL_A = 0.4
 
 # Estado geral da máquina no uso contínuo: multiplica a vibração do acionamento
 SEVERIDADE = {"normal": 1.0, "atencao": 1.8, "severo": 3.2}
@@ -124,15 +138,15 @@ def _medida(rng, o1x, o2x, o3x, banda, curtose_extra):
     }
 
 
-def gerar_payload(dispositivo, medido_em, rotacao_alvo_rpm, etapa="T2", condicao="normal", modo="normal",
+def gerar_payload(dispositivo, medido_em, rotacao_alvo_rpm, etapa="T3", condicao="normal", modo="normal",
                   rng=None, com_canais=True):
     """Gera uma janela SIMULADA no contrato de POST /api/v1/telemetria (ver docs/payload.md).
 
     dispositivo        identificador que vai no corpo (tem de ser o mesmo do cabeçalho)
     medido_em          datetime da medição (UTC)
     rotacao_alvo_rpm   rotação pretendida; a rotação "medida" sai um pouco abaixo e com ruído
-    etapa              T0 parada, T1 em vazio, T2 corte leve, T3 corte pleno
-    condicao           rótulo do ensaio; só altera o sinal quando há corte
+    etapa              T0 desligada, T1 em vazio, T2 aproximação sem contato, T3 corte
+    condicao           rótulo do ensaio; só altera o sinal quando há corte (T3)
     modo               estado geral da máquina: normal, atencao ou severo
     rng                random.Random; passe um com semente fixa para repetir a sequência
     """
@@ -203,8 +217,10 @@ def gerar_payload(dispositivo, medido_em, rotacao_alvo_rpm, etapa="T2", condicao
         if girando:
             corrente = (2.2 + 1.1 * r + 3.0 * carga * efeito["corrente"] * (0.6 + 0.4 * r))
             corrente *= (1.0 + 0.05 * (severidade - 1.0)) * _ruido(rng, 0.03)
+        elif etapa == "T0":
+            corrente = CORRENTE_DESLIGADA_A * _ruido(rng, 0.10)  # só o ruído do sensor
         else:
-            corrente = 0.4 * _ruido(rng, 0.03)  # só o painel ligado
+            corrente = CORRENTE_PAINEL_A * _ruido(rng, 0.03)  # eixo parado, painel ligado
         payload["canais"] = {
             "temp_cabecote_c": round(ambiente + aquecimento + rng.gauss(0.0, 0.4), 2),
             "temp_ferramenta_c": round(ambiente + 45.0 * carga * r * efeito["temp"] + rng.gauss(0.0, 0.8), 2),
@@ -422,7 +438,8 @@ def criar_argumentos():
     c.add_argument("--modo", choices=MODOS, default="normal")
     c.add_argument("--intervalo", type=float, default=float(INTERVALO_JANELAS_S), help="segundos entre janelas")
     c.add_argument("--rotacao", type=int, default=1200, help="rotação alvo em rpm")
-    c.add_argument("--etapa", choices=ETAPAS, default="T2")
+    c.add_argument("--etapa", choices=ETAPAS, default="T3",
+                   help="; ".join(f"{e} {d}" for e, d in DESCRICAO_ETAPA.items()) + " (padrão: T3)")
     c.add_argument("--condicao", choices=CONDICOES, default="normal")
     c.add_argument("--quantidade", type=int, help="para depois de N janelas (padrão: até Ctrl+C)")
 
@@ -431,7 +448,7 @@ def criar_argumentos():
     r.add_argument("--senha", default=os.environ.get("ADMIN_SENHA"), help="padrão: ADMIN_SENHA")
     r.add_argument("--maquina", default=MAQUINA_PADRAO, help="código da máquina")
     r.add_argument("--janelas", type=int, default=12, help="janelas por ensaio (M)")
-    r.add_argument("--etapas", type=_lista, default=list(ETAPAS), help="ex.: T1,T2")
+    r.add_argument("--etapas", type=_lista, default=list(ETAPAS), help="ex.: T1,T3")
     r.add_argument("--condicoes", type=_lista, default=list(CONDICOES))
     r.add_argument("--rotacoes", type=_lista, default=["400", "800", "1200"], help="ex.: 400,800,1200")
     r.add_argument("--repeticoes", type=int, default=1)

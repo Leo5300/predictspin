@@ -230,7 +230,7 @@ pip install -r requirements.txt
 python -m pytest -q
 ```
 
-Resultado em 10/11/2026: **82 testes, nenhuma falha**.
+Resultado em 10/11/2026: **108 testes, nenhuma falha**.
 
 **Dependências com vulnerabilidade conhecida** (OWASP dependency-check), fora do build normal:
 
@@ -266,11 +266,20 @@ python simulador.py continuo
 python simulador.py continuo --modo severo --intervalo 1 --quantidade 5
 
 # Ensaios rotulados para cada combinação de etapa, condição e rotação
-python simulador.py roteiro --etapas T1,T2 --condicoes normal,ferramenta_desgastada --rotacoes 400,800 --janelas 12
+python simulador.py roteiro --etapas T1,T3 --condicoes normal,ferramenta_desgastada --rotacoes 400,800 --janelas 12
 ```
 
+Etapas do protocolo de ensaios, como o simulador as representa:
+
+| Etapa | Situação | No sinal simulado |
+|---|---|---|
+| `T0` | máquina desligada | só ruído de fundo; rotação zero |
+| `T1` | girando em vazio | vibração do acionamento, que cresce com a rotação |
+| `T2` | ferramenta se aproximando da peça, sem contato | o mesmo modelo de `T1`: as duas só diferem pelo ruído |
+| `T3` | corte | soma o esforço de corte na ferramenta; a condição do ensaio só aparece aqui |
+
 - **`continuo`** envia janelas em sequência. Opções: `--modo` (`normal`, `atencao`, `severo`),
-  `--rotacao`, `--etapa`, `--condicao`, `--intervalo`, `--quantidade`.
+  `--rotacao`, `--etapa` (padrão `T3`), `--condicao`, `--intervalo`, `--quantidade`.
 - **`roteiro`** abre um ensaio para cada combinação, envia as janelas e encerra. Usa o login de
   `ADMIN_EMAIL` e `ADMIN_SENHA` (ou `--email` e `--senha`). Sem opções, percorre as 4 etapas
   (T0 a T3), as 4 condições e 3 rotações.
