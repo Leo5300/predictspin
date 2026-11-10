@@ -1,0 +1,63 @@
+# Blueprint do Render: API em Docker (pasta api/) e banco PostgreSQL gerenciado.
+# Passo a passo em docs/deploy-render.md.
+#
+# Nenhum segredo fica neste arquivo. As variáveis com "sync: false" são pedidas pelo Render
+# na criação do Blueprint e ficam guardadas só lá.
+
+databases:
+  - name: predictspin-db
+    plan: free
+    region: virginia
+    databaseName: predictspin
+    user: predictspin
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: predictspin-api
+    runtime: docker
+    plan: free
+    region: virginia
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: ./api
+    # Só reconstrói quando a API muda
+    buildFilter:
+      paths:
+        - api/**
+        - render.yaml
+    healthCheckPath: /actuator/health
+    # PORT não é declarada: o Render injeta a porta e a API escuta nela (server.port=${PORT}).
+    envVars:
+      # --- Banco: o Render preenche com a conexão interna do banco acima.
+      # A API converte DATABASE_URL (postgresql://usuario:senha@host/banco) para JDBC.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: predictspin-db
+          property: connectionString
+      - key: DB_POOL_MAX
+        value: "5"
+
+      # --- JVM: limites para a instância de 512 MB ---
+      - key: JAVA_OPTS
+        value: >-
+          -Xmx220m -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=48m
+          -Xss512k -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError
+
+      - key: ADMIN_NOME
+        value: Administrador
+
+      # --- Segredos e dados de instalação: sem valor aqui, informados no painel do Render ---
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_SENHA
+        sync: false
+      - key: DEVICE_CREDENTIAL_SALT
+        sync: false
+      - key: DISPOSITIVO_TORNO_CHAVE
+        sync: false
+      - key: DISPOSITIVO_SIM_CHAVE
+        sync: false
+      - key: CORS_ORIGENS
+        sync: false

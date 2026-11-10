@@ -122,5 +122,9 @@ janela e ponto, com os rótulos) é o conjunto de treino da classificação.
 
 ## Ambiente
 
-Docker Compose para banco e API. Manifests Kubernetes versionados no repositório para a
-demonstração de implantação reproduzível. Variáveis sensíveis por ambiente, nunca no repositório.
+Docker Compose para banco e API no desenvolvimento. A publicação é feita no Render a partir do
+`render.yaml` da raiz (serviço web em Docker e PostgreSQL gerenciado); o passo a passo está em
+[`deploy-render.md`](deploy-render.md). A cada push e pull request o GitHub Actions compila a API,
+roda os testes com a meta de cobertura e os testes de `analise/`. Manifests Kubernetes para a
+demonstração de implantação reproduzível ainda não existem no repositório. Variáveis sensíveis por
+ambiente, nunca no repositório.
