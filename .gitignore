@@ -1,16 +1,29 @@
-# Java / Spring
+# Java / Maven
+# .mvn/wrapper/ é versionado: guarda as propriedades do Maven Wrapper
 target/
 *.class
-.mvn/
-!.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.jar
+
+# Cobertura e relatórios
+jacoco.exec
+*.exec
+coverage/
+htmlcov/
+.coverage
+.pytest_cache/
+dependency-check-report.*
+carga/resultados/
+*.log
 
 # Node / React Native
 node_modules/
 .expo/
 npm-debug.log
 
-# Ambiente
+# Ambiente (segredos ficam fora do repositório)
 .env
+.env.*
+!.env.example
 *.local
 
 # IDE
