@@ -1,0 +1,37 @@
+# Sobe o PostgreSQL 16 e a API. Lê as variáveis do arquivo .env (copie de .env.example).
+#   docker compose up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-predictspin}
+      POSTGRES_USER: ${DB_USER:-predictspin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - dados-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      # Dentro da rede do compose o banco responde pelo nome do serviço
+      DB_HOST: db
+      DB_PORT: "5432"
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+
+volumes:
+  dados-postgres:
