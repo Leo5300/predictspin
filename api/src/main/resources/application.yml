@@ -48,6 +48,27 @@ management:
     health:
       show-details: never
 
+predictspin:
+  seguranca:
+    jwt:
+      segredo: ${JWT_SECRET:}
+      validade-ms: ${JWT_EXPIRATION_MS:86400000}
+    cors-origens: ${CORS_ORIGENS:http://localhost:3000}
+    login:
+      max-tentativas-email: ${LOGIN_MAX_TENTATIVAS_EMAIL:5}
+      max-tentativas-ip: ${LOGIN_MAX_TENTATIVAS_IP:20}
+      janela-segundos: ${LOGIN_JANELA_SEGUNDOS:900}
+    dispositivo-sal: ${DEVICE_CREDENTIAL_SALT:}
+  carga-inicial:
+    maquina-codigo: TORNO-01
+    admin-nome: ${ADMIN_NOME:Administrador}
+    admin-email: ${ADMIN_EMAIL:}
+    admin-senha: ${ADMIN_SENHA:}
+    dispositivo-real: ps-torno-01
+    chave-dispositivo-real: ${DISPOSITIVO_TORNO_CHAVE:}
+    dispositivo-simulado: ps-sim-01
+    chave-dispositivo-simulado: ${DISPOSITIVO_SIM_CHAVE:}
+
 springdoc:
   api-docs:
     path: /v3/api-docs

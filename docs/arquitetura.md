@@ -1,6 +1,8 @@
-# Arquitetura — v2
+# Arquitetura — v3
 
-Data: 18/09/2026 · Versão 2 · corrige ESP32-S3 (inexistente no acervo) e sensores descartados (MLX90614, INMP441, BME280)
+Data: 10/11/2026 · Versão 3 · telemetria agrupada em janela (ver [`der.md`](der.md)), autenticação
+de dispositivo por cabeçalho e coleta rotulada por ensaio. A v2 (18/09/2026) corrigiu ESP32-S3
+(inexistente no acervo) e sensores descartados (MLX90614, INMP441, BME280).
 
 ## Visão geral
 
@@ -74,17 +76,24 @@ sequenceDiagram
     participant B as Baseline
     participant O as Ordem de serviço
     D->>A: POST /api/v1/telemetria (credencial do dispositivo)
-    A->>A: valida credencial e origem
-    A->>A: persiste medição
-    A->>B: compara métricas com baseline da condição
-    alt desvio acima do critério
-        A->>A: classifica tipo de falha e atualiza severidade
-        A->>O: abre ordem com máquina, falha, severidade e peça sugerida
-        A-->>D: 202 aceito, alerta gerado
-    else dentro da faixa
-        A-->>D: 202 aceito
+    A->>A: valida cabeçalhos X-Dispositivo-Id e X-Dispositivo-Chave
+    A->>A: valida payload e atualiza ultimo_contato
+    alt (dispositivo, medido_em) já recebido
+        A-->>D: 200, janela existente (nada é duplicado)
+    else janela nova
+        A->>A: grava JANELA (com o ensaio aberto, se houver), TELEMETRIA por ponto e LEITURA por canal
+        A->>B: compara métricas com baseline da condição (etapa futura)
+        opt desvio acima do critério (etapa futura)
+            A->>A: classifica tipo de falha e atualiza severidade
+            A->>O: abre ordem com máquina, falha, severidade e peça sugerida
+        end
+        A-->>D: 201, janela criada
     end
 ```
+
+Hoje a API grava a janela e responde; a comparação com baseline, a classificação e a abertura de
+ordem de serviço ainda não estão implementadas (tabelas `BASELINE`, `ALERTA` e `ORDEM_SERVICO` já
+existem). O contrato do payload está em [`payload.md`](payload.md).
 
 A máquina nunca é bloqueada. O sistema classifica e notifica; a decisão permanece com o operador —
 restrição explícita da GEOSOL e fundamento da leitura de Indústria 5.0 do projeto.
@@ -100,7 +109,16 @@ erro de exibição: causa decisão de manutenção errada, com custo real. Cada 
 própria, provisionada fora do código-fonte, e a API rejeita origem não reconhecida.
 
 **Idempotência na ingestão.** O buffer local pode reenviar. A chave `(dispositivo_id, medido_em)` é
-única; reenvio não duplica série temporal.
+única na tabela `JANELA`; o reenvio responde 2xx e não duplica janela, telemetria nem leitura.
+
+**Coleta rotulada por ensaio.** Um técnico abre um ensaio (etapa, condição, rotação alvo) na
+máquina; toda janela recebida enquanto ele está aberto é gravada com esse ensaio. Só há um ensaio
+aberto por máquina. Ensaio descartado é marcado, não apagado. A exportação em CSV (uma linha por
+janela e ponto, com os rótulos) é o conjunto de treino da classificação.
+
+**Dado simulado é marcado como tal.** Dispositivo e ensaio têm a coluna `simulado`; o simulador
+(`analise/simulador.py`) usa o dispositivo `ps-sim-01`. Consultas e exportação filtram por
+`simulado`, e janela de dispositivo simulado nunca entra em ensaio real (nem o contrário).
 
 ## Ambiente
 
