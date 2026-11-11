@@ -13,7 +13,10 @@ ESCALA_G = 0.0039  # ADXL345 em resolucao total: 3,9 mg por LSB
 
 
 def carregar(caminho):
-    d = np.genfromtxt(caminho, delimiter=",", skip_header=1)
+    # invalid_raise=False: linha com colunas faltando (serial cortada no meio) e linha de diagnostico
+    # sao puladas com aviso, em vez de derrubar a leitura do arquivo inteiro.
+    d = np.genfromtxt(caminho, delimiter=",", skip_header=1, invalid_raise=False, comments="#")
+    d = np.atleast_2d(d)
     d = d[~np.isnan(d).any(axis=1)]
     t = d[:, 0].astype(np.int64)
     dt = np.diff(t)

@@ -1,5 +1,6 @@
-pyserial
-numpy
-matplotlib
-requests
-pytest
+# Versões fixas: a mesma instalação em qualquer máquina e no CI (Python 3.12 a 3.14).
+pyserial==3.5
+numpy==2.5.4
+matplotlib==3.11.2
+requests==2.34.2
+pytest==9.2.0
