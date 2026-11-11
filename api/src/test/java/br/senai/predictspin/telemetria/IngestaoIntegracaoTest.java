@@ -87,6 +87,35 @@ class IngestaoIntegracaoTest extends IntegracaoBase {
     }
 
     @Test
+    void ultimoContatoRecenteNaoEhRegravadoEAntigoEh() throws Exception {
+        Instant recente = Instant.now().minusSeconds(3).truncatedTo(ChronoUnit.MICROS);
+        jdbc.update("UPDATE dispositivo SET ultimo_contato = ? WHERE identificador = ?",
+                java.sql.Timestamp.from(recente), DISPOSITIVO_REAL);
+        enviarReal(medidoEm).andExpect(status().isCreated());
+        assertThat(ultimoContato(DISPOSITIVO_REAL)).isEqualTo(recente);
+
+        Instant antigo = Instant.now().minusSeconds(30).truncatedTo(ChronoUnit.MICROS);
+        jdbc.update("UPDATE dispositivo SET ultimo_contato = ? WHERE identificador = ?",
+                java.sql.Timestamp.from(antigo), DISPOSITIVO_REAL);
+        Instant antesDoEnvio = Instant.now().minusSeconds(1);
+        enviarReal(medidoEm.plusSeconds(5)).andExpect(status().isCreated());
+        assertThat(ultimoContato(DISPOSITIVO_REAL)).isAfter(antesDoEnvio);
+    }
+
+    @Test
+    void reenvioTambemContaComoContato() throws Exception {
+        enviarReal(medidoEm).andExpect(status().isCreated());
+        jdbc.update("UPDATE dispositivo SET ultimo_contato = NULL WHERE identificador = ?", DISPOSITIVO_REAL);
+        enviarReal(medidoEm).andExpect(status().isOk());
+        assertThat(ultimoContato(DISPOSITIVO_REAL)).isNotNull();
+    }
+
+    private Instant ultimoContato(String identificador) {
+        return jdbc.queryForObject("SELECT ultimo_contato FROM dispositivo WHERE identificador = ?",
+                java.sql.Timestamp.class, identificador).toInstant();
+    }
+
+    @Test
     void chaveErradaOuAusenteResponde401() throws Exception {
         enviar(DISPOSITIVO_REAL, "chave-errada", payload(DISPOSITIVO_REAL, medidoEm))
                 .andExpect(status().isUnauthorized())

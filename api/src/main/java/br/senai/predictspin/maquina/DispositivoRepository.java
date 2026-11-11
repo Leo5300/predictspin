@@ -38,7 +38,16 @@ public interface DispositivoRepository extends JpaRepository<Dispositivo, Long> 
     @Query("select count(d) from Dispositivo d where d.maquina.id = :maquinaId and d.ativo = true and d.simulado = false")
     long contarReaisAtivos(@Param("maquinaId") Long maquinaId);
 
+    /**
+     * Grava o último contato só se o valor guardado for anterior a {@code limite} (ou nulo). Assim a
+     * linha do dispositivo é travada no máximo uma vez por intervalo, e não em toda janela recebida.
+     *
+     * @return 1 se gravou, 0 se o contato guardado já era recente
+     */
     @Modifying
-    @Query("update Dispositivo d set d.ultimoContato = :instante where d.id = :id")
-    int registrarContato(@Param("id") Long id, @Param("instante") Instant instante);
+    @Query("""
+            update Dispositivo d set d.ultimoContato = :instante
+            where d.id = :id and (d.ultimoContato is null or d.ultimoContato < :limite)
+            """)
+    int registrarContato(@Param("id") Long id, @Param("instante") Instant instante, @Param("limite") Instant limite);
 }

@@ -42,6 +42,13 @@ public class IngestaoService {
     /** Tolerância para relógio do dispositivo adiantado em relação ao servidor. */
     static final Duration TOLERANCIA_FUTURO = Duration.ofMinutes(5);
 
+    /**
+     * Resolução de DISPOSITIVO.ultimo_contato. Atualizar a mesma linha em toda janela fazia as
+     * ingestões concorrentes do mesmo dispositivo esperarem umas pelas outras até o COMMIT
+     * (medição em docs/teste-de-carga.md); com o intervalo, só uma janela a cada 10 s trava a linha.
+     */
+    static final Duration INTERVALO_CONTATO = Duration.ofSeconds(10);
+
     private final IngestaoRepository ingestao;
     private final PontoMedicaoRepository pontos;
     private final CanalRepository canais;
@@ -76,7 +83,7 @@ public class IngestaoService {
         List<IngestaoRepository.LinhaTelemetria> linhas = resolverPontos(dispositivo.maquinaId(), req.pontos());
         Map<Long, Double> leituras = resolverCanais(dispositivo.maquinaId(), req.canais());
 
-        dispositivos.registrarContato(dispositivo.id(), agora);
+        dispositivos.registrarContato(dispositivo.id(), agora, agora.minus(INTERVALO_CONTATO));
 
         Long ensaioId = ensaios.idAberto(dispositivo.maquinaId(), dispositivo.simulado()).orElse(null);
         Optional<Long> novaJanela = ingestao.inserirJanela(dispositivo.id(), ensaioId, medidoEm, agora,

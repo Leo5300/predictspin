@@ -1,6 +1,6 @@
 # Teste de carga
 
-Data: 10/11/2026. O script [`carga/telemetria.js`](../carga/telemetria.js) usa o
+Data: 10/11/2026, atualizado em 11/11/2026. O script [`carga/telemetria.js`](../carga/telemetria.js) usa o
 [k6](https://k6.io) para medir a API com ingestão de telemetria e consultas ao mesmo tempo.
 
 **As janelas enviadas pelo teste são simuladas.** Saem do dispositivo `ps-sim-01` com valores
@@ -38,9 +38,9 @@ entram nas metas por cenário.
 
 ### Limites do teste
 
-- Todos os VUs usam o mesmo dispositivo. Cada ingestão atualiza `ultimo_contato` na mesma linha de
-  `DISPOSITIVO`, então as gravações concorrem entre si mais do que concorreriam com dispositivos
-  distintos. O efeito disso na cauda da ingestão não foi medido em separado.
+- Todos os VUs usam o mesmo dispositivo. Até 10/11 cada ingestão atualizava `ultimo_contato` na
+  mesma linha de `DISPOSITIVO`, e as gravações faziam fila nessa linha. A medição e a correção estão
+  em [Otimização da ingestão](#otimização-da-ingestão-11112026-antes-e-depois).
 - O `medido_em` de cada envio é único (relógio em milissegundos mais o número do VU nos
   microssegundos), para que toda requisição grave uma janela nova. O caminho de reenvio
   (resposta 200) não é exercitado; os contadores `janelas_novas` e `janelas_duplicadas` do resumo
@@ -179,34 +179,151 @@ Todas as metas foram atendidas: 7 902 requisições, nenhuma com erro, 3 949 jan
 duplicada. A ingestão tem cauda mais longa que as consultas (p99 acima de 500 ms).
 
 Ainda **não medido**: produção no Render, contêiner limitado a 512 MB, banco com volume grande de
-dados e execução com o k6 em outra máquina.
+dados e execução com o k6 em outra máquina. Esta medição é anterior à otimização de 11/11.
 
-## Antes e depois (para preencher)
+## Otimização da ingestão (11/11/2026): antes e depois
 
-Use quando mudar algo que possa afetar o desempenho (índice, tamanho do pool, plano do Render,
-versão da API). Rode o mesmo comando antes e depois, na mesma máquina e com o banco em estado
-parecido, e registre só o que foi medido.
+### O que foi medido e onde
 
-| | Antes | Depois |
+- **Máquina:** a mesma da medição de referência (notebook Intel Core i5-1135G7, 7,8 GB, Windows 11,
+  Docker Desktop). API e PostgreSQL pelo `docker compose` do repositório, `DB_POOL_MAX=10`,
+  `JAVA_OPTS` padrão; k6 v2.3.0 pela imagem `grafana/k6`, na mesma rede Docker.
+- **Protocolo, igual nos dois lados:** banco recriado vazio (`docker compose down -v`), API
+  reconstruída, aquecimento de 10 s com 20 VUs (`-e CENARIO=20 -e DURACAO_S=10`, descartado) e três
+  execuções completas seguidas (20 e 50 VUs, 60 s cada).
+- **Antes:** commit `2f75ab4`. **Depois:** o mesmo código com a mudança abaixo.
+- **Produção:** não medida. As variáveis de produção não estavam definidas na sessão; o comando
+  está em [Como medir em produção](#como-medir-em-produção).
+
+### Onde estava o tempo
+
+Um `POST /api/v1/telemetria` com 3 pontos e 2 canais faz 14 comandos no banco (log do PostgreSQL com
+`log_min_duration_statement = 0`, uma requisição isolada):
+
+| Etapa | Comandos | Tempo no banco (requisição isolada) |
+|---|---|---|
+| autenticação do dispositivo (transação só de leitura) | `BEGIN`, `SELECT` do dispositivo, `COMMIT` | 1,3 ms |
+| códigos de pontos e de canais da máquina | 2 `SELECT` | 0,9 ms |
+| `UPDATE dispositivo SET ultimo_contato` | 1 | 3,6 ms |
+| ensaio aberto | 1 `SELECT` | 0,2 ms |
+| janela, 3 telemetrias e 2 leituras | 6 `INSERT` | 6,9 ms |
+| `COMMIT` | 1 | 1,1 ms |
+
+Isolada, a requisição é rápida. Sob carga, a amostragem de `pg_stat_activity` a cada 0,2 s
+(100 amostras durante 50 VUs) mostrou onde as sessões ativas paravam:
+
+| Estado da sessão ativa | Antes | Depois |
+|---|---|---|
+| esperando trava (`Lock:transactionid` ou `Lock:tuple`) no `UPDATE dispositivo` | **29 de 51** | **0 de 25** |
+| esperando gravação do log (`IO:WALSync`) | 4 | 1 |
+| executando (CPU), quase tudo a contagem da consulta paginada de telemetria | 15 | 24 |
+
+Todos os VUs enviam como o mesmo dispositivo (`ps-sim-01`). O `UPDATE` vinha antes dos `INSERT` e
+travava a linha do dispositivo até o `COMMIT`. As ingestões concorrentes faziam fila nessa linha,
+uma de cada vez. Com um único ESP32 por máquina isso quase não acontece em operação. Mas a mesma
+fila se forma sempre que um dispositivo envia em rajada, por exemplo ao esvaziar a fila depois de
+uma queda de rede ou da hibernação do Render.
+
+As hipóteses do roteiro foram conferidas e descartadas pelo dado:
+
+- **Hash da chave do dispositivo:** é SHA-256 e não aparece como tempo próprio.
+- **Consultas de códigos de pontos e canais:** somam 0,9 ms e nunca apareceram esperando.
+- **Pool:** com 10 conexões, nenhuma espera por conexão apareceu nas amostras.
+
+### A mudança
+
+`DISPOSITIVO.ultimo_contato` passa a ser gravado só quando o valor guardado tem mais de 10 s
+(`UPDATE ... WHERE id = ? AND (ultimo_contato IS NULL OR ultimo_contato < agora - 10 s)`). Fora
+desse intervalo o `UPDATE` não encontra linha e não trava nada. O efeito colateral é a resolução de
+10 s no último contato, suficiente para saber se o dispositivo está vivo. Nas execuções do
+depois, a tabela `dispositivo` recebeu 41 atualizações em cinco execuções (aquecimento, três completas e diagnóstico), contra uma por janela
+(cerca de 4 mil por execução) antes. Testes:
+`IngestaoServiceTest.janelaNovaGravaPontosCanaisERegistraContato` e
+`IngestaoIntegracaoTest.ultimoContatoRecenteNaoEhRegravadoEAntigoEh`.
+
+### Resultado
+
+**Comando de diagnóstico** (50 VUs por 40 s, com a amostragem de `pg_stat_activity` rodando junto
+nos dois lados; é a comparação mais direta, porque mede o mesmo trecho com o mesmo ruído):
+
+| Métrica (ingestão, `POST /telemetria`) | Antes | Depois |
+|---|---|---|
+| Mediana | 71,75 ms | 6,74 ms |
+| p95 | 1,04 s | 25,31 ms |
+| p99 | 1,94 s | 229,50 ms |
+| Máximo | 2,41 s | 309,54 ms |
+| Janelas gravadas em 40 s | 1 535 | 1 958 |
+| Erros | 0 % | 0 % |
+
+**Execuções completas** (20 e 50 VUs, 60 s cada; três de cada lado, na ordem em que rodaram):
+
+| Ingestão | Antes 1 | Antes 2 | Antes 3 | Depois 1 | Depois 2 | Depois 3 |
+|---|---|---|---|---|---|---|
+| Mediana | 14,81 ms | 10,40 ms | 8,16 ms | 9,31 ms | 9,11 ms | 6,38 ms |
+| p95 | 1,06 s | 167,36 ms | 106,17 ms | 63,26 ms | 129,21 ms | 20,74 ms |
+| p99 | 2,36 s | 764,67 ms | 1,80 s | 859,76 ms | 1,43 s | 225,19 ms |
+| Máximo | 5,67 s | 2,00 s | 3,35 s | 2,14 s | 3,41 s | 380,59 ms |
+
+| Total (todas as requisições) | Antes 1 | Antes 2 | Antes 3 | Depois 1 | Depois 2 | Depois 3 |
+|---|---|---|---|---|---|---|
+| Requisições | 7 128 | 7 938 | 7 924 | 8 084 | 7 820 | 8 282 |
+| p95 | 372,51 ms | 107,53 ms | 58,12 ms | 41,14 ms | 88,98 ms | 27,71 ms |
+| p99 | 1,96 s | 468,94 ms | 439,42 ms | 330,02 ms | 472,39 ms | 83,01 ms |
+| Erros | 0 % | 0 % | 0 % | 0 % | 0 % | 0 % |
+| Metas atendidas | não (p95 da ingestão) | sim | sim | sim | sim | sim |
+
+Leitura dos números:
+
+- A mediana dos três p95 da ingestão caiu de 167 ms para 63 ms, e a dos três p99 de 1,80 s para
+  860 ms. A espera por trava, que era a causa medida, desapareceu.
+- As execuções completas oscilam muito entre si nos dois lados. Picos isolados de 1 a 5 s
+  aparecem antes e depois da mudança, em consultas e em ingestões, e não coincidiram com espera no
+  banco. A causa não foi investigada; a suspeita, não verificada, é a máquina virtual do Docker
+  Desktop disputando CPU com o Windows.
+- A primeira execução de cada lado, logo depois do aquecimento, foi a pior. Dez segundos de
+  aquecimento não bastam para a JVM chegar ao regime.
+- A montagem é a mesma da referência de 10/11, mas as execuções de 11/11 antes da mudança saíram
+  diferentes dela (p95 da ingestão de 106 ms a 1,06 s, contra 241 ms em 10/11). Uma execução
+  isolada nesta máquina não basta para comparar.
+
+Saídas completas em `carga/resultados/2026-11-11-local-*.txt` (fora do controle de versão).
+
+### Como medir em produção
+
+Para ter o antes em produção, rode **antes do push** que leva esta mudança ao Render; depois do
+push e do redeploy, rode de novo para o depois. No PowerShell, a partir da raiz do repositório, com
+`$env:PS_URL`, `$env:DISPOSITIVO_SIM_CHAVE`, `$env:ADMIN_EMAIL` e `$env:ADMIN_SENHA` definidas na
+mesma janela:
+
+```powershell
+# 1. acorda a API e mede quanto levou
+$t = Measure-Command { do { try { $ok = (Invoke-WebRequest "$env:PS_URL/actuator/health" -UseBasicParsing -TimeoutSec 30).StatusCode -eq 200 } catch { $ok = $false; Start-Sleep 5 } } until ($ok) }
+"API respondeu depois de $([int]$t.TotalSeconds) s"
+
+# 2. latência de rede: mediana de 10 GETs no health
+$ms = 1..10 | ForEach-Object { (Measure-Command { Invoke-WebRequest "$env:PS_URL/actuator/health" -UseBasicParsing | Out-Null }).TotalMilliseconds } | Sort-Object
+"mediana do health: $([int](($ms[4] + $ms[5]) / 2)) ms"
+
+# 3. carga com 20 VUs (50 VUs só se o de 20 passar: troque CENARIO=20 por CENARIO=50)
+New-Item -ItemType Directory -Force carga/resultados | Out-Null
+docker run --rm -v "${PWD}/carga:/carga:ro" `
+  -e BASE_URL=$env:PS_URL -e DISPOSITIVO_SIM_CHAVE -e ADMIN_EMAIL -e ADMIN_SENHA -e CENARIO=20 `
+  grafana/k6:latest run --no-color /carga/telemetria.js | Tee-Object carga/resultados/producao-depois.txt
+```
+
+Antes do passo 3, confira que não há ensaio simulado aberto (`GET /api/v1/maquinas/{id}/ensaios`,
+campo `aberto`). Registre o tempo para acordar, a mediana do health e as linhas
+`{ tipo:ingestao }` e `{ carga:20vus }`.
+
+| Produção (Render, plano gratuito) | Antes | Depois |
 |---|---|---|
 | Data e hora | | |
 | Commit da API | | |
-| Ambiente (local ou produção, plano) | | |
-| Máquina que rodou o k6 | | |
-| O que mudou | | |
-
-| Métrica | Antes | Depois | Meta |
-|---|---|---|---|
-| 20 VUs: requisições | | | |
-| 20 VUs: p95 | | | < 500 ms |
-| 20 VUs: p99 | | | |
-| 20 VUs: erros | | | < 1 % |
-| 50 VUs: requisições | | | |
-| 50 VUs: p95 | | | < 500 ms |
-| 50 VUs: p99 | | | |
-| 50 VUs: erros | | | < 1 % |
-| Ingestão: p95 | | | < 500 ms |
-| Consultas: p95 | | | < 500 ms |
-| Metas atendidas (sim ou não) | | | |
-
-Observações:
+| Tempo até o primeiro health responder | | |
+| Mediana de 10 GETs no health | | |
+| 20 VUs: requisições | | |
+| 20 VUs: p95 | | |
+| 20 VUs: erros | | |
+| Ingestão: p95 | | |
+| Ingestão: p99 | | |
+| Metas atendidas (sim ou não) | | |

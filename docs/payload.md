@@ -83,7 +83,8 @@ Erro padronizado:
 
 ## Efeitos
 
-- `DISPOSITIVO.ultimo_contato` é atualizado a cada envio aceito (inclusive reenvio).
+- `DISPOSITIVO.ultimo_contato` é atualizado por envio aceito (inclusive reenvio), com resolução de
+  10 s: só é regravado quando o valor guardado tem mais de 10 s (ver `docs/teste-de-carga.md`).
 - Se a máquina do dispositivo tiver **ensaio aberto**, a janela é gravada com esse ensaio — desde que
   ensaio e dispositivo sejam do mesmo tipo (ambos reais ou ambos simulados). `ensaio_id` na
   resposta indica a associação.

@@ -103,7 +103,7 @@ class IngestaoServiceTest {
         assertThat(resultado.resposta().janelaId()).isEqualTo(100L);
         assertThat(resultado.resposta().duplicada()).isFalse();
         assertThat(resultado.resposta().ensaioId()).isNull();
-        verify(dispositivos).registrarContato(20L, AGORA);
+        verify(dispositivos).registrarContato(20L, AGORA, AGORA.minusSeconds(10));
         verify(ingestao).inserirJanela(20L, null, MEDIDO, AGORA, 1200.0, false);
 
         @SuppressWarnings("unchecked")
@@ -169,7 +169,7 @@ class IngestaoServiceTest {
         assertThatThrownBy(() -> servico.receber(SIMULADOR, requisicao("ps-torno-01", MEDIDO, null)))
                 .isInstanceOf(OperacaoProibidaException.class);
         verify(ingestao, never()).inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean());
-        verify(dispositivos, never()).registrarContato(anyLong(), any());
+        verify(dispositivos, never()).registrarContato(anyLong(), any(), any());
     }
 
     @Test
