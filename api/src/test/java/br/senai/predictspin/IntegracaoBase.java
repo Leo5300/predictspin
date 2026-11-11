@@ -64,6 +64,7 @@ public abstract class IntegracaoBase {
         jdbc.update("DELETE FROM usuario WHERE email <> ?", ADMIN_EMAIL);
         jdbc.update("UPDATE usuario SET ativo = true");
         jdbc.update("UPDATE dispositivo SET ultimo_contato = NULL, ativo = true");
+        jdbc.update("UPDATE maquina SET modo_rapido_ate = NULL");
         maquinaId = jdbc.queryForObject("SELECT id FROM maquina WHERE codigo = 'TORNO-01'", Long.class);
     }
 

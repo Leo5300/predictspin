@@ -85,7 +85,8 @@ public class ConsultaTelemetriaService {
         long segundos = Math.max(0, Duration.between(janela.getRecebidoEm(), relogio.instant()).toSeconds());
         return new UltimaJanelaResposta(janela.getId(), janela.getDispositivo().getIdentificador(),
                 janela.getDispositivo().isSimulado(), janela.getMedidoEm(), janela.getRecebidoEm(), segundos,
-                janela.getRotacaoRpm(), janela.isSaturou(), ensaio == null ? null : ensaio.getId(),
+                janela.getRotacaoRpm(), janela.isSaturou(), janela.getModo(), janela.getAmostras(),
+                janela.getAmostrasEsperadas(), ensaio == null ? null : ensaio.getId(),
                 ensaio == null ? null : ensaio.getCodigo(), porPonto, porCanal);
     }
 }

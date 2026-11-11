@@ -204,9 +204,9 @@ class EnsaioIntegracaoTest extends IntegracaoBase {
                 .andExpect(status().isOk()));
 
         assertThat(cobertura.get("rotacoes_rpm").toString()).isEqualTo("[800,1200]");
-        assertThat(cobertura.get("combinacoes").asInt()).isEqualTo(4 * 4 * 2);
+        assertThat(cobertura.get("combinacoes").asInt()).isEqualTo(4 * 6 * 2); // etapas x condições (6 desde a V3) x rotações
         assertThat(cobertura.get("ensaios_validos").asInt()).isEqualTo(1);
-        assertThat(cobertura.get("ensaios_faltantes").asInt()).isEqualTo(4 * 4 * 2 * 2 - 1);
+        assertThat(cobertura.get("ensaios_faltantes").asInt()).isEqualTo(4 * 6 * 2 * 2 - 1);
         JsonNode t1Normal800 = null;
         for (JsonNode item : cobertura.get("itens")) {
             if (item.get("etapa").asText().equals("T1") && item.get("condicao").asText().equals("normal")

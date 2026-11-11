@@ -3,6 +3,7 @@ package br.senai.predictspin.telemetria.dto;
 import java.time.Instant;
 import java.util.Map;
 
+import br.senai.predictspin.telemetria.ModoJanela;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /** Estado mais recente de uma máquina: os pontos, os canais e a rotação da última janela. */
@@ -16,6 +17,11 @@ public record UltimaJanelaResposta(
         long segundosDesdeRecebimento,
         double rotacaoRpm,
         boolean saturou,
+        @Schema(description = "normal (janela de 5 s) ou rapido (janela de 1 s)")
+        ModoJanela modo,
+        @Schema(description = "Menor número de amostras lidas entre os sensores; nulo se o dispositivo não informou")
+        Integer amostras,
+        Integer amostrasEsperadas,
         Long ensaioId,
         String ensaioCodigo,
         Map<String, Ponto> pontos,

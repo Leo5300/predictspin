@@ -21,6 +21,7 @@ import br.senai.predictspin.comum.OperacaoProibidaException;
 import br.senai.predictspin.comum.RequisicaoInvalidaException;
 import br.senai.predictspin.maquina.CanalRepository;
 import br.senai.predictspin.maquina.DispositivoRepository;
+import br.senai.predictspin.maquina.ModoRapidoService;
 import br.senai.predictspin.maquina.PontoMedicaoRepository;
 import br.senai.predictspin.seguranca.DispositivoAutenticado;
 import br.senai.predictspin.telemetria.dto.IngestaoResposta;
@@ -54,15 +55,18 @@ public class IngestaoService {
     private final CanalRepository canais;
     private final DispositivoRepository dispositivos;
     private final EnsaioRepository ensaios;
+    private final ModoRapidoService modoRapido;
     private final Clock relogio;
 
     public IngestaoService(IngestaoRepository ingestao, PontoMedicaoRepository pontos, CanalRepository canais,
-                           DispositivoRepository dispositivos, EnsaioRepository ensaios, Clock relogio) {
+                           DispositivoRepository dispositivos, EnsaioRepository ensaios, ModoRapidoService modoRapido,
+                           Clock relogio) {
         this.ingestao = ingestao;
         this.pontos = pontos;
         this.canais = canais;
         this.dispositivos = dispositivos;
         this.ensaios = ensaios;
+        this.modoRapido = modoRapido;
         this.relogio = relogio;
     }
 
@@ -86,13 +90,17 @@ public class IngestaoService {
         dispositivos.registrarContato(dispositivo.id(), agora, agora.minus(INTERVALO_CONTATO));
 
         Long ensaioId = ensaios.idAberto(dispositivo.maquinaId(), dispositivo.simulado()).orElse(null);
+        var amostragem = new IngestaoRepository.Amostragem(req.modoOuNormal(), req.amostras(), req.amostrasEsperadas());
         Optional<Long> novaJanela = ingestao.inserirJanela(dispositivo.id(), ensaioId, medidoEm, agora,
-                req.rotacaoRpm(), req.saturou());
+                req.rotacaoRpm(), req.saturou(), amostragem);
+        // Vale para envio novo e para reenvio: é assim que o dispositivo fica sabendo do modo rápido
+        Instant modoRapidoAte = modoRapido.vigente(dispositivo.maquinaId());
 
         if (novaJanela.isEmpty()) {
             IngestaoRepository.JanelaExistente existente = ingestao.buscarJanela(dispositivo.id(), medidoEm)
                     .orElseThrow(() -> new IllegalStateException("Janela em conflito não encontrada"));
-            return new Resultado(new IngestaoResposta(existente.id(), true, existente.ensaioId(), medidoEm));
+            return new Resultado(new IngestaoResposta(existente.id(), true, existente.ensaioId(), medidoEm,
+                    modoRapidoAte));
         }
 
         long janelaId = novaJanela.get();
@@ -100,7 +108,7 @@ public class IngestaoService {
         if (!leituras.isEmpty()) {
             ingestao.inserirLeituras(janelaId, leituras);
         }
-        return new Resultado(new IngestaoResposta(janelaId, false, ensaioId, medidoEm));
+        return new Resultado(new IngestaoResposta(janelaId, false, ensaioId, medidoEm, modoRapidoAte));
     }
 
     private List<IngestaoRepository.LinhaTelemetria> resolverPontos(Long maquinaId,

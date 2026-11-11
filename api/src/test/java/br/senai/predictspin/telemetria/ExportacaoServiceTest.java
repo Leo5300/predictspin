@@ -49,10 +49,18 @@ class ExportacaoServiceTest {
     }
 
     private static ResultSet linha(String material, BigDecimal avanco, boolean correnteNula) throws SQLException {
+        return linha(material, avanco, correnteNula, "normal", "normal", 8000, 8000);
+    }
+
+    private static ResultSet linha(String material, BigDecimal avanco, boolean correnteNula, String condicao,
+                                   String modo, Integer amostras, Integer esperadas) throws SQLException {
         ResultSet rs = mock(ResultSet.class);
         when(rs.getString("ensaio")).thenReturn("TORNO-01-T1-00001");
         when(rs.getString("etapa")).thenReturn("T1");
-        when(rs.getString("condicao")).thenReturn("normal");
+        when(rs.getString("condicao")).thenReturn(condicao);
+        when(rs.getString("modo")).thenReturn(modo);
+        when(rs.getInt("amostras")).thenReturn(amostras == null ? 0 : amostras);
+        when(rs.getInt("amostras_esperadas")).thenReturn(esperadas == null ? 0 : esperadas);
         when(rs.getString("material")).thenReturn(material);
         when(rs.getString("rotacao_alvo_rpm")).thenReturn("1200");
         when(rs.getBigDecimal("avanco_alvo")).thenReturn(avanco);
@@ -73,8 +81,10 @@ class ExportacaoServiceTest {
         when(rs.getDouble("ordem_2x")).thenReturn(0.03);
         when(rs.getDouble("ordem_3x")).thenReturn(0.01);
         when(rs.getDouble("canal_0")).thenReturn(correnteNula ? 0.0 : 4.5);
-        // wasNull é consultado logo depois de cada getDouble: só o último (canal_0) pode ser nulo
-        when(rs.wasNull()).thenReturn(false, false, false, false, false, false, false, correnteNula);
+        // wasNull é consultado logo depois de cada getDouble e getInt, nesta ordem: rotação, 6 medidas,
+        // amostras, amostras esperadas e canal_0
+        when(rs.wasNull()).thenReturn(false, false, false, false, false, false, false, amostras == null,
+                esperadas == null, correnteNula);
         return rs;
     }
 
@@ -92,11 +102,44 @@ class ExportacaoServiceTest {
         assertThat(csv[0]).isEqualTo(String.join(",", ExportacaoService.COLUNAS_FIXAS) + ",corrente_a");
         assertThat(csv[1]).isEqualTo("TORNO-01-T1-00001,T1,normal,\"aço SAE 1045, barra\",1200,0.150,1,true,"
                 + "TORNO-01,ps-sim-01,77,2026-11-10T12:00:05Z,1198.5,false,A,acionamento,"
-                + "0.12,0.4,3.1,0.08,0.03,0.01,4.5");
+                + "0.12,0.4,3.1,0.08,0.03,0.01,normal,8000,8000,treino,,4.5");
         // material, avanço e canal ausentes viram campo vazio
         assertThat(csv[2]).isEqualTo("TORNO-01-T1-00001,T1,normal,,1200,,1,true,"
                 + "TORNO-01,ps-sim-01,77,2026-11-10T12:00:05Z,1198.5,false,A,acionamento,"
-                + "0.12,0.4,3.1,0.08,0.03,0.01,");
+                + "0.12,0.4,3.1,0.08,0.03,0.01,normal,8000,8000,treino,,");
+    }
+
+    @Test
+    void separaTreinoDeValidacaoEMarcaJanelasForaDoTreino() throws SQLException {
+        when(canais.codigos(1L)).thenReturn(List.of());
+        entregar(linha(null, null, false, "sensor_solto", "normal", 8000, 8000),
+                linha(null, null, false, "desbalanceamento", "rapido", 1600, 1600),
+                linha(null, null, false, "normal", "normal", 7839, 8000),
+                linha(null, null, false, "normal", "rapido", 1500, 1600),
+                linha(null, null, false, "normal", "normal", 7840, 8000),
+                linha(null, null, false, "normal", "normal", null, null));
+        StringWriter saida = new StringWriter();
+
+        servico.exportar(true, 1L, saida);
+
+        String[] csv = saida.toString().split("\n");
+        assertThat(csv[1]).endsWith(",normal,8000,8000,validacao,");
+        assertThat(csv[2]).endsWith(",rapido,1600,1600,treino,rapida");
+        // 7839 < 98% de 8000 (7840): incompleta; 7840 já serve
+        assertThat(csv[3]).endsWith(",normal,7839,8000,treino,amostras_incompletas");
+        assertThat(csv[4]).endsWith(",rapido,1500,1600,treino,rapida|amostras_incompletas");
+        assertThat(csv[5]).endsWith(",normal,7840,8000,treino,");
+        // envio antigo, sem contagem: sem marca
+        assertThat(csv[6]).endsWith(",normal,,,treino,");
+    }
+
+    @Test
+    void marcaDaJanela() {
+        assertThat(ExportacaoService.marca(ModoJanela.NORMAL, null, null)).isEmpty();
+        assertThat(ExportacaoService.marca(ModoJanela.NORMAL, 100, null)).isEmpty();
+        assertThat(ExportacaoService.marca(ModoJanela.NORMAL, 97, 100)).isEqualTo("amostras_incompletas");
+        assertThat(ExportacaoService.marca(ModoJanela.NORMAL, 98, 100)).isEmpty();
+        assertThat(ExportacaoService.marca(ModoJanela.RAPIDO, 98, 100)).isEqualTo("rapida");
     }
 
     @Test

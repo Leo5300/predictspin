@@ -25,13 +25,15 @@ public class IngestaoRepository {
 
     /** Insere a janela; vazio se (dispositivo, medido_em) já existia. */
     public Optional<Long> inserirJanela(long dispositivoId, Long ensaioId, Instant medidoEm, Instant recebidoEm,
-                                        double rotacaoRpm, boolean saturou) {
+                                        double rotacaoRpm, boolean saturou, Amostragem amostragem) {
         List<Long> ids = jdbc.queryForList("""
-                INSERT INTO janela (dispositivo_id, ensaio_id, medido_em, recebido_em, rotacao_rpm, saturou)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO janela (dispositivo_id, ensaio_id, medido_em, recebido_em, rotacao_rpm, saturou,
+                                    modo, amostras, amostras_esperadas)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (dispositivo_id, medido_em) DO NOTHING
                 RETURNING id
-                """, Long.class, dispositivoId, ensaioId, utc(medidoEm), utc(recebidoEm), rotacaoRpm, saturou);
+                """, Long.class, dispositivoId, ensaioId, utc(medidoEm), utc(recebidoEm), rotacaoRpm, saturou,
+                amostragem.modo().valor(), amostragem.amostras(), amostragem.amostrasEsperadas());
         return ids.stream().findFirst();
     }
 
@@ -72,6 +74,10 @@ public class IngestaoRepository {
     }
 
     public record JanelaExistente(long id, Long ensaioId) {
+    }
+
+    /** Como a janela foi amostrada: modo de envio e contagem de amostras (as duas contagens são opcionais). */
+    public record Amostragem(ModoJanela modo, Integer amostras, Integer amostrasEsperadas) {
     }
 
     public record LinhaTelemetria(long pontoId, double rmsG, double picoG, double curtose,

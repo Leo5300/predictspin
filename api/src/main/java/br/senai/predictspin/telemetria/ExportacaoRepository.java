@@ -36,6 +36,7 @@ public class ExportacaoRepository {
                 SELECT e.codigo AS ensaio, e.etapa, e.condicao, e.material, e.rotacao_alvo_rpm, e.avanco_alvo,
                        e.repeticao, e.simulado, m.codigo AS maquina, d.identificador AS dispositivo,
                        j.id AS janela_id, j.medido_em, j.rotacao_rpm, j.saturou,
+                       j.modo, j.amostras, j.amostras_esperadas,
                        p.codigo AS ponto, p.papel, t.rms_g, t.pico_g, t.curtose, t.ordem_1x, t.ordem_2x, t.ordem_3x
                        %s
                 FROM ensaio e

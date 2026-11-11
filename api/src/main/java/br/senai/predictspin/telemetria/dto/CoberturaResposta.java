@@ -23,6 +23,10 @@ public record CoberturaResposta(
         long ensaiosFaltantes,
         List<Item> itens) {
 
-    public record Item(Etapa etapa, Condicao condicao, Integer rotacaoAlvoRpm, long ensaiosValidos, long faltam) {
+    public record Item(Etapa etapa, Condicao condicao,
+                       @Schema(description = "treino (rótulo da classificação) ou validacao (conferência de alerta, "
+                               + "nunca classe de treino)")
+                       Condicao.Uso uso,
+                       Integer rotacaoAlvoRpm, long ensaiosValidos, long faltam) {
     }
 }

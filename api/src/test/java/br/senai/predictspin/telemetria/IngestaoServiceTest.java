@@ -29,6 +29,7 @@ import br.senai.predictspin.comum.OperacaoProibidaException;
 import br.senai.predictspin.comum.RequisicaoInvalidaException;
 import br.senai.predictspin.maquina.CanalRepository;
 import br.senai.predictspin.maquina.DispositivoRepository;
+import br.senai.predictspin.maquina.ModoRapidoService;
 import br.senai.predictspin.maquina.PontoMedicaoRepository;
 import br.senai.predictspin.seguranca.DispositivoAutenticado;
 import br.senai.predictspin.telemetria.dto.TelemetriaRequisicao;
@@ -46,6 +47,7 @@ class IngestaoServiceTest {
     private CanalRepository canais;
     private DispositivoRepository dispositivos;
     private EnsaioRepository ensaios;
+    private ModoRapidoService modoRapido;
     private IngestaoService servico;
 
     @BeforeEach
@@ -55,10 +57,11 @@ class IngestaoServiceTest {
         canais = mock(CanalRepository.class);
         dispositivos = mock(DispositivoRepository.class);
         ensaios = mock(EnsaioRepository.class);
+        modoRapido = mock(ModoRapidoService.class);
         when(pontos.codigosAtivos(MAQUINA)).thenReturn(List.of(codigo("A", 11L), codigo("B", 12L), codigo("C", 13L)));
         when(canais.codigosAtivos(MAQUINA)).thenReturn(List.of(codigo("corrente_a", 31L), codigo("amb_temp_c", 32L)));
         when(ensaios.idAberto(MAQUINA, true)).thenReturn(Optional.empty());
-        servico = new IngestaoService(ingestao, pontos, canais, dispositivos, ensaios,
+        servico = new IngestaoService(ingestao, pontos, canais, dispositivos, ensaios, modoRapido,
                 Clock.fixed(AGORA, ZoneOffset.UTC));
     }
 
@@ -89,8 +92,57 @@ class IngestaoServiceTest {
     }
 
     private void janelaNova(long id) {
-        when(ingestao.inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean()))
+        when(ingestao.inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean(), any()))
                 .thenReturn(Optional.of(id));
+    }
+
+    private static final IngestaoRepository.Amostragem SEM_CONTAGEM =
+            new IngestaoRepository.Amostragem(ModoJanela.NORMAL, null, null);
+
+    @Test
+    void modoEContagemDeAmostrasSaoGravadosNaJanela() {
+        janelaNova(100L);
+        var base = requisicao("ps-sim-01", MEDIDO, null);
+        var req = new TelemetriaRequisicao(base.dispositivo(), base.medidoEm(), base.rotacaoRpm(), base.saturou(),
+                base.pontos(), null, ModoJanela.RAPIDO, 1590, 1600);
+
+        servico.receber(SIMULADOR, req);
+
+        verify(ingestao).inserirJanela(20L, null, MEDIDO, AGORA, 1200.0, false,
+                new IngestaoRepository.Amostragem(ModoJanela.RAPIDO, 1590, 1600));
+    }
+
+    @Test
+    void envioSemModoValeComoNormalESemContagem() {
+        janelaNova(100L);
+        servico.receber(SIMULADOR, requisicao("ps-sim-01", MEDIDO, null));
+        verify(ingestao).inserirJanela(20L, null, MEDIDO, AGORA, 1200.0, false, SEM_CONTAGEM);
+    }
+
+    @Test
+    void respostaTrazOPrazoDoModoRapidoSoQuandoVigente() {
+        janelaNova(100L);
+        Instant prazo = AGORA.plusSeconds(90);
+        when(modoRapido.vigente(MAQUINA)).thenReturn(prazo);
+        assertThat(servico.receber(SIMULADOR, requisicao("ps-sim-01", MEDIDO, null)).resposta().modoRapidoAte())
+                .isEqualTo(prazo);
+
+        when(modoRapido.vigente(MAQUINA)).thenReturn(null);
+        assertThat(servico.receber(SIMULADOR, requisicao("ps-sim-01", MEDIDO.plusSeconds(5), null))
+                .resposta().modoRapidoAte()).isNull();
+    }
+
+    @Test
+    void reenvioTambemTrazOPrazoDoModoRapido() {
+        when(ingestao.inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean(), any()))
+                .thenReturn(Optional.empty());
+        when(ingestao.buscarJanela(20L, MEDIDO)).thenReturn(Optional.of(new IngestaoRepository.JanelaExistente(55L, null)));
+        when(modoRapido.vigente(MAQUINA)).thenReturn(AGORA.plusSeconds(30));
+
+        var resultado = servico.receber(SIMULADOR, requisicao("ps-sim-01", MEDIDO, null));
+
+        assertThat(resultado.criada()).isFalse();
+        assertThat(resultado.resposta().modoRapidoAte()).isEqualTo(AGORA.plusSeconds(30));
     }
 
     @Test
@@ -104,7 +156,7 @@ class IngestaoServiceTest {
         assertThat(resultado.resposta().duplicada()).isFalse();
         assertThat(resultado.resposta().ensaioId()).isNull();
         verify(dispositivos).registrarContato(20L, AGORA, AGORA.minusSeconds(10));
-        verify(ingestao).inserirJanela(20L, null, MEDIDO, AGORA, 1200.0, false);
+        verify(ingestao).inserirJanela(20L, null, MEDIDO, AGORA, 1200.0, false, SEM_CONTAGEM);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<IngestaoRepository.LinhaTelemetria>> linhas = ArgumentCaptor.forClass(List.class);
@@ -133,13 +185,13 @@ class IngestaoServiceTest {
         var resultado = servico.receber(SIMULADOR, requisicao("ps-sim-01", MEDIDO, null));
 
         assertThat(resultado.resposta().ensaioId()).isEqualTo(7L);
-        verify(ingestao).inserirJanela(20L, 7L, MEDIDO, AGORA, 1200.0, false);
+        verify(ingestao).inserirJanela(20L, 7L, MEDIDO, AGORA, 1200.0, false, SEM_CONTAGEM);
         verify(ensaios, never()).idAberto(MAQUINA, false);
     }
 
     @Test
     void reenvioDevolveAJanelaExistenteSemGravarDeNovo() {
-        when(ingestao.inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean()))
+        when(ingestao.inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean(), any()))
                 .thenReturn(Optional.empty());
         when(ingestao.buscarJanela(20L, MEDIDO))
                 .thenReturn(Optional.of(new IngestaoRepository.JanelaExistente(55L, 9L)));
@@ -168,7 +220,7 @@ class IngestaoServiceTest {
     void dispositivoDoCorpoDiferenteDoCabecalhoEhProibido() {
         assertThatThrownBy(() -> servico.receber(SIMULADOR, requisicao("ps-torno-01", MEDIDO, null)))
                 .isInstanceOf(OperacaoProibidaException.class);
-        verify(ingestao, never()).inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean());
+        verify(ingestao, never()).inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean(), any());
         verify(dispositivos, never()).registrarContato(anyLong(), any(), any());
     }
 
@@ -194,7 +246,7 @@ class IngestaoServiceTest {
                 .hasMessageContaining("'pontos'")
                 .hasMessageContaining("[Z]")
                 .hasMessageContaining("[A, B, C]");
-        verify(ingestao, never()).inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean());
+        verify(ingestao, never()).inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean(), any());
     }
 
     @Test
@@ -204,6 +256,6 @@ class IngestaoServiceTest {
                 .isInstanceOf(RequisicaoInvalidaException.class)
                 .hasMessageContaining("'canais'")
                 .hasMessageContaining("pressao_bar");
-        verify(ingestao, never()).inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean());
+        verify(ingestao, never()).inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean(), any());
     }
 }

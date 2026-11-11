@@ -143,7 +143,7 @@ public class EnsaioService {
                 for (Integer rotacao : grade) {
                     long qtd = contagem.getOrDefault(chave(etapa, condicao, rotacao), 0L);
                     long falta = Math.max(0, meta - qtd);
-                    itens.add(new CoberturaResposta.Item(etapa, condicao, rotacao, qtd, falta));
+                    itens.add(new CoberturaResposta.Item(etapa, condicao, condicao.uso(), rotacao, qtd, falta));
                     validos += qtd;
                     faltantes += falta;
                     if (falta == 0) {

@@ -42,6 +42,12 @@ public class Janela {
 
     private boolean saturou;
 
+    private ModoJanela modo;
+
+    private Integer amostras;
+
+    private Integer amostrasEsperadas;
+
     protected Janela() {
     }
 
@@ -71,5 +77,17 @@ public class Janela {
 
     public boolean isSaturou() {
         return saturou;
+    }
+
+    public ModoJanela getModo() {
+        return modo;
+    }
+
+    public Integer getAmostras() {
+        return amostras;
+    }
+
+    public Integer getAmostrasEsperadas() {
+        return amostrasEsperadas;
     }
 }

@@ -1,6 +1,6 @@
 # Modelo de dados — DER v3
 
-Data: 10/11/2026 · Versão 3 · PostgreSQL 16 · Implementado em
+Data: 10/11/2026, com a migração V3 de 11/11/2026 · PostgreSQL 16 · Implementado em
 [`api/src/main/resources/db/migration`](../api/src/main/resources/db/migration) (Flyway)
 
 ## O que mudou da v2 para a v3
@@ -32,6 +32,20 @@ precisa valer para o pacote inteiro, não para cada ponto. A v3 separa isso:
 - **`ORDEM_SERVICO`** ganhou `responsavel_id` (a relação "atribuída a" usuário da v2).
 - Grandezas medidas usam `double precision` em vez de `numeric`: são leituras de sensor, não
   valores monetários, e ponto flutuante de 64 bits é mais compacto e mais rápido de agregar.
+
+## O que mudou com a migração V3 (11/11/2026)
+
+A migração `V3__firmware_tres_sensores.sql` acompanha o firmware de 3 sensores, sem quebrar o envio
+antigo:
+
+- **`ENSAIO.condicao`** aceita `desbalanceamento` (classe de treino) e `sensor_solto` (ímã de um
+  sensor afrouxado de propósito, para validar o alerta de instrumento). `sensor_solto` conta na
+  cobertura e sai na exportação com `uso = validacao`; nunca é classe de treino.
+- **`JANELA`** ganhou `modo` (`normal` ou `rapido`, padrão `normal`), `amostras` (o menor número de
+  amostras lidas entre os sensores) e `amostras_esperadas`, as duas opcionais. Janela rápida ou com
+  menos de 98% das amostras esperadas sai marcada na exportação (coluna `marca`), fora do treino.
+- **`MAQUINA`** ganhou `modo_rapido_ate`: até quando a máquina está em modo rápido (nulo ou no
+  passado = normal).
 
 ## Diagrama
 
@@ -74,6 +88,7 @@ erDiagram
         varchar fabricante
         date data_instalacao
         boolean ativa
+        timestamptz modo_rapido_ate
     }
     PONTO_MEDICAO {
         bigint id PK
@@ -136,6 +151,9 @@ erDiagram
         timestamptz recebido_em
         double rotacao_rpm
         boolean saturou
+        varchar modo
+        integer amostras
+        integer amostras_esperadas
     }
     TELEMETRIA {
         bigint id PK
@@ -226,7 +244,8 @@ erDiagram
 | `ponto_medicao.papel` | `acionamento`, `ferramenta`, `estrutura` |
 | `canal.grandeza` | `temperatura`, `umidade`, `corrente`, `tensao`, `potencia` |
 | `ensaio.etapa` | `T0`, `T1`, `T2`, `T3` |
-| `ensaio.condicao` | `normal`, `ferramenta_desgastada`, `avanco_excessivo`, `rotacao_inadequada` |
+| `ensaio.condicao` | treino: `normal`, `ferramenta_desgastada`, `avanco_excessivo`, `rotacao_inadequada`, `desbalanceamento`; validação: `sensor_solto` |
+| `janela.modo` | `normal`, `rapido` |
 | `baseline.metrica` | `rms_g`, `pico_g`, `curtose`, `ordem_1x`, `ordem_2x`, `ordem_3x` |
 | `alerta.severidade` | `baixa`, `media`, `alta`, `critica` |
 | `alerta.retorno_tecnico`, `ordem_servico.retorno_tecnico` | `confirmada`, `rejeitada` ou nulo |

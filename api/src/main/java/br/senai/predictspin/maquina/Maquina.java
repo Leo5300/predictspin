@@ -1,5 +1,6 @@
 package br.senai.predictspin.maquina;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 import jakarta.persistence.Entity;
@@ -35,6 +36,8 @@ public class Maquina {
 
     private boolean ativa;
 
+    private Instant modoRapidoAte;
+
     protected Maquina() {
     }
 
@@ -68,5 +71,9 @@ public class Maquina {
 
     public boolean isAtiva() {
         return ativa;
+    }
+
+    public Instant getModoRapidoAte() {
+        return modoRapidoAte;
     }
 }

@@ -1,7 +1,9 @@
 # Contrato de ingestão de telemetria
 
 `POST /api/v1/telemetria` — enviado pelo ESP32 (ou pelo simulador) a cada janela de ~5 s, com as
-características já extraídas na borda. **Este contrato é fixo:** mudanças exigem nova versão da rota.
+características já extraídas na borda. **Este contrato é fixo:** mudanças que quebrem envio antigo exigem
+nova versão da rota. Em 11/11/2026 (migração V3) entraram três campos **opcionais** (`modo`, `amostras`,
+`amostras_esperadas`) e o campo de resposta `modo_rapido_ate`; o envio antigo continua válido.
 
 ## Autenticação
 
@@ -45,6 +47,28 @@ Dispositivo inexistente, inativo, sem cabeçalho ou com chave errada: **401**.
 | `pontos.*.curtose` | número | sim | adimensional |
 | `pontos.*.o1x`, `o2x`, `o3x` | número (g) | sim | ≥ 0; amplitude nas ordens 1X, 2X e 3X da rotação |
 | `canais` | objeto | **não** | cada chave também é opcional; chave = código do canal; código desconhecido → **400** |
+| `modo` | texto | **não** | `normal` (janela de 5 s) ou `rapido` (janela de 1 s); ausente = `normal`; outro valor → **400** |
+| `amostras` | inteiro | **não** | ≥ 0; o **menor** número de amostras lidas entre os sensores nesta janela |
+| `amostras_esperadas` | inteiro | **não** | ≥ 1; quantas amostras a janela deveria ter (taxa × duração: 8000 em 5 s, 1600 em 1 s a 1600 Hz) |
+
+Exemplo de envio do firmware de 3 sensores, só com o ponto A ligado:
+
+```json
+{
+  "dispositivo": "ps-torno-01",
+  "medido_em": "2026-11-11T12:00:00.000000Z",
+  "rotacao_rpm": 812.4,
+  "saturou": false,
+  "modo": "normal",
+  "amostras": 8000,
+  "amostras_esperadas": 8000,
+  "pontos": {"A": {"rms_g": 0.031, "pico_g": 0.112, "curtose": 3.2, "o1x": 0.012, "o2x": 0.004, "o3x": 0.002}}
+}
+```
+
+As janelas com `modo` = `rapido` e as que chegaram com menos de 98% das amostras esperadas ficam
+marcadas na exportação (`GET /api/v1/ensaios/exportar.csv`, coluna `marca`) para não entrarem no
+treino.
 
 Canais cadastrados no torno `TORNO-01`:
 
@@ -64,6 +88,9 @@ Rotação não é canal: é atributo da janela, porque define as ordens 1X/2X/3X
 |---|---|---|
 | **201** | janela nova gravada | `{"janela_id": 42, "duplicada": false, "ensaio_id": 7, "medido_em": "…"}` |
 | **200** | reenvio: `(dispositivo, medido_em)` já existia; nada é gravado de novo | `{"janela_id": 42, "duplicada": true, …}` |
+
+Enquanto a máquina estiver em **modo rápido**, as respostas 201 e 200 trazem também
+`"modo_rapido_ate": "2026-11-11T12:02:00.123456Z"` (UTC). Fora disso o campo **não aparece**.
 | **400** | JSON inválido, campo ausente ou fora da faixa, ponto/canal desconhecido, `medido_em` no futuro | erro padronizado, com `campos` |
 | **401** | credencial de dispositivo ausente ou inválida | erro padronizado |
 | **403** | `dispositivo` no corpo diferente do cabeçalho | erro padronizado |
@@ -91,12 +118,28 @@ Erro padronizado:
 - Grava 1 linha em `JANELA`, 1 em `TELEMETRIA` por ponto e 1 em `LEITURA` por canal, na mesma
   transação.
 
+## Modo rápido (ao vivo)
+
+Um usuário logado (qualquer papel) pede janelas de 1 s para ver a máquina quase em tempo real:
+
+| Rota | Efeito |
+|---|---|
+| `POST /api/v1/maquinas/{id}/modo-rapido` | liga por 2 minutos a partir de agora; chamar de novo renova |
+| `DELETE /api/v1/maquinas/{id}/modo-rapido` | desliga |
+| `GET /api/v1/maquinas/{id}/modo-rapido` | `{"maquina_id": 1, "ativo": true, "modo_rapido_ate": "…"}` |
+
+O prazo fica gravado em `MAQUINA.modo_rapido_ate`, e não em memória: vale para todos os
+dispositivos da máquina e sobrevive a um reinício da API. O dispositivo descobre o modo pela resposta
+da ingestão. Recebendo `modo_rapido_ate` no futuro, passa a janelas de 1 s com `"modo": "rapido"` até
+esse instante e volta sozinho a 5 s. A notificação ao painel (SSE) ainda não existe.
+
 ## Recomendações para o firmware
 
 - Reenvie com o **mesmo** `medido_em` em caso de falha de rede: a API não duplica.
 - Trate 2xx (200 e 201) como sucesso e descarte a janela do buffer. Trate 400/403 como erro de
   programação (não reenvie em laço). Reenvie em 5xx e em falha de conexão, com espera crescente.
 - Sincronize o relógio por NTP antes de medir.
+- Mande `amostras` e `amostras_esperadas` em toda janela; obedeça `modo_rapido_ate` (ver acima).
 
 ## Exemplo com curl
 
