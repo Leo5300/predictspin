@@ -53,9 +53,9 @@ Detalhes de cada camada, fluxo de ingestão e decisões estruturais estão em
 
 ## Stack
 
-- **Borda:** ESP32, C++ (Arduino framework, PlatformIO)
+- **Borda:** ESP32, C++ (Arduino-ESP32 2.0.17, PlatformIO), U8g2, Adafruit NeoPixel
 - **Backend:** Java 21, Spring Boot 3.5, PostgreSQL 16, Flyway, JWT (HS256)
-- **Testes:** JUnit 5, Testcontainers, JaCoCo, pytest, k6
+- **Testes:** JUnit 5, Testcontainers, JaCoCo, pytest, Unity (testes nativos do firmware), k6
 - **Análise:** Python (NumPy, Matplotlib) para processamento offline do sinal bruto e simulador
 - **Infra:** Docker Compose (desenvolvimento), GitHub Actions (integração contínua), Render
   (publicação)
@@ -63,32 +63,32 @@ Detalhes de cada camada, fluxo de ingestão e decisões estruturais estão em
 
 ## Status atual
 
-Situação em 10/11/2026.
+Situação em 11/11/2026.
 
 | Parte | Situação |
 |---|---|
-| API (`api/`) | Pronta para a coleta: login, usuários e papéis, máquinas, ingestão de telemetria, consultas, ensaios rotulados, cobertura da coleta e exportação CSV. 125 testes automatizados. |
-| Banco | PostgreSQL 16 com o modelo completo criado pelo Flyway (`V1`) e carga inicial (`V2`: máquina `TORNO-01`, pontos A, B e C, canais). |
+| API (`api/`) | Pronta para a coleta e para o firmware de 3 sensores: login, usuários e papéis, máquinas, ingestão de telemetria (com `modo`, `amostras` e `amostras_esperadas` opcionais), modo rápido, consultas, ensaios rotulados, cobertura da coleta e exportação CSV com treino e validação separados. 149 testes automatizados. |
+| Banco | PostgreSQL 16 com o modelo criado pelo Flyway (`V1`), carga inicial (`V2`: máquina `TORNO-01`, pontos A, B e C, canais) e `V3` (condições `desbalanceamento` e `sensor_solto`, modo e amostras da janela, modo rápido da máquina). |
 | Alerta e ordem de serviço | Tabelas e entidades existem; **ainda não há regra nem rota**. |
 | Classificação da condição | **Não iniciada.** |
-| Firmware (`firmware/`) | Lê **um** ADXL345 por SPI a 1600 Hz e a referência de rotação e envia o sinal bruto pela serial. **Ainda não** calcula as características na borda **nem envia para a API**. |
-| Análise (`analise/`) | Captura da serial (`captura.py`), espectro com janela de Hann e ordens (`espectro.py`) e simulador de telemetria (`simulador.py`). |
+| Firmware (`firmware/`) | Reescrito para 3 ADXL345 e o FC-51: aquisição no núcleo 1 (FIFO a 1600 Hz), características em fluxo, envio HTTPS à API com fila em RAM e LittleFS, modo rápido, tela, LEDs e sinal bruto binário pela serial. Compila e passa em 44 testes nativos; **não foi testado em hardware**. Roteiro de bancada em [`docs/teste-bancada-firmware.md`](docs/teste-bancada-firmware.md). |
+| Análise (`analise/`) | Captura da serial (`captura.py`, binário de 3 sensores e texto antigo de 1), espectro com janela de Hann e ordens (`espectro.py`) e simulador de telemetria (`simulador.py`, que obedece ao modo rápido). |
 | Painel web e aplicativo (`mobile/`) | **Não iniciados.** |
-| Integração contínua | Workflow escrito em `.github/workflows/ci.yml`; **ainda não rodou no GitHub**. |
-| Publicação no Render | `render.yaml` e roteiro escritos; **implantação ainda não feita**. |
+| Integração contínua | Workflow em `.github/workflows/ci.yml` (API e `analise/`); o resultado no GitHub não foi conferido nesta atualização. Os testes nativos do firmware não estão no CI. |
+| Publicação no Render | `render.yaml` e roteiro escritos; segundo o responsável, a API está publicada (não conferido nesta atualização). |
 
-Todos os dados de vibração que passaram pela API até agora são **simulados**. Nenhuma medição real
-do torno foi gravada no servidor.
+Todos os dados de vibração que passaram pela API local até agora são **simulados**. O envio do
+ESP32 real ainda não foi feito.
 
 ## Estrutura do repositório
 
 ```
 predictspin
 ├── api                  backend Spring Boot (código, migrações, testes, Dockerfile)
-├── firmware             código do ESP32 (PlatformIO)
+├── firmware             código do ESP32 (PlatformIO): src/ hardware, lib/ lógica pura, test/ testes nativos
 ├── analise              scripts Python: captura, espectro, simulador e seus testes
 ├── carga                teste de carga com k6
-├── docs                 arquitetura, modelo de dados, contrato, implantação, teste de carga
+├── docs                 arquitetura, modelo de dados, contrato, firmware, implantação, testes
 ├── mobile               reservado para o aplicativo (vazio)
 ├── .github/workflows    integração contínua
 ├── docker-compose.yml   banco e API para desenvolvimento
@@ -187,7 +187,10 @@ A descrição completa, com exemplos, está no Swagger (`/swagger-ui`).
 | `GET /maquinas` | autenticado | lista máquinas |
 | `GET /maquinas/{id}/pontos` | autenticado | pontos de medição da máquina |
 | `GET /maquinas/{id}/dispositivos` | autenticado | dispositivos da máquina |
-| `POST /telemetria` | dispositivo | recebe uma janela; 201 se nova, 200 se reenvio da mesma janela |
+| `POST /maquinas/{id}/modo-rapido` | autenticado | liga o modo rápido (janelas de 1 s) por 2 min; chamar de novo renova |
+| `DELETE /maquinas/{id}/modo-rapido` | autenticado | desliga o modo rápido |
+| `GET /maquinas/{id}/modo-rapido` | autenticado | diz se o modo rápido vale e até quando |
+| `POST /telemetria` | dispositivo | recebe uma janela; 201 se nova, 200 se reenvio da mesma janela; traz `modo_rapido_ate` enquanto o modo rápido valer |
 | `GET /pontos/{id}/telemetria` | autenticado | série de um ponto (`de`, `ate`, `simulado`) |
 | `GET /maquinas/{id}/ultima-janela` | autenticado | última janela recebida da máquina |
 | `POST /maquinas/{id}/ensaios` | ADMIN, TECNICO | abre um ensaio rotulado (etapa, condição, rotação) |
@@ -197,7 +200,7 @@ A descrição completa, com exemplos, está no Swagger (`/swagger-ui`).
 | `POST /ensaios/{id}/descartar` | ADMIN, TECNICO | marca o ensaio como descartado |
 | `GET /ensaios/{id}/resumo` | ADMIN, TECNICO | estatísticas das janelas do ensaio |
 | `GET /maquinas/{id}/coleta/cobertura` | ADMIN, TECNICO | quantos ensaios válidos há por combinação e quanto falta para a meta |
-| `GET /ensaios/exportar.csv` | ADMIN, TECNICO | exporta as janelas dos ensaios válidos em CSV |
+| `GET /ensaios/exportar.csv` | ADMIN, TECNICO | exporta as janelas dos ensaios válidos em CSV; colunas `uso` (treino ou validação) e `marca` (janela rápida ou com amostras incompletas) |
 | `GET /actuator/health` | público | situação da API |
 | `GET /swagger-ui`, `GET /v3/api-docs` | público | documentação |
 
@@ -217,12 +220,12 @@ cd api
 .\mvnw.cmd -B verify
 ```
 
-Resultado em 10/11/2026: **125 testes, nenhuma falha**. Cobertura de linhas medida pelo JaCoCo:
-**99,2 %** nas classes de regra (`*Service`) e **92,3 %** no projeto inteiro. O build falha se a
+Resultado em 11/11/2026: **149 testes, nenhuma falha**. Cobertura de linhas medida pelo JaCoCo:
+**99,3 %** nas classes de regra (`*Service`) e **92,6 %** no projeto inteiro. O build falha se a
 cobertura das classes de regra ficar abaixo de 70 %. O relatório fica em
 `api/target/site/jacoco/index.html`.
 
-**Simulador.**
+**Análise (simulador, captura e espectro).**
 
 ```powershell
 cd analise
@@ -230,7 +233,21 @@ pip install -r requirements.txt
 python -m pytest -q
 ```
 
-Resultado em 10/11/2026: **108 testes, nenhuma falha**.
+Resultado em 11/11/2026: **128 testes, nenhuma falha**.
+
+**Firmware.** Compilação para o ESP32 e testes nativos da lógica pura (precisa de `g++` no PATH;
+foi usado o WinLibs, `winget install BrechtSanders.WinLibs.POSIX.UCRT`):
+
+```powershell
+cd firmware
+copy include\segredos.exemplo.h include\segredos.h   # e preencha; fica fora do Git
+python -m pip install platformio
+python -m platformio run
+python -m platformio test -e native
+```
+
+Resultado em 11/11/2026: compila (RAM estática 63.844 bytes, flash 1.091.333 bytes) e
+**44 testes nativos, nenhuma falha**. Nada disso substitui o teste em hardware.
 
 **Dependências com vulnerabilidade conhecida** (OWASP dependency-check), fora do build normal:
 
@@ -243,14 +260,14 @@ cd api
 Esta verificação **ainda não tem resultado**: a tentativa feita sem `NVD_API_KEY` falhou ao baixar
 a base do NVD. A chave é gratuita (<https://nvd.nist.gov/developers/request-an-api-key>).
 
-**Integração contínua.** O workflow roda os testes da API e do simulador a cada `push` e
-`pull request`. Ainda não foi executado no GitHub.
+**Integração contínua.** O workflow roda os testes da API e de `analise/` a cada `push` e
+`pull request`.
 
 ## Simulador
 
 > **Os dados do simulador são simulados e nunca substituem medição.** Servem para desenvolver e
-> testar o servidor enquanto o firmware não envia telemetria. Saem do dispositivo `ps-sim-01` e
-> ficam gravados com a marca `simulado`.
+> testar o servidor enquanto o firmware não foi conferido em bancada. Saem do dispositivo
+> `ps-sim-01` e ficam gravados com a marca `simulado`.
 
 O simulador lê o `.env` da raiz para completar endereço, chave e usuário. As opções vêm depois do
 modo (`continuo` ou `roteiro`).
@@ -279,10 +296,14 @@ Etapas do protocolo de ensaios, como o simulador as representa:
 | `T3` | corte | soma o esforço de corte na ferramenta; a condição do ensaio só aparece aqui |
 
 - **`continuo`** envia janelas em sequência. Opções: `--modo` (`normal`, `atencao`, `severo`),
-  `--rotacao`, `--etapa` (padrão `T3`), `--condicao`, `--intervalo`, `--quantidade`.
+  `--rotacao`, `--etapa` (padrão `T3`), `--condicao`, `--intervalo`, `--quantidade`. Como o
+  firmware, obedece ao modo rápido: com `modo_rapido_ate` na resposta, passa a janelas de 1 s até o
+  prazo e volta sozinho ao intervalo normal.
+- Toda janela leva `modo`, `amostras` e `amostras_esperadas` (1600 por segundo de janela).
 - **`roteiro`** abre um ensaio para cada combinação, envia as janelas e encerra. Usa o login de
   `ADMIN_EMAIL` e `ADMIN_SENHA` (ou `--email` e `--senha`). Sem opções, percorre as 4 etapas
-  (T0 a T3), as 4 condições e 3 rotações.
+  (T0 a T3), as 4 condições que ele modela e 3 rotações (`desbalanceamento` e `sensor_solto`
+  ainda não são simuladas).
 - `--semente` repete a mesma sequência de valores; `--url` e `--chave` trocam o destino.
 - `python simulador.py continuo --help` e `python simulador.py roteiro --help` listam tudo.
 
@@ -290,11 +311,13 @@ Etapas do protocolo de ensaios, como o simulador as representa:
 
 - **Render:** o [`render.yaml`](render.yaml) descreve a API em Docker e o banco gerenciado. O
   passo a passo, as variáveis e as limitações do plano gratuito estão em
-  [`docs/deploy-render.md`](docs/deploy-render.md). A implantação ainda não foi feita.
+  [`docs/deploy-render.md`](docs/deploy-render.md).
 - **Teste de carga:** [`carga/telemetria.js`](carga/telemetria.js) usa o k6 com 20 e 50 usuários
-  virtuais, meta de p95 abaixo de 500 ms e menos de 1 % de erro. Como rodar e a medição local de
-  referência estão em [`docs/teste-de-carga.md`](docs/teste-de-carga.md). Não há medição em
-  produção.
+  virtuais, meta de p95 abaixo de 500 ms e menos de 1 % de erro. A otimização de 11/11 (último
+  contato do dispositivo gravado no máximo a cada 10 s) tirou a espera por trava da ingestão. No
+  diagnóstico local com 50 VUs, o p95 da ingestão passou de 1,04 s para 25 ms. Medições, protocolo
+  e o comando para produção em [`docs/teste-de-carga.md`](docs/teste-de-carga.md). Não há medição
+  em produção.
 
 ## Documentação
 
@@ -302,7 +325,9 @@ Etapas do protocolo de ensaios, como o simulador as representa:
 |---|---|
 | [`docs/arquitetura.md`](docs/arquitetura.md) | camadas, fluxo de ingestão, decisões |
 | [`docs/der.md`](docs/der.md) | modelo de dados |
-| [`docs/payload.md`](docs/payload.md) | contrato de `POST /api/v1/telemetria` |
+| [`docs/payload.md`](docs/payload.md) | contrato de `POST /api/v1/telemetria` e modo rápido |
+| [`docs/firmware.md`](docs/firmware.md) | firmware: pinos, núcleos, filtragem, fila, protocolo serial, limites |
+| [`docs/teste-bancada-firmware.md`](docs/teste-bancada-firmware.md) | roteiro do teste de bancada do ESP32 com a API |
 | [`docs/deploy-render.md`](docs/deploy-render.md) | implantação no Render |
 | [`docs/teste-de-carga.md`](docs/teste-de-carga.md) | teste de carga e medições |
 

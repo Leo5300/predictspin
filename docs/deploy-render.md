@@ -4,8 +4,10 @@ Data: 10/11/2026. Descreve como publicar a API e o banco no [Render](https://ren
 do arquivo [`render.yaml`](../render.yaml) da raiz do repositório.
 
 **Situação:** o `render.yaml` está escrito e a mesma imagem Docker foi testada localmente com o
-limite de 512 MB e as opções de JVM declaradas nele (ver [Memória](#memória)). A implantação em uma
-conta do Render **ainda não foi feita**; a primeira execução deste roteiro é também o teste dele.
+limite de 512 MB e as opções de JVM declaradas nele (ver [Memória](#memória)). Em 11/11/2026 o
+responsável informou que a API está publicada; a sessão que atualizou este documento não teve o
+endereço e **não conferiu** a publicação. A migração `V3` (firmware de 3 sensores) é aplicada
+sozinha pelo Flyway no próximo deploy.
 
 ## O que o Blueprint cria
 
