@@ -8,6 +8,9 @@ marcados como simulados e podem ser separados em qualquer consulta com simulado=
 
 Uso contínuo (uma janela a cada N segundos, até Ctrl+C):
     python simulador.py continuo --modo normal --intervalo 5 --rotacao 1200
+Como o firmware, obedece ao modo rápido: se a resposta da API trouxer "modo_rapido_ate" no futuro,
+passa a janelas de 1 s com "modo": "rapido" até esse instante e volta sozinho ao intervalo normal.
+Toda janela leva "modo", "amostras" e "amostras_esperadas" (1600 amostras/s x duração da janela).
 
 Uso roteiro (abre um ensaio para cada combinação de etapa, condição e rotação, envia M janelas
 com medido_em espaçado de 5 s, encerra e passa ao próximo):
@@ -50,6 +53,8 @@ PONTOS = ("A", "B", "C")
 CANAIS = ("temp_cabecote_c", "temp_ferramenta_c", "amb_temp_c", "amb_umid_pct", "corrente_a")
 
 INTERVALO_JANELAS_S = 5
+JANELA_RAPIDA_S = 1
+TAXA_AMOSTRAS_HZ = 1600  # ADXL345 a 1600 Hz, como o firmware
 FUNDO_ESCALA_G = 16.0  # ADXL345 em +/-16 g
 RUIDO_FUNDO_G = 0.004
 
@@ -139,7 +144,7 @@ def _medida(rng, o1x, o2x, o3x, banda, curtose_extra):
 
 
 def gerar_payload(dispositivo, medido_em, rotacao_alvo_rpm, etapa="T3", condicao="normal", modo="normal",
-                  rng=None, com_canais=True):
+                  rng=None, com_canais=True, rapido=False, duracao_s=INTERVALO_JANELAS_S):
     """Gera uma janela SIMULADA no contrato de POST /api/v1/telemetria (ver docs/payload.md).
 
     dispositivo        identificador que vai no corpo (tem de ser o mesmo do cabeçalho)
@@ -149,6 +154,8 @@ def gerar_payload(dispositivo, medido_em, rotacao_alvo_rpm, etapa="T3", condicao
     condicao           rótulo do ensaio; só altera o sinal quando há corte (T3)
     modo               estado geral da máquina: normal, atencao ou severo
     rng                random.Random; passe um com semente fixa para repetir a sequência
+    rapido             janela do modo rápido (campo "modo" = "rapido")
+    duracao_s          duração da janela, que define "amostras_esperadas" (1600 por segundo)
     """
     if etapa not in ETAPAS:
         raise ValueError(f"etapa inválida: {etapa!r}. Use uma de {ETAPAS}")
@@ -228,6 +235,12 @@ def gerar_payload(dispositivo, medido_em, rotacao_alvo_rpm, etapa="T3", condicao
             "amb_umid_pct": round(min(100.0, max(0.0, 55.0 + rng.gauss(0.0, 1.5))), 1),
             "corrente_a": round(corrente, 3),
         }
+    # Como o firmware: amostras esperadas = taxa x duração; "amostras" é a menor contagem entre os
+    # sensores, que no simulador perde de 0 a 2 amostras (relógio do sensor um pouco fora do nominal)
+    esperadas = int(round(TAXA_AMOSTRAS_HZ * duracao_s))
+    payload["modo"] = "rapido" if rapido else "normal"
+    payload["amostras_esperadas"] = esperadas
+    payload["amostras"] = esperadas - rng.randint(0, 2)
     return payload
 
 
@@ -339,20 +352,47 @@ class Cliente:
 # Os dois usos
 # --------------------------------------------------------------------------------------------
 
+def ler_instante(texto):
+    """Instante ISO-8601 da API (com Z ou fuso) como datetime em UTC; None se ausente ou inválido."""
+    if not texto:
+        return None
+    try:
+        instante = datetime.fromisoformat(texto.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return instante if instante.tzinfo else instante.replace(tzinfo=timezone.utc)
+
+
 def executar_continuo(cliente, rng, modo, rotacao, etapa, condicao, intervalo_s, quantidade=None,
                       agora=lambda: datetime.now(timezone.utc), dormir=time.sleep, escrever=print):
-    """Envia uma janela simulada a cada intervalo_s segundos, até quantidade (ou para sempre)."""
+    """Envia uma janela simulada a cada intervalo_s segundos, até quantidade (ou para sempre).
+
+    Obedece ao modo rápido como o firmware: com "modo_rapido_ate" no futuro na resposta, a janela
+    seguinte é de 1 s ("modo": "rapido"); quando o prazo passa, ou quando a resposta deixa de trazer
+    o campo, volta ao intervalo normal.
+    """
     enviadas = 0
+    rapido_ate = None
+    estava_rapido = False
     while quantidade is None or enviadas < quantidade:
-        payload = gerar_payload(cliente.dispositivo, agora(), rotacao, etapa, condicao, modo, rng)
+        inicio = agora()
+        rapido = rapido_ate is not None and inicio < rapido_ate
+        if rapido != estava_rapido:
+            escrever(f"[simulado] modo rápido até {formatar_instante(rapido_ate)}: janelas de {JANELA_RAPIDA_S} s"
+                     if rapido else f"[simulado] modo rápido terminou: janelas de {intervalo_s:g} s")
+            estava_rapido = rapido
+        duracao = JANELA_RAPIDA_S if rapido else intervalo_s
+        payload = gerar_payload(cliente.dispositivo, inicio, rotacao, etapa, condicao, modo, rng,
+                                rapido=rapido, duracao_s=duracao)
         resposta = cliente.enviar(payload)
+        rapido_ate = ler_instante(resposta.get("modo_rapido_ate"))
         enviadas += 1
-        escrever(f"[simulado] janela {resposta['janela_id']} em {payload['medido_em']}  "
+        escrever(f"[simulado] janela {resposta['janela_id']} em {payload['medido_em']}  {payload['modo']:<6}  "
                  f"{payload['rotacao_rpm']:.0f} rpm  rms A/B/C = "
                  + " / ".join(f"{payload['pontos'][p]['rms_g']:.3f}" for p in PONTOS)
                  + (f"  ensaio {resposta['ensaio_id']}" if resposta.get("ensaio_id") else ""))
         if quantidade is None or enviadas < quantidade:
-            dormir(intervalo_s)
+            dormir(duracao)
     return enviadas
 
 

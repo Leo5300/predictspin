@@ -29,7 +29,8 @@ def media_de(campo, ponto, rotacao=1200, n=200, **kwargs):
 
 def test_payload_segue_o_contrato_da_api():
     p = gerar()
-    assert set(p) == {"dispositivo", "medido_em", "rotacao_rpm", "saturou", "pontos", "canais"}
+    assert set(p) == {"dispositivo", "medido_em", "rotacao_rpm", "saturou", "pontos", "canais", "modo", "amostras",
+                      "amostras_esperadas"}
     assert p["dispositivo"] == "ps-sim-01"
     assert p["medido_em"] == "2026-11-10T12:00:00Z"
     assert isinstance(p["saturou"], bool)
@@ -392,3 +393,109 @@ def test_cliente_entra_e_usa_o_token_para_achar_a_maquina():
     cliente.entrar("admin@x.com", "senha")
     assert cliente.id_da_maquina("TORNO-01") == 1
     assert sessao.pedidos[1][2]["headers"] == {"Authorization": "Bearer abc"}
+
+
+# ---------------------------------------------------------------- modo e amostras (firmware de 3 sensores)
+
+def test_janela_normal_leva_modo_e_amostras_de_5_s():
+    p = gerar()
+    assert p["modo"] == "normal"
+    assert p["amostras_esperadas"] == 8000
+    assert 0.98 * 8000 <= p["amostras"] <= 8000
+    json.dumps(p)
+
+
+def test_janela_rapida_leva_modo_rapido_e_amostras_de_1_s():
+    p = gerar(rapido=True, duracao_s=sim.JANELA_RAPIDA_S)
+    assert p["modo"] == "rapido"
+    assert p["amostras_esperadas"] == 1600
+    assert 1598 <= p["amostras"] <= 1600
+
+
+def test_campos_de_amostragem_nao_mudam_as_caracteristicas():
+    # o sorteio das amostras vem depois de tudo: a mesma semente dá os mesmos pontos e canais
+    normal = gerar(semente=9)
+    rapida = gerar(semente=9, rapido=True, duracao_s=1)
+    assert normal["pontos"] == rapida["pontos"]
+    assert normal["canais"] == rapida["canais"]
+
+
+def test_ler_instante_da_api():
+    assert sim.ler_instante("2026-11-11T12:02:00.123456Z") == datetime(2026, 11, 11, 12, 2, 0, 123456,
+                                                                       tzinfo=timezone.utc)
+    assert sim.ler_instante("2026-11-11T09:02:00-03:00") == datetime(2026, 11, 11, 12, 2, tzinfo=timezone.utc)
+    assert sim.ler_instante(None) is None
+    assert sim.ler_instante("") is None
+    assert sim.ler_instante("amanhã") is None
+
+
+class ApiComModoRapido(ClienteFalso):
+    """Responde como a API: traz modo_rapido_ate enquanto o prazo estiver ligado no servidor."""
+
+    def __init__(self, prazo_por_envio):
+        super().__init__()
+        self.prazo_por_envio = prazo_por_envio  # lista: o prazo devolvido no envio i (None = sem campo)
+
+    def enviar(self, payload):
+        resposta = super().enviar(payload)
+        i = len(self.payloads) - 1
+        prazo = self.prazo_por_envio[i] if i < len(self.prazo_por_envio) else None
+        if prazo is not None:
+            resposta["modo_rapido_ate"] = sim.formatar_instante(prazo)
+        return resposta
+
+
+class RelogioFalso:
+    """Relógio que só anda quando o simulador dorme."""
+
+    def __init__(self, inicio):
+        self.agora = inicio
+        self.esperas = []
+
+    def ler(self):
+        return self.agora
+
+    def dormir(self, segundos):
+        self.esperas.append(segundos)
+        self.agora += timedelta(seconds=segundos)
+
+
+def test_continuo_muda_para_janelas_de_1_s_e_volta_sozinho_quando_o_prazo_passa():
+    relogio = RelogioFalso(INICIO)
+    prazo = INICIO + timedelta(seconds=8)  # ligado no servidor logo depois do 1º envio
+    cliente = ApiComModoRapido([prazo] * 20)
+    linhas = []
+
+    sim.executar_continuo(cliente, random.Random(1), "normal", 1200, "T3", "normal", 5, quantidade=8,
+                          agora=relogio.ler, dormir=relogio.dormir, escrever=linhas.append)
+
+    modos = [p["modo"] for p in cliente.payloads]
+    # 1ª janela normal (5 s); de 5 s até o prazo de 8 s, janelas de 1 s; depois volta a 5 s
+    assert modos == ["normal", "rapido", "rapido", "rapido", "normal", "normal", "normal", "normal"]
+    assert relogio.esperas == [5, 1, 1, 1, 5, 5, 5]
+    assert [p["amostras_esperadas"] for p in cliente.payloads] == [8000, 1600, 1600, 1600, 8000, 8000, 8000, 8000]
+    assert any("modo rápido até" in l for l in linhas)
+    assert any("modo rápido terminou" in l for l in linhas)
+
+
+def test_continuo_volta_ao_normal_quando_a_api_desliga_o_modo():
+    relogio = RelogioFalso(INICIO)
+    longe = INICIO + timedelta(minutes=2)
+    cliente = ApiComModoRapido([longe, longe, None, None])  # DELETE depois do 2º envio
+
+    sim.executar_continuo(cliente, random.Random(1), "normal", 1200, "T3", "normal", 5, quantidade=4,
+                          agora=relogio.ler, dormir=relogio.dormir, escrever=lambda _: None)
+
+    assert [p["modo"] for p in cliente.payloads] == ["normal", "rapido", "rapido", "normal"]
+    assert relogio.esperas == [5, 1, 1]
+
+
+def test_continuo_ignora_prazo_que_ja_passou():
+    relogio = RelogioFalso(INICIO)
+    cliente = ApiComModoRapido([INICIO - timedelta(seconds=1)] * 3)
+
+    sim.executar_continuo(cliente, random.Random(1), "normal", 1200, "T3", "normal", 5, quantidade=3,
+                          agora=relogio.ler, dormir=relogio.dormir, escrever=lambda _: None)
+
+    assert {p["modo"] for p in cliente.payloads} == {"normal"}
+    assert relogio.esperas == [5, 5]
