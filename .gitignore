@@ -42,3 +42,5 @@ __pycache__/
 
 # PlatformIO
 .pio/
+# Segredos do firmware (Wi-Fi, chave do dispositivo, URL): modelo em firmware/include/segredos.exemplo.h
+firmware/include/segredos.h
