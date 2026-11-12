@@ -16,6 +16,9 @@ public interface MaquinaRepository extends JpaRepository<Maquina, Long> {
             countQuery = "select count(m) from Maquina m")
     Page<Maquina> listarComLocal(Pageable pageable);
 
+    @Query("select m from Maquina m join fetch m.local where m.id = :id")
+    Optional<Maquina> buscarComLocal(@Param("id") Long id);
+
     Optional<Maquina> findByCodigo(String codigo);
 
     /** Prazo do modo rápido da máquina; vazio se nunca foi ligado ou foi desligado. */

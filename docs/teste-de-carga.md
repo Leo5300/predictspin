@@ -1,6 +1,6 @@
 # Teste de carga
 
-Data: 10/11/2026, atualizado em 11/11/2026. O script [`carga/telemetria.js`](../carga/telemetria.js) usa o
+Data: 10/11/2026, atualizado em 11/11/2026 e em 12/11/2026 (eventos ao vivo). O script [`carga/telemetria.js`](../carga/telemetria.js) usa o
 [k6](https://k6.io) para medir a API com ingestão de telemetria e consultas ao mesmo tempo.
 
 **As janelas enviadas pelo teste são simuladas.** Saem do dispositivo `ps-sim-01` com valores
@@ -287,6 +287,62 @@ Leitura dos números:
   isolada nesta máquina não basta para comparar.
 
 Saídas completas em `carga/resultados/2026-11-11-local-*.txt` (fora do controle de versão).
+
+## Eventos ao vivo e ingestão (12/11/2026)
+
+A pergunta: clientes conectados ao fluxo de eventos ao vivo (SSE, `GET /maquinas/{id}/eventos`)
+atrasam a ingestão? Cada janela gravada passa a ser lida do banco e escrita para cada cliente, em
+threads próprias (ver [`arquitetura.md`](arquitetura.md#eventos-ao-vivo-sse)).
+
+### O que foi medido e onde
+
+- **Máquina e montagem:** as mesmas das medições anteriores (notebook Intel Core i5-1135G7,
+  7,8 GB, Windows 11, Docker Desktop; API e PostgreSQL pelo `docker compose`, `DB_POOL_MAX=10`,
+  `JAVA_OPTS` padrão; k6 v2.3.0 pela imagem `grafana/k6`, na mesma rede Docker). API construída a
+  partir do código do commit que introduz os eventos ao vivo. **Produção não foi medida.**
+- **Estado:** banco com alguns milhares de janelas simuladas (não foi recriado); o simulador
+  contínuo ficou ligado o tempo todo (uma janela a cada 5 s).
+- **Protocolo:** aquecimento de 10 s com 20 VUs (descartado) e, em seguida, três pares de execuções
+  de 60 s com 20 VUs (`-e CENARIO=20`), alternando: sem cliente de eventos, depois com 3 clientes.
+  Os clientes eram três conexões HTTP mantidas por um script Python na mesma máquina, fora do
+  Docker, autenticadas como ADMIN, lendo o fluxo sem filtro.
+
+### Resultado
+
+| Ingestão (`POST /telemetria`), 20 VUs | Sem 1 | Sem 2 | Sem 3 | Com 3 SSE, 1 | Com 3 SSE, 2 | Com 3 SSE, 3 |
+|---|---|---|---|---|---|---|
+| Mediana | 11,21 ms | 8,36 ms | 7,64 ms | 8,74 ms | 7,70 ms | 7,52 ms |
+| p95 | 29,46 ms | 30,35 ms | 18,71 ms | 23,31 ms | 16,01 ms | 17,63 ms |
+| p99 | 185,22 ms | 74,04 ms | 49,70 ms | 69,80 ms | 85,04 ms | 65,83 ms |
+| Máximo | 248,04 ms | 113,82 ms | 96,48 ms | 144,15 ms | 297,84 ms | 88,79 ms |
+| Janelas gravadas pelo k6 | 1 180 | 1 180 | 1 180 | 1 180 | 1 180 | 1 180 |
+| Erros | 0 % | 0 % | 0 % | 0 % | 0 % | 0 % |
+
+| Consultas, 20 VUs | Sem 1 | Sem 2 | Sem 3 | Com 3 SSE, 1 | Com 3 SSE, 2 | Com 3 SSE, 3 |
+|---|---|---|---|---|---|---|
+| p95 | 19,51 ms | 22,10 ms | 19,75 ms | 16,67 ms | 16,26 ms | 21,38 ms |
+
+Em cada execução com clientes, cada um dos três recebeu 1 195 eventos `janela` em 72 s de conexão
+(as 1 180 janelas do k6 mais as do simulador contínuo): nenhum evento foi descartado e nenhum
+cliente foi desconectado.
+
+Leitura dos números:
+
+- O p95 da ingestão com 3 clientes de eventos (16 a 23 ms) ficou dentro da faixa das execuções sem
+  cliente (19 a 30 ms). **Não houve piora visível.** A ordem das execuções (sem, com, sem, com…)
+  favorece um pouco o lado "com", que roda sempre com a JVM mais aquecida; a primeira execução sem
+  cliente foi a pior das seis, como nas medições de 11/11.
+- Comparação com o registrado em 11/11 depois da otimização: nas execuções completas (20 e
+  50 VUs somados) o p95 da ingestão foi de 63, 129 e 21 ms; no diagnóstico com 50 VUs, 25 ms. As
+  seis execuções de hoje, só com 20 VUs, ficaram entre 16 e 30 ms. Os cenários não são idênticos
+  (hoje não houve a fase de 50 VUs), então a comparação serve para ordem de grandeza.
+- A cauda (p99 e máximo) oscila nos dois lados, como já oscilava.
+
+Saídas completas em `carga/resultados/2026-11-12-sse-*.txt` (fora do controle de versão).
+
+Ainda **não medido**: mais de 3 clientes, cliente lento de verdade (rede ruim) e a instância de
+0,1 CPU do Render. O comportamento com cliente lento é coberto por teste automatizado
+(`EventosServiceTest.clienteLentoEhDescartadoSemSegurarQuemPublica`), não por medição.
 
 ### Como medir em produção
 

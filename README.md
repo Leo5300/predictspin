@@ -160,6 +160,7 @@ Nenhum segredo fica no repositório. Tudo vem de variáveis de ambiente, listada
 | `JWT_EXPIRATION_MS` | não | `86400000` | validade do token (24 h) |
 | `CORS_ORIGENS` | não | `http://localhost:3000,http://localhost:5173` | origens liberadas, separadas por vírgula; `5173` é a porta do painel em desenvolvimento (Vite) |
 | `LOGIN_MAX_TENTATIVAS_EMAIL`, `LOGIN_MAX_TENTATIVAS_IP`, `LOGIN_JANELA_SEGUNDOS` | não | `5`, `20`, `900` | limite de tentativas de login com falha |
+| `EVENTOS_MAX_POR_USUARIO`, `EVENTOS_MAX_TOTAL` | não | `4`, `20` | conexões de eventos ao vivo (SSE) abertas ao mesmo tempo, por usuário e no total |
 | `JAVA_OPTS` | não | | opções da JVM (memória) |
 | `ADMIN_NOME` | não | `Administrador` | nome do primeiro administrador |
 | `ADMIN_EMAIL`, `ADMIN_SENHA` | sim | | primeiro administrador, criado na primeira subida; senha com no mínimo 8 caracteres |
@@ -187,7 +188,8 @@ A descrição completa, com exemplos, está no Swagger (`/swagger-ui`). O docume
 | `POST /usuarios` | ADMIN | cria usuário (ADMIN, TECNICO ou OPERADOR) |
 | `GET /usuarios` | ADMIN | lista usuários |
 | `POST /usuarios/{id}/desativar` | ADMIN | desativa um usuário |
-| `GET /maquinas` | autenticado | lista máquinas |
+| `GET /maquinas` | autenticado | lista máquinas, com as rotações nominais e o plano de coleta |
+| `GET /maquinas/{id}` | autenticado | detalhe de uma máquina |
 | `GET /maquinas/{id}/pontos` | autenticado | pontos de medição da máquina |
 | `GET /maquinas/{id}/dispositivos` | autenticado | dispositivos da máquina |
 | `POST /maquinas/{id}/modo-rapido` | autenticado | liga o modo rápido (janelas de 1 s) por 2 min; chamar de novo renova |
@@ -196,13 +198,18 @@ A descrição completa, com exemplos, está no Swagger (`/swagger-ui`). O docume
 | `POST /telemetria` | dispositivo | recebe uma janela; 201 se nova, 200 se reenvio da mesma janela; traz `modo_rapido_ate` enquanto o modo rápido valer |
 | `GET /pontos/{id}/telemetria` | autenticado | série de um ponto (`de`, `ate`, `simulado`) |
 | `GET /maquinas/{id}/ultima-janela` | autenticado | última janela recebida da máquina |
+| `GET /maquinas/{id}/janelas` | autenticado | janelas completas (envio, pontos e canais), paginadas; filtros `de`, `ate`, `simulado`, `modo` e `ordem` |
+| `GET /maquinas/{id}/serie` | autenticado | série agregada: o período dividido em `baldes` intervalos iguais (até 600), com média e máximo por ponto; janelas rápidas ficam fora e intervalo sem janela volta vazio |
+| `GET /maquinas/{id}/eventos` | autenticado | eventos ao vivo (SSE): `janela`, `ensaio` (só ADMIN e TECNICO) e `modo_rapido`; token no cabeçalho `Authorization` |
 | `POST /maquinas/{id}/ensaios` | ADMIN, TECNICO | abre um ensaio rotulado (etapa, condição, rotação) |
 | `GET /maquinas/{id}/ensaios` | ADMIN, TECNICO | lista os ensaios da máquina |
 | `GET /ensaios/{id}` | ADMIN, TECNICO | detalhe de um ensaio |
 | `POST /ensaios/{id}/encerrar` | ADMIN, TECNICO | encerra o ensaio |
 | `POST /ensaios/{id}/descartar` | ADMIN, TECNICO | marca o ensaio como descartado |
 | `GET /ensaios/{id}/resumo` | ADMIN, TECNICO | estatísticas das janelas do ensaio |
-| `GET /maquinas/{id}/coleta/cobertura` | ADMIN, TECNICO | quantos ensaios válidos há por combinação e quanto falta para a meta |
+| `GET /ensaios/{id}/janelas` | ADMIN, TECNICO | janelas completas do ensaio em ordem crescente de `medido_em` (replay), paginadas |
+| `PUT /maquinas/{id}/coleta/plano` | ADMIN, TECNICO | grava as rotações escolhidas para a grade de cobertura (plano de coleta) |
+| `GET /maquinas/{id}/coleta/cobertura` | ADMIN, TECNICO | quantos ensaios válidos há por combinação e quanto falta para a meta; sem `rotacoes`, usa o plano de coleta e, se ele estiver vazio, as rotações já usadas |
 | `GET /ensaios/exportar.csv` | ADMIN, TECNICO | exporta as janelas dos ensaios válidos em CSV; colunas `uso` (treino ou validação) e `marca` (janela rápida ou com amostras incompletas) |
 | `GET /actuator/health` | público | situação da API |
 | `GET /swagger-ui`, `GET /v3/api-docs` | público | documentação |

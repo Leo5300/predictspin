@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
@@ -158,8 +159,17 @@ public class TratadorGlobalErros {
     @ExceptionHandler(MuitasTentativasException.class)
     ResponseEntity<ErroResposta> muitasTentativas(MuitasTentativasException e, HttpServletRequest req) {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .contentType(MediaType.APPLICATION_JSON)
                 .header(HttpHeaders.RETRY_AFTER, String.valueOf(e.getSegundosParaNovaTentativa()))
                 .body(corpo(HttpStatus.TOO_MANY_REQUESTS, e.getMessage(), req, List.of()));
+    }
+
+    @ExceptionHandler(LimiteDeConexoesException.class)
+    ResponseEntity<ErroResposta> limiteDeConexoes(LimiteDeConexoesException e, HttpServletRequest req) {
+        return ResponseEntity.status(e.getStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(LimiteDeConexoesException.ESPERA_SEGUNDOS))
+                .body(corpo(e.getStatus(), e.getMessage(), req, List.of()));
     }
 
     @ExceptionHandler(Exception.class)
@@ -170,7 +180,9 @@ public class TratadorGlobalErros {
 
     private static ResponseEntity<ErroResposta> resposta(HttpStatus status, String mensagem, HttpServletRequest req,
                                                          List<ErroResposta.CampoInvalido> campos) {
-        return ResponseEntity.status(status).body(corpo(status, mensagem, req, campos));
+        // Tipo explícito: o erro sai em JSON mesmo quando o cliente pediu outro formato (text/event-stream, CSV)
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON)
+                .body(corpo(status, mensagem, req, campos));
     }
 
     public static ErroResposta corpo(HttpStatus status, String mensagem, HttpServletRequest req,

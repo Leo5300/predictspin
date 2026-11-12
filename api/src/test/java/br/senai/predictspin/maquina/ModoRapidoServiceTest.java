@@ -14,6 +14,7 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 import br.senai.predictspin.RelogioAjustavel;
 import br.senai.predictspin.comum.RecursoNaoEncontradoException;
@@ -24,13 +25,15 @@ class ModoRapidoServiceTest {
 
     private MaquinaRepository maquinas;
     private RelogioAjustavel relogio;
+    private ApplicationEventPublisher anuncios;
     private ModoRapidoService servico;
 
     @BeforeEach
     void criar() {
         maquinas = mock(MaquinaRepository.class);
         relogio = new RelogioAjustavel(AGORA);
-        servico = new ModoRapidoService(maquinas, relogio);
+        anuncios = mock(ApplicationEventPublisher.class);
+        servico = new ModoRapidoService(maquinas, anuncios, relogio);
     }
 
     @Test
@@ -42,6 +45,7 @@ class ModoRapidoServiceTest {
         assertThat(resposta.ativo()).isTrue();
         assertThat(resposta.modoRapidoAte()).isEqualTo(AGORA.plusSeconds(120));
         verify(maquinas).definirModoRapido(1L, AGORA.plusSeconds(120));
+        verify(anuncios).publishEvent(new ModoRapidoAlterado(resposta));
     }
 
     @Test

@@ -23,6 +23,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 
 import br.senai.predictspin.comum.CodigoId;
 import br.senai.predictspin.comum.OperacaoProibidaException;
@@ -48,6 +49,7 @@ class IngestaoServiceTest {
     private DispositivoRepository dispositivos;
     private EnsaioRepository ensaios;
     private ModoRapidoService modoRapido;
+    private ApplicationEventPublisher anuncios;
     private IngestaoService servico;
 
     @BeforeEach
@@ -58,10 +60,11 @@ class IngestaoServiceTest {
         dispositivos = mock(DispositivoRepository.class);
         ensaios = mock(EnsaioRepository.class);
         modoRapido = mock(ModoRapidoService.class);
+        anuncios = mock(ApplicationEventPublisher.class);
         when(pontos.codigosAtivos(MAQUINA)).thenReturn(List.of(codigo("A", 11L), codigo("B", 12L), codigo("C", 13L)));
         when(canais.codigosAtivos(MAQUINA)).thenReturn(List.of(codigo("corrente_a", 31L), codigo("amb_temp_c", 32L)));
         when(ensaios.idAberto(MAQUINA, true)).thenReturn(Optional.empty());
-        servico = new IngestaoService(ingestao, pontos, canais, dispositivos, ensaios, modoRapido,
+        servico = new IngestaoService(ingestao, pontos, canais, dispositivos, ensaios, modoRapido, anuncios,
                 Clock.fixed(AGORA, ZoneOffset.UTC));
     }
 
@@ -257,5 +260,18 @@ class IngestaoServiceTest {
                 .hasMessageContaining("'canais'")
                 .hasMessageContaining("pressao_bar");
         verify(ingestao, never()).inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean(), any());
+    }
+
+    @Test
+    void janelaNovaEhAnunciadaEReenvioNao() {
+        janelaNova(100L);
+        servico.receber(SIMULADOR, requisicao("ps-sim-01", MEDIDO, null));
+        verify(anuncios).publishEvent(new JanelaGravada(MAQUINA, 100L));
+
+        when(ingestao.inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean(), any()))
+                .thenReturn(Optional.empty());
+        when(ingestao.buscarJanela(20L, MEDIDO)).thenReturn(Optional.of(new IngestaoRepository.JanelaExistente(100L, null)));
+        servico.receber(SIMULADOR, requisicao("ps-sim-01", MEDIDO, null));
+        verify(anuncios, org.mockito.Mockito.times(1)).publishEvent(any(JanelaGravada.class));
     }
 }

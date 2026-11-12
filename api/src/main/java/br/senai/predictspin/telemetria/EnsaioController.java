@@ -110,7 +110,8 @@ public class EnsaioController {
     @GetMapping("/maquinas/{id}/coleta/cobertura")
     @Operation(summary = "Ensaios válidos por etapa, condição e rotação, e quantos faltam para a meta",
             description = "Válido = encerrado, não descartado e com ao menos uma janela. Sem 'rotacoes', a grade "
-                    + "usa as rotações alvo já usadas em ensaios da máquina.")
+                    + "usa o plano de coleta da máquina (PUT .../coleta/plano); com o plano vazio, as rotações alvo "
+                    + "já usadas em ensaios da máquina.")
     public CoberturaResposta cobertura(
             @PathVariable Long id,
             @RequestParam(required = false) Boolean simulado,

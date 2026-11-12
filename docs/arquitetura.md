@@ -1,6 +1,7 @@
 # Arquitetura — v3
 
-Data: 10/11/2026, atualizada em 11/11/2026 (firmware de 3 sensores e modo rápido) · Versão 3 ·
+Data: 10/11/2026, atualizada em 11/11/2026 (firmware de 3 sensores e modo rápido) e em 12/11/2026
+(consultas do painel, eventos ao vivo e plano de coleta) · Versão 3 ·
 telemetria agrupada em janela (ver [`der.md`](der.md)), autenticação de dispositivo por cabeçalho e
 coleta rotulada por ensaio. A v2 (18/09/2026) corrigiu ESP32-S3
 (inexistente no acervo) e sensores descartados (MLX90614, INMP441, BME280).
@@ -74,7 +75,8 @@ br.senai.predictspin
 ├── config         OpenAPI, CORS, Jackson, Flyway
 ├── seguranca      JWT, BCrypt, autenticação de dispositivo, rate limiting
 ├── maquina        local, máquina, ponto de medição, componente, dispositivo
-├── telemetria     ingestão, consulta, baseline, ensaio
+├── telemetria     ingestão, consulta (janelas completas, série agregada), baseline, ensaio
+├── eventos        eventos ao vivo para o painel (SSE)
 ├── alerta         avaliação contra baseline, classificação, severidade acumulada
 └── ordemservico   abertura automática, atribuição, ciclo de vida
 ```
@@ -140,16 +142,86 @@ A `marca` tira do treino as janelas do modo rápido e as que chegaram com menos 
 
 **Modo rápido no banco, não em memória.** O prazo fica em `MAQUINA.modo_rapido_ate`: vale para
 todos os dispositivos da máquina e sobrevive a um reinício da API. O dispositivo descobre o modo
-pela resposta da ingestão, sem conexão permanente. A notificação ao painel (SSE) fica para o painel.
+pela resposta da ingestão, sem conexão permanente. O painel é avisado pelo evento `modo_rapido` do
+fluxo de eventos ao vivo.
 
 **Último contato com resolução de 10 s.** Gravar `DISPOSITIVO.ultimo_contato` em toda janela fazia
 as ingestões concorrentes do mesmo dispositivo esperarem umas pelas outras pela trava da linha
 (medição em [`teste-de-carga.md`](teste-de-carga.md)). Agora só se grava quando o valor guardado
 tem mais de 10 s.
 
+**Plano de coleta na máquina.** `MAQUINA.rotacoes_nominais_rpm` guarda as rotações que a máquina
+oferece e `MAQUINA.rotacoes_coleta_rpm` as escolhidas para a grade de cobertura
+(`PUT /maquinas/{id}/coleta/plano`). A cobertura usa o plano quando a consulta não informa
+rotações; com o plano vazio, continua usando as rotações dos ensaios já feitos.
+
 **Dado simulado é marcado como tal.** Dispositivo e ensaio têm a coluna `simulado`; o simulador
 (`analise/simulador.py`) usa o dispositivo `ps-sim-01`. Consultas e exportação filtram por
 `simulado`, e janela de dispositivo simulado nunca entra em ensaio real (nem o contrário).
+
+## Consultas do painel
+
+Além da última janela e da série por ponto, o painel usa:
+
+- **Janelas completas** (`GET /maquinas/{id}/janelas` e `GET /ensaios/{id}/janelas`): cada item traz
+  o envio, os pontos e os canais. Uma página custa um número fixo de consultas (janelas, contagem,
+  telemetrias de todas elas e leituras de todas elas), conferido por teste com as estatísticas do
+  Hibernate.
+- **Série agregada** (`GET /maquinas/{id}/serie`): o período é dividido em N intervalos iguais (até
+  600) e o banco devolve, em uma consulta, média e máximo de `rms_g`, máximo de `pico_g`, média de
+  curtose e das ordens por ponto, mais rotação média, número de janelas e saturação por intervalo.
+  Janelas do modo rápido ficam fora. Intervalo sem janela volta vazio: é uma lacuna, nunca um valor
+  interpolado. O período máximo é de 31 dias, para proteger a instância pequena de produção.
+
+## Eventos ao vivo (SSE)
+
+`GET /api/v1/maquinas/{id}/eventos` devolve um fluxo `text/event-stream`. O usuário se autentica
+com o JWT no cabeçalho `Authorization`; token na URL é recusado (401). O parâmetro opcional
+`simulado` restringe o fluxo a dado simulado ou real.
+
+| Evento | Corpo | Quando |
+|---|---|---|
+| `janela` | `JanelaResposta` (o item das listagens de janelas) | janela nova gravada; reenvio (200) não gera evento |
+| `ensaio` | `EnsaioEvento` (`acao`: `aberto`, `encerrado` ou `descartado`; `ensaio`: `EnsaioResposta`) | só para ADMIN e TECNICO |
+| `modo_rapido` | `ModoRapidoResposta` | modo rápido ligado ou desligado; é também o primeiro evento de toda conexão, com o estado atual |
+
+```mermaid
+sequenceDiagram
+    participant D as Dispositivo
+    participant I as Ingestão (thread da requisição)
+    participant F as Difusão (thread própria)
+    participant C as Painel (uma thread de envio por cliente)
+    D->>I: POST /telemetria
+    I->>I: grava a janela e faz o COMMIT
+    I-)F: depois do commit: enfileira o id da janela (fila limitada, sem esperar)
+    I-->>D: 201
+    F->>F: lê a janela completa e serializa uma vez
+    F-)C: oferece à fila de cada cliente
+    C->>C: escreve no fluxo, ou manda o batimento no silêncio
+```
+
+Regras do fluxo:
+
+- **A ingestão nunca espera cliente.** O serviço só anuncia a janela nova; o anúncio é entregue
+  depois do commit e apenas coloca o id numa fila limitada (256). Ler a janela do banco e escrever
+  para os clientes acontece em outras threads. Sem cliente conectado na máquina, nada é feito.
+- **Cliente lento ou caído é descartado.** Cada cliente tem uma fila de 64 mensagens; fila cheia ou
+  falha de escrita encerra a conexão dele e libera a vaga.
+- **Batimento.** Sem evento por 15 s, vai uma linha de comentário (`:batimento`), para o proxy não
+  fechar a conexão. Os cabeçalhos `Cache-Control: no-cache` e `X-Accel-Buffering: no` impedem o
+  proxy de segurar o fluxo.
+- **Limites.** No máximo 4 conexões por usuário (429) e 20 no total (503), com `Retry-After` e a
+  mensagem em `ErroResposta`. Cada conexão custa uma thread de envio; os padrões foram escolhidos
+  para a instância de 0,1 CPU e 512 MB e mudam por `EVENTOS_MAX_POR_USUARIO` e `EVENTOS_MAX_TOTAL`.
+- **Duração.** O servidor encerra cada conexão depois de 30 minutos; o cliente reconecta. No
+  desligamento da API os fluxos são fechados antes da espera pelas requisições em andamento.
+- **Uma instância só.** A difusão é em memória: com mais de uma instância da API, um cliente só
+  veria os eventos da instância em que está conectado. Enquanto a API rodar em uma instância (como
+  no Render hoje), isso basta; para escalar, a difusão teria de passar por um canal compartilhado
+  (por exemplo `LISTEN/NOTIFY` do PostgreSQL).
+
+O efeito dos clientes de eventos sobre a ingestão foi medido; os números estão em
+[`teste-de-carga.md`](teste-de-carga.md#eventos-ao-vivo-e-ingestão-12112026).
 
 ## Ambiente
 

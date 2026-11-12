@@ -2,6 +2,7 @@ package br.senai.predictspin.seguranca;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -31,6 +32,16 @@ class AcessoPorPapelIntegracaoTest extends IntegracaoBase {
         mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId + "/coleta/cobertura"), operador))
                 .andExpect(status().isForbidden());
         mvc.perform(comToken(get("/api/v1/usuarios"), operador)).andExpect(status().isForbidden());
+
+        // leitura do painel: janelas completas, série agregada e detalhe da máquina
+        mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId), operador)).andExpect(status().isOk());
+        mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId + "/janelas"), operador)).andExpect(status().isOk());
+        mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId + "/serie"), operador)).andExpect(status().isOk());
+        // coleta e replay de ensaio continuam restritos
+        mvc.perform(comToken(put("/api/v1/maquinas/" + maquinaId + "/coleta/plano"), operador)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"rotacoes_rpm\":[280]}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(comToken(get("/api/v1/ensaios/1/janelas"), operador)).andExpect(status().isForbidden());
     }
 
     @Test

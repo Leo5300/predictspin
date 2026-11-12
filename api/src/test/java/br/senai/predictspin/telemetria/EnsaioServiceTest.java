@@ -16,6 +16,7 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
@@ -38,6 +39,7 @@ class EnsaioServiceTest {
     private MaquinaRepository maquinas;
     private DispositivoRepository dispositivos;
     private RelogioAjustavel relogio;
+    private ApplicationEventPublisher anuncios;
     private Maquina torno;
     private EnsaioService servico;
 
@@ -48,6 +50,7 @@ class EnsaioServiceTest {
         maquinas = mock(MaquinaRepository.class);
         dispositivos = mock(DispositivoRepository.class);
         relogio = new RelogioAjustavel(INICIO);
+        anuncios = mock(ApplicationEventPublisher.class);
         torno = mock(Maquina.class);
         when(torno.getId()).thenReturn(MAQUINA);
         when(torno.getCodigo()).thenReturn("TORNO-01");
@@ -58,7 +61,7 @@ class EnsaioServiceTest {
         when(ensaios.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
         when(dispositivos.contarAtivos(MAQUINA)).thenReturn(2L);
         when(dispositivos.contarReaisAtivos(MAQUINA)).thenReturn(1L);
-        servico = new EnsaioService(ensaios, janelas, maquinas, dispositivos, relogio);
+        servico = new EnsaioService(ensaios, janelas, maquinas, dispositivos, anuncios, relogio);
     }
 
     private static NovoEnsaioRequisicao pedido(Boolean simulado) {
@@ -188,6 +191,7 @@ class EnsaioServiceTest {
     @Test
     void listarECoberturaEmMaquinaInexistenteSao404() {
         when(maquinas.existsById(99L)).thenReturn(false);
+        when(maquinas.findById(99L)).thenReturn(Optional.empty());
         var filtro = new EnsaioService.Filtro(null, null, null, null, null);
         assertThatThrownBy(() -> servico.listar(99L, filtro, PageRequest.of(0, 10)))
                 .isInstanceOf(RecursoNaoEncontradoException.class);
@@ -240,6 +244,7 @@ class EnsaioServiceTest {
 
         int combinacoes = Etapa.values().length * Condicao.values().length * 2;
         assertThat(c.rotacoesRpm()).containsExactly(800, 1200);
+        assertThat(c.origemRotacoes()).isEqualTo(CoberturaResposta.OrigemRotacoes.PARAMETRO);
         assertThat(c.combinacoes()).isEqualTo(combinacoes);
         assertThat(c.itens()).hasSize(combinacoes);
         assertThat(c.combinacoesCompletas()).isEqualTo(2);
@@ -260,8 +265,47 @@ class EnsaioServiceTest {
         CoberturaResposta c = servico.cobertura(MAQUINA, null, 1, List.of());
 
         assertThat(c.rotacoesRpm()).containsExactly(400, 1600);
+        assertThat(c.origemRotacoes()).isEqualTo(CoberturaResposta.OrigemRotacoes.USADAS);
         assertThat(c.combinacoesCompletas()).isZero();
         assertThat(c.ensaiosFaltantes()).isEqualTo(c.combinacoes());
+    }
+
+    @Test
+    void coberturaSemRotacoesInformadasUsaOPlanoDeColetaQuandoExiste() {
+        when(torno.getRotacoesColetaRpm()).thenReturn(List.of(280, 1120, 560));
+        when(ensaios.cobertura(MAQUINA, false)).thenReturn(List.of(linha(Etapa.T1, Condicao.NORMAL, 560, 1L)));
+
+        CoberturaResposta c = servico.cobertura(MAQUINA, false, 1, null);
+
+        assertThat(c.rotacoesRpm()).containsExactly(280, 560, 1120);
+        assertThat(c.origemRotacoes()).isEqualTo(CoberturaResposta.OrigemRotacoes.PLANO);
+        assertThat(item(c, Etapa.T1, Condicao.NORMAL, 560).faltam()).isZero();
+        verify(ensaios, never()).rotacoesUsadas(any(), any());
+    }
+
+    @Test
+    void rotacoesDaConsultaVencemOPlano() {
+        when(torno.getRotacoesColetaRpm()).thenReturn(List.of(280, 560));
+        when(ensaios.cobertura(MAQUINA, null)).thenReturn(List.of());
+
+        CoberturaResposta c = servico.cobertura(MAQUINA, null, 1, List.of(900));
+
+        assertThat(c.rotacoesRpm()).containsExactly(900);
+        assertThat(c.origemRotacoes()).isEqualTo(CoberturaResposta.OrigemRotacoes.PARAMETRO);
+    }
+
+    @Test
+    void abrirEncerrarEDescartarAnunciamAMudanca() {
+        var aberto = servico.abrir(MAQUINA, pedido(true));
+        verify(anuncios).publishEvent(new EnsaioAlterado(EnsaioAlterado.Acao.ABERTO, aberto));
+
+        Ensaio emCurso = ensaio(true);
+        when(ensaios.findById(5L)).thenReturn(Optional.of(emCurso));
+        var encerrado = servico.encerrar(5L);
+        verify(anuncios).publishEvent(new EnsaioAlterado(EnsaioAlterado.Acao.ENCERRADO, encerrado));
+
+        var descartado = servico.descartar(5L);
+        verify(anuncios).publishEvent(new EnsaioAlterado(EnsaioAlterado.Acao.DESCARTADO, descartado));
     }
 
     private static CoberturaResposta.Item item(CoberturaResposta c, Etapa etapa, Condicao condicao, int rotacao) {

@@ -59,6 +59,13 @@ predictspin:
       max-tentativas-ip: ${LOGIN_MAX_TENTATIVAS_IP:20}
       janela-segundos: ${LOGIN_JANELA_SEGUNDOS:900}
     dispositivo-sal: ${DEVICE_CREDENTIAL_SALT:}
+  # Eventos ao vivo (SSE): limites pensados para a instância de 0,1 CPU e 512 MB
+  eventos:
+    max-por-usuario: ${EVENTOS_MAX_POR_USUARIO:4}
+    max-total: ${EVENTOS_MAX_TOTAL:20}
+    batimento: 15s
+    fila-por-assinante: 64
+    duracao-maxima: 30m
   carga-inicial:
     maquina-codigo: TORNO-01
     admin-nome: ${ADMIN_NOME:Administrador}

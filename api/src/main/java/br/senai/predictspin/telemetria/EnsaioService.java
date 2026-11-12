@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeSet;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,14 +42,16 @@ public class EnsaioService {
     private final JanelaRepository janelas;
     private final MaquinaRepository maquinas;
     private final DispositivoRepository dispositivos;
+    private final ApplicationEventPublisher anuncios;
     private final Clock relogio;
 
     public EnsaioService(EnsaioRepository ensaios, JanelaRepository janelas, MaquinaRepository maquinas,
-                         DispositivoRepository dispositivos, Clock relogio) {
+                         DispositivoRepository dispositivos, ApplicationEventPublisher anuncios, Clock relogio) {
         this.ensaios = ensaios;
         this.janelas = janelas;
         this.maquinas = maquinas;
         this.dispositivos = dispositivos;
+        this.anuncios = anuncios;
         this.relogio = relogio;
     }
 
@@ -66,7 +69,7 @@ public class EnsaioService {
                 req.rotacaoAlvoRpm(), req.avancoAlvo(), Objects.requireNonNullElse(req.repeticao(), 1),
                 vazioParaNulo(req.observacao()), simulado, relogio.instant());
         // flush imediato: se outra requisição abriu ensaio ao mesmo tempo, o índice único responde 409 aqui
-        return EnsaioResposta.de(ensaios.saveAndFlush(ensaio));
+        return anunciar(EnsaioAlterado.Acao.ABERTO, EnsaioResposta.de(ensaios.saveAndFlush(ensaio)));
     }
 
     @Transactional
@@ -76,7 +79,7 @@ public class EnsaioService {
             throw new ConflitoException("O ensaio " + ensaio.getCodigo() + " já está encerrado");
         }
         ensaio.encerrar(relogio.instant());
-        return EnsaioResposta.de(ensaio);
+        return anunciar(EnsaioAlterado.Acao.ENCERRADO, EnsaioResposta.de(ensaio));
     }
 
     @Transactional
@@ -86,7 +89,7 @@ public class EnsaioService {
             throw new ConflitoException("O ensaio " + ensaio.getCodigo() + " já está descartado");
         }
         ensaio.descartar(relogio.instant());
-        return EnsaioResposta.de(ensaio);
+        return anunciar(EnsaioAlterado.Acao.DESCARTADO, EnsaioResposta.de(ensaio));
     }
 
     @Transactional(readOnly = true)
@@ -118,16 +121,27 @@ public class EnsaioService {
 
     /**
      * Grade etapa × condição × rotação com a contagem de ensaios válidos e quanto falta para a meta.
-     * Sem rotações informadas, usa as rotações alvo já usadas em ensaios da máquina.
+     * Sem rotações informadas, usa o plano de coleta da máquina; se o plano estiver vazio, as
+     * rotações alvo já usadas em ensaios da máquina.
      */
     @Transactional(readOnly = true)
     public CoberturaResposta cobertura(Long maquinaId, Boolean simulado, int meta, List<Integer> rotacoes) {
-        if (!maquinas.existsById(maquinaId)) {
-            throw new RecursoNaoEncontradoException("Máquina " + maquinaId + " não encontrada");
+        Maquina maquina = maquinas.findById(maquinaId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Máquina " + maquinaId + " não encontrada"));
+        List<Integer> plano = maquina.getRotacoesColetaRpm();
+        CoberturaResposta.OrigemRotacoes origem;
+        List<Integer> escolhidas;
+        if (rotacoes != null && !rotacoes.isEmpty()) {
+            origem = CoberturaResposta.OrigemRotacoes.PARAMETRO;
+            escolhidas = rotacoes;
+        } else if (plano != null && !plano.isEmpty()) {
+            origem = CoberturaResposta.OrigemRotacoes.PLANO;
+            escolhidas = plano;
+        } else {
+            origem = CoberturaResposta.OrigemRotacoes.USADAS;
+            escolhidas = ensaios.rotacoesUsadas(maquinaId, simulado);
         }
-        List<Integer> grade = new ArrayList<>(new TreeSet<>(rotacoes == null || rotacoes.isEmpty()
-                ? ensaios.rotacoesUsadas(maquinaId, simulado)
-                : rotacoes));
+        List<Integer> grade = new ArrayList<>(new TreeSet<>(escolhidas));
 
         Map<String, Long> contagem = new HashMap<>();
         for (EnsaioRepository.LinhaCobertura linha : ensaios.cobertura(maquinaId, simulado)) {
@@ -152,8 +166,14 @@ public class EnsaioService {
                 }
             }
         }
-        return new CoberturaResposta(maquinaId, simulado, meta, grade, itens.size(), completas, validos, faltantes,
-                itens);
+        return new CoberturaResposta(maquinaId, simulado, meta, grade, origem, itens.size(), completas, validos,
+                faltantes, itens);
+    }
+
+    /** Anuncia a mudança para o fluxo de eventos ao vivo (entregue só depois do commit). */
+    private EnsaioResposta anunciar(EnsaioAlterado.Acao acao, EnsaioResposta ensaio) {
+        anuncios.publishEvent(new EnsaioAlterado(acao, ensaio));
+        return ensaio;
     }
 
     private boolean somenteSimuladosAtivos(Long maquinaId) {

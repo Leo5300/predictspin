@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,10 +24,12 @@ public class ModoRapidoService {
     public static final Duration DURACAO = Duration.ofMinutes(2);
 
     private final MaquinaRepository maquinas;
+    private final ApplicationEventPublisher anuncios;
     private final Clock relogio;
 
-    public ModoRapidoService(MaquinaRepository maquinas, Clock relogio) {
+    public ModoRapidoService(MaquinaRepository maquinas, ApplicationEventPublisher anuncios, Clock relogio) {
         this.maquinas = maquinas;
+        this.anuncios = anuncios;
         this.relogio = relogio;
     }
 
@@ -34,13 +37,13 @@ public class ModoRapidoService {
     public ModoRapidoResposta ligar(Long maquinaId) {
         Instant ate = relogio.instant().plus(DURACAO).truncatedTo(ChronoUnit.MICROS);
         gravar(maquinaId, ate);
-        return new ModoRapidoResposta(maquinaId, true, ate);
+        return anunciar(new ModoRapidoResposta(maquinaId, true, ate));
     }
 
     @Transactional
     public ModoRapidoResposta desligar(Long maquinaId) {
         gravar(maquinaId, null);
-        return new ModoRapidoResposta(maquinaId, false, null);
+        return anunciar(new ModoRapidoResposta(maquinaId, false, null));
     }
 
     @Transactional(readOnly = true)
@@ -57,6 +60,12 @@ public class ModoRapidoService {
     public Instant vigente(Long maquinaId) {
         Instant agora = relogio.instant();
         return maquinas.modoRapidoAte(maquinaId).filter(ate -> ate.isAfter(agora)).orElse(null);
+    }
+
+    /** Anuncia a mudança para o fluxo de eventos ao vivo (entregue só depois do commit). */
+    private ModoRapidoResposta anunciar(ModoRapidoResposta estado) {
+        anuncios.publishEvent(new ModoRapidoAlterado(estado));
+        return estado;
     }
 
     private void gravar(Long maquinaId, Instant ate) {

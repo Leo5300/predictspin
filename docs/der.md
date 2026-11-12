@@ -1,6 +1,6 @@
 # Modelo de dados — DER v3
 
-Data: 10/11/2026, com a migração V3 de 11/11/2026 · PostgreSQL 16 · Implementado em
+Data: 10/11/2026, com as migrações V3 (11/11/2026) e V4 (12/11/2026) · PostgreSQL 16 · Implementado em
 [`api/src/main/resources/db/migration`](../api/src/main/resources/db/migration) (Flyway)
 
 ## O que mudou da v2 para a v3
@@ -47,6 +47,21 @@ antigo:
 - **`MAQUINA`** ganhou `modo_rapido_ate`: até quando a máquina está em modo rápido (nulo ou no
   passado = normal).
 
+## O que mudou com a migração V4 (12/11/2026)
+
+A migração `V4__plano_de_coleta.sql` dá à máquina o plano de coleta:
+
+- **`MAQUINA.rotacoes_nominais_rpm`** (`integer[]`): as rotações que a máquina oferece. Para o
+  `TORNO-01`: 45, 71, 90, 112, 140, 180, 224, 265, 280, 355, 450, 560, 710, 900, 1120, 1400, 1800 e
+  2240 rpm, lidas da tabela da máquina. **O valor 265 ainda será conferido na placa do torno.**
+- **`MAQUINA.rotacoes_coleta_rpm`** (`integer[]`): as rotações escolhidas para a grade de cobertura
+  da coleta. Começa vazia; é gravada por `PUT /api/v1/maquinas/{id}/coleta/plano`, sem repetição e
+  em ordem crescente.
+
+As duas listas aparecem em `MaquinaResposta`. A cobertura (`GET .../coleta/cobertura`), quando a
+consulta não informa `rotacoes`, usa o plano; se o plano estiver vazio, usa as rotações alvo dos
+ensaios já feitos. O campo `origem_rotacoes` da resposta diz qual das três foi usada.
+
 ## Diagrama
 
 ```mermaid
@@ -89,6 +104,8 @@ erDiagram
         date data_instalacao
         boolean ativa
         timestamptz modo_rapido_ate
+        integer_array rotacoes_nominais_rpm
+        integer_array rotacoes_coleta_rpm
     }
     PONTO_MEDICAO {
         bigint id PK
@@ -320,6 +337,9 @@ só se ainda não existirem — assim nenhuma senha ou chave fica no repositóri
 ## Controle de N+1
 
 Listagens de máquina com local usam `JOIN FETCH` explícito; séries de telemetria usam projeção
-direta para DTO; a última janela busca janela, pontos e canais em três consultas fixas.
+direta para DTO; a última janela busca janela, pontos e canais em três consultas fixas. As
+listagens de janelas completas buscam as telemetrias e as leituras de toda a página de uma vez
+(`IN` dos ids), e um teste confere que o número de comandos é o mesmo com 3 ou com 40 janelas. A
+série agregada é uma única consulta SQL.
 `spring.jpa.open-in-view` está desligado, para que acesso preguiçoso fora da transação falhe em
 desenvolvimento em vez de gerar consultas silenciosas em produção.

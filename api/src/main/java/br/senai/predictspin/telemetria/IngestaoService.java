@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +35,8 @@ import br.senai.predictspin.telemetria.dto.TelemetriaRequisicao;
  *   <li>pontos e canais têm de existir (e estar ativos) na máquina do dispositivo;</li>
  *   <li>reenvio do mesmo (dispositivo, medido_em) não grava nada e devolve a janela existente;</li>
  *   <li>se houver ensaio aberto na máquina, do mesmo tipo (real ou simulado) do dispositivo,
- *       a janela é gravada com ele.</li>
+ *       a janela é gravada com ele;</li>
+ *   <li>janela nova é anunciada ({@link JanelaGravada}) para o fluxo de eventos ao vivo; reenvio não.</li>
  * </ul>
  */
 @Service
@@ -56,17 +58,19 @@ public class IngestaoService {
     private final DispositivoRepository dispositivos;
     private final EnsaioRepository ensaios;
     private final ModoRapidoService modoRapido;
+    private final ApplicationEventPublisher anuncios;
     private final Clock relogio;
 
     public IngestaoService(IngestaoRepository ingestao, PontoMedicaoRepository pontos, CanalRepository canais,
                            DispositivoRepository dispositivos, EnsaioRepository ensaios, ModoRapidoService modoRapido,
-                           Clock relogio) {
+                           ApplicationEventPublisher anuncios, Clock relogio) {
         this.ingestao = ingestao;
         this.pontos = pontos;
         this.canais = canais;
         this.dispositivos = dispositivos;
         this.ensaios = ensaios;
         this.modoRapido = modoRapido;
+        this.anuncios = anuncios;
         this.relogio = relogio;
     }
 
@@ -108,6 +112,8 @@ public class IngestaoService {
         if (!leituras.isEmpty()) {
             ingestao.inserirLeituras(janelaId, leituras);
         }
+        // Só anuncia: quem escuta age depois do commit e fora desta thread (eventos ao vivo do painel)
+        anuncios.publishEvent(new JanelaGravada(dispositivo.maquinaId(), janelaId));
         return new Resultado(new IngestaoResposta(janelaId, false, ensaioId, medidoEm, modoRapidoAte));
     }
 

@@ -131,7 +131,8 @@ Um usuário logado (qualquer papel) pede janelas de 1 s para ver a máquina quas
 O prazo fica gravado em `MAQUINA.modo_rapido_ate`, e não em memória: vale para todos os
 dispositivos da máquina e sobrevive a um reinício da API. O dispositivo descobre o modo pela resposta
 da ingestão. Recebendo `modo_rapido_ate` no futuro, passa a janelas de 1 s com `"modo": "rapido"` até
-esse instante e volta sozinho a 5 s. A notificação ao painel (SSE) ainda não existe.
+esse instante e volta sozinho a 5 s. O painel é avisado pelo evento `modo_rapido` do fluxo
+`GET /api/v1/maquinas/{id}/eventos` (ver [`arquitetura.md`](arquitetura.md#eventos-ao-vivo-sse)).
 
 ## Recomendações para o firmware
 

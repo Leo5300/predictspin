@@ -44,6 +44,8 @@ class MaquinaServiceTest {
         when(torno.getLocal()).thenReturn(local);
         when(maquinas.findById(1L)).thenReturn(Optional.of(torno));
         when(maquinas.findById(99L)).thenReturn(Optional.empty());
+        when(maquinas.buscarComLocal(1L)).thenReturn(Optional.of(torno));
+        when(maquinas.buscarComLocal(99L)).thenReturn(Optional.empty());
         servico = new MaquinaService(maquinas, pontos, dispositivos);
     }
 
@@ -101,5 +103,27 @@ class MaquinaServiceTest {
                 .isInstanceOf(RecursoNaoEncontradoException.class);
         assertThatThrownBy(() -> servico.exigirMaquina(99L)).isInstanceOf(RecursoNaoEncontradoException.class);
         assertThat(servico.exigirMaquina(1L)).isSameAs(torno);
+    }
+
+    @Test
+    void buscaUmaMaquinaComRotacoesNominaisEPlano() {
+        when(torno.getRotacoesNominaisRpm()).thenReturn(List.of(45, 71, 90));
+        when(torno.getRotacoesColetaRpm()).thenReturn(List.of(71));
+
+        var maquina = servico.buscar(1L);
+
+        assertThat(maquina.codigo()).isEqualTo("TORNO-01");
+        assertThat(maquina.rotacoesNominaisRpm()).containsExactly(45, 71, 90);
+        assertThat(maquina.rotacoesColetaRpm()).containsExactly(71);
+        assertThatThrownBy(() -> servico.buscar(99L)).isInstanceOf(RecursoNaoEncontradoException.class);
+    }
+
+    @Test
+    void planoDeColetaEhGravadoNaMaquina() {
+        servico.definirPlanoDeColeta(1L, List.of(560, 280, 560));
+
+        org.mockito.Mockito.verify(torno).definirRotacoesColeta(List.of(560, 280, 560));
+        assertThatThrownBy(() -> servico.definirPlanoDeColeta(99L, List.of(280)))
+                .isInstanceOf(RecursoNaoEncontradoException.class);
     }
 }

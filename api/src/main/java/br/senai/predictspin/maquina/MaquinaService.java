@@ -1,5 +1,7 @@
 package br.senai.predictspin.maquina;
 
+import java.util.List;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,18 @@ public class MaquinaService {
         return Pagina.de(maquinas.listarComLocal(pageable), MaquinaResposta::de);
     }
 
+    public MaquinaResposta buscar(Long maquinaId) {
+        return MaquinaResposta.de(exigirComLocal(maquinaId));
+    }
+
+    /** Grava as rotações da grade de cobertura (plano de coleta). Lista vazia limpa o plano. */
+    @Transactional
+    public MaquinaResposta definirPlanoDeColeta(Long maquinaId, List<Integer> rotacoes) {
+        Maquina maquina = exigirComLocal(maquinaId);
+        maquina.definirRotacoesColeta(rotacoes);
+        return MaquinaResposta.de(maquina);
+    }
+
     public Pagina<PontoResposta> listarPontos(Long maquinaId, Pageable pageable) {
         exigirMaquina(maquinaId);
         return Pagina.de(pontos.listarPorMaquina(maquinaId, pageable), PontoResposta::de);
@@ -36,6 +50,11 @@ public class MaquinaService {
     public Pagina<DispositivoResposta> listarDispositivos(Long maquinaId, Boolean simulado, Pageable pageable) {
         exigirMaquina(maquinaId);
         return Pagina.de(dispositivos.listarPorMaquina(maquinaId, simulado, pageable), DispositivoResposta::de);
+    }
+
+    private Maquina exigirComLocal(Long maquinaId) {
+        return maquinas.buscarComLocal(maquinaId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Máquina " + maquinaId + " não encontrada"));
     }
 
     public Maquina exigirMaquina(Long maquinaId) {
