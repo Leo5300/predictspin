@@ -1,5 +1,6 @@
 package br.senai.predictspin.telemetria.dto;
 
+import org.springframework.lang.Nullable;
 import java.math.BigDecimal;
 import java.time.Instant;
 
@@ -13,16 +14,16 @@ public record EnsaioResposta(
         String codigo,
         Etapa etapa,
         Condicao condicao,
-        String material,
+        @Nullable String material,
         Integer rotacaoAlvoRpm,
-        BigDecimal avancoAlvo,
+        @Nullable BigDecimal avancoAlvo,
         Integer repeticao,
-        String observacao,
+        @Nullable String observacao,
         boolean aberto,
         boolean descartado,
         boolean simulado,
         Instant iniciadoEm,
-        Instant encerradoEm) {
+        @Nullable Instant encerradoEm) {
 
     /** Lê só o id da máquina (não inicializa o proxy). */
     public static EnsaioResposta de(Ensaio e) {

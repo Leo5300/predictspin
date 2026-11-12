@@ -1,5 +1,6 @@
 package br.senai.predictspin.telemetria.dto;
 
+import org.springframework.lang.Nullable;
 import java.time.Instant;
 import java.util.Map;
 
@@ -20,10 +21,10 @@ public record UltimaJanelaResposta(
         @Schema(description = "normal (janela de 5 s) ou rapido (janela de 1 s)")
         ModoJanela modo,
         @Schema(description = "Menor número de amostras lidas entre os sensores; nulo se o dispositivo não informou")
-        Integer amostras,
-        Integer amostrasEsperadas,
-        Long ensaioId,
-        String ensaioCodigo,
+        @Nullable Integer amostras,
+        @Nullable Integer amostrasEsperadas,
+        @Nullable Long ensaioId,
+        @Nullable String ensaioCodigo,
         Map<String, Ponto> pontos,
         Map<String, Canal> canais) {
 

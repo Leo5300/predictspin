@@ -1,5 +1,6 @@
 package br.senai.predictspin.telemetria.dto;
 
+import org.springframework.lang.Nullable;
 import java.time.Instant;
 
 /** Uma linha da série temporal de um ponto de medição. */
@@ -9,7 +10,7 @@ public record TelemetriaPontoResposta(
         Instant recebidoEm,
         double rotacaoRpm,
         boolean saturou,
-        Long ensaioId,
+        @Nullable Long ensaioId,
         String dispositivo,
         boolean simulado,
         double rmsG,

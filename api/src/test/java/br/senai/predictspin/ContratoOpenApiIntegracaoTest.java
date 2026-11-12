@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Instant;
@@ -28,11 +29,6 @@ import com.fasterxml.jackson.databind.JsonNode;
  * documento; se um lado mudar sem o outro, este teste quebra.
  */
 class ContratoOpenApiIntegracaoTest extends IntegracaoBase {
-
-    /** Propriedades que a API omite de propósito quando vazias ou nulas (JsonInclude). */
-    private static final Map<String, Set<String>> PODEM_FALTAR = Map.of(
-            "ErroResposta", Set.of("campos"),
-            "IngestaoResposta", Set.of("modo_rapido_ate"));
 
     private JsonNode documento;
     private String admin;
@@ -73,6 +69,29 @@ class ContratoOpenApiIntegracaoTest extends IntegracaoBase {
     }
 
     @Test
+    void respostasDizemOQueSempreVemEOQuePodeSerNulo() {
+        JsonNode esquemas = documento.at("/components/schemas");
+        // toda propriedade de resposta é obrigatória, menos as que a API omite
+        assertThat(valores(esquemas.at("/JanelaResposta/required"))).contains("id", "medido_em", "ensaio_id", "pontos");
+        assertThat(valores(esquemas.at("/PaginaMaquinaResposta/required")))
+                .containsExactlyInAnyOrder("conteudo", "pagina", "tamanho", "total_elementos", "total_paginas");
+        assertThat(valores(esquemas.at("/ErroResposta/required")))
+                .containsExactlyInAnyOrder("timestamp", "status", "erro", "mensagem", "caminho");
+        assertThat(valores(esquemas.at("/IngestaoResposta/required"))).doesNotContain("modo_rapido_ate");
+        // nulo só onde o dado pode faltar
+        assertThat(valores(esquemas.at("/JanelaResposta/properties/ensaio_id/type"))).contains("null");
+        assertThat(valores(esquemas.at("/JanelaResposta/properties/amostras/type"))).contains("null");
+        assertThat(esquemas.at("/JanelaResposta/properties/medido_em/type").asText()).isEqualTo("string");
+        assertThat(valores(esquemas.at("/ModoRapidoResposta/properties/modo_rapido_ate/type"))).contains("null");
+        assertThat(valores(esquemas.at("/SerieIntervalo/properties/rotacao_media_rpm/type"))).contains("null");
+        assertThat(esquemas.at("/JanelaPonto/properties/rms_g/type").asText()).isEqualTo("number");
+        // a marca interna não vaza para o documento
+        assertThat(documento.toString()).doesNotContain("x-opcional").doesNotContain("x-nulo");
+        // requisições seguem a validação
+        assertThat(valores(esquemas.at("/LoginRequisicao/required"))).containsExactlyInAnyOrder("email", "senha");
+    }
+
+    @Test
     void respostasSaoJsonTipadoEOCsvETextoCsv() {
         JsonNode maquinas = documento.at("/paths/~1api~1v1~1maquinas/get/responses/200/content");
         assertThat(maquinas.has("application/json")).isTrue();
@@ -94,6 +113,21 @@ class ContratoOpenApiIntegracaoTest extends IntegracaoBase {
                 "id", "de", "ate", "simulado", "page", "size");
         assertThat(nomesDosParametros("/api/v1/maquinas/{id}/coleta/cobertura", "get")).containsExactlyInAnyOrder(
                 "id", "simulado", "meta", "rotacoes");
+        assertThat(nomesDosParametros("/api/v1/maquinas/{id}/janelas", "get")).containsExactlyInAnyOrder(
+                "id", "de", "ate", "simulado", "modo", "ordem", "page", "size");
+        assertThat(nomesDosParametros("/api/v1/maquinas/{id}/serie", "get")).containsExactlyInAnyOrder(
+                "id", "de", "ate", "simulado", "baldes");
+        assertThat(nomesDosParametros("/api/v1/maquinas/{id}/eventos", "get")).containsExactlyInAnyOrder(
+                "id", "simulado");
+        JsonNode ordem = documento.at("/paths/~1api~1v1~1maquinas~1{id}~1janelas/get/parameters");
+        ordem.forEach(parametro -> {
+            if (parametro.get("name").asText().equals("ordem")) {
+                assertThat(valores(parametro.at("/schema/enum"))).containsExactly("asc", "desc");
+            }
+            if (parametro.get("name").asText().equals("modo")) {
+                assertThat(valores(parametro.at("/schema/enum"))).containsExactly("normal", "rapido");
+            }
+        });
     }
 
     @Test
@@ -189,6 +223,49 @@ class ContratoOpenApiIntegracaoTest extends IntegracaoBase {
     }
 
     @Test
+    void janelasSerieMaquinaEPlanoDeColeta() throws Exception {
+        long ensaioId = corpo(mvc.perform(comToken(post("/api/v1/maquinas/" + maquinaId + "/ensaios"), admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"etapa\":\"T1\",\"condicao\":\"normal\",\"rotacao_alvo_rpm\":900,\"simulado\":true}"))
+                .andExpect(status().isCreated())).get("id").asLong();
+        Map<String, Object> completa = payload(DISPOSITIVO_SIM, base);
+        completa.put("modo", "normal");
+        completa.put("amostras", 8000);
+        completa.put("amostras_esperadas", 8000);
+        enviar(DISPOSITIVO_SIM, CHAVE_SIM, completa).andExpect(status().isCreated());
+
+        conferir("/api/v1/maquinas/{id}/janelas", "get", 200,
+                mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId + "/janelas"), admin)));
+        conferir("/api/v1/ensaios/{id}/janelas", "get", 200,
+                mvc.perform(comToken(get("/api/v1/ensaios/" + ensaioId + "/janelas"), admin)));
+        conferir("/api/v1/maquinas/{id}/serie", "get", 200, mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId
+                + "/serie?baldes=2&de=" + base.minusSeconds(60) + "&ate=" + base.plusSeconds(60)), admin)));
+        conferir("/api/v1/maquinas/{id}", "get", 200,
+                mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId), admin)));
+        conferir("/api/v1/maquinas/{id}/coleta/plano", "put", 200,
+                mvc.perform(comToken(put("/api/v1/maquinas/" + maquinaId + "/coleta/plano"), admin)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"rotacoes_rpm\":[280,560]}")));
+        jdbc.update("UPDATE maquina SET rotacoes_coleta_rpm = '{}'");
+    }
+
+    @Test
+    void fluxoDeEventosEDocumentadoComOsEsquemasDosEventos() {
+        JsonNode eventos = documento.at("/paths/~1api~1v1~1maquinas~1{id}~1eventos/get");
+        assertThat(eventos.at("/responses/200/content").fieldNames()).toIterable().containsExactly("text/event-stream");
+        assertThat(eventos.at("/responses/429/content/application~1json/schema/$ref").asText())
+                .isEqualTo("#/components/schemas/ErroResposta");
+        JsonNode esquemas = documento.at("/components/schemas");
+        assertThat(esquemas.has("JanelaResposta")).isTrue();
+        assertThat(esquemas.has("ModoRapidoResposta")).isTrue();
+        assertThat(valores(esquemas.at("/EnsaioEvento/properties/acao/enum")))
+                .containsExactly("aberto", "encerrado", "descartado");
+        assertThat(esquemas.at("/EnsaioEvento/properties/ensaio/$ref").asText())
+                .isEqualTo("#/components/schemas/EnsaioResposta");
+        assertThat(valores(esquemas.at("/CoberturaResposta/properties/origem_rotacoes/enum")))
+                .containsExactly("parametro", "plano", "usadas");
+    }
+
+    @Test
     void modoRapido() throws Exception {
         String rota = "/api/v1/maquinas/" + maquinaId + "/modo-rapido";
         conferir("/api/v1/maquinas/{id}/modo-rapido", "post", 200, mvc.perform(comToken(post(rota), admin)));
@@ -229,7 +306,13 @@ class ContratoOpenApiIntegracaoTest extends IntegracaoBase {
     }
 
     private void comparar(JsonNode valor, JsonNode esquema, String onde, String nomeEsquema, List<String> diferencas) {
-        if (valor == null || valor.isNull() || esquema == null) {
+        if (valor == null || esquema == null) {
+            return;
+        }
+        if (valor.isNull()) {
+            if (!permiteNulo(esquema)) {
+                diferencas.add(onde + ": veio nulo, o documento não permite nulo");
+            }
             return;
         }
         if (esquema.has("$ref")) {
@@ -280,20 +363,35 @@ class ContratoOpenApiIntegracaoTest extends IntegracaoBase {
 
         Set<String> soNoJson = new TreeSet<>(reais);
         soNoJson.removeAll(declaradas);
-        Set<String> soNoDocumento = new TreeSet<>(declaradas);
-        soNoDocumento.removeAll(reais);
-        soNoDocumento.removeAll(PODEM_FALTAR.getOrDefault(nomeEsquema == null ? "" : nomeEsquema, Set.of()));
+        // só pode faltar no JSON o que o documento não marca como obrigatório
+        Set<String> obrigatoriasAusentes = new TreeSet<>();
+        if (esquema.has("required")) {
+            esquema.get("required").forEach(nome -> obrigatoriasAusentes.add(nome.asText()));
+        }
+        obrigatoriasAusentes.removeAll(reais);
         if (!soNoJson.isEmpty()) {
             diferencas.add(onde + ": chaves no JSON que o documento não declara: " + soNoJson);
         }
-        if (!soNoDocumento.isEmpty()) {
-            diferencas.add(onde + ": propriedades do documento ausentes no JSON: " + soNoDocumento);
+        if (!obrigatoriasAusentes.isEmpty()) {
+            diferencas.add(onde + ": propriedades obrigatórias do documento ausentes no JSON: " + obrigatoriasAusentes);
         }
         for (String chave : reais) {
             if (declaradas.contains(chave)) {
                 comparar(valor.get(chave), propriedades.get(chave), onde + "." + chave, null, diferencas);
             }
         }
+    }
+
+    private static boolean permiteNulo(JsonNode esquema) {
+        JsonNode tipo = esquema.get("type");
+        if (tipo != null && tipo.isArray()) {
+            for (JsonNode t : tipo) {
+                if ("null".equals(t.asText())) {
+                    return true;
+                }
+            }
+        }
+        return esquema.path("nullable").asBoolean(false);
     }
 
     private List<String> nomesDosParametros(String rota, String metodo) {

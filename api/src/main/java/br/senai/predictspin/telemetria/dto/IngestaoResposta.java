@@ -1,5 +1,6 @@
 package br.senai.predictspin.telemetria.dto;
 
+import org.springframework.lang.Nullable;
 import java.time.Instant;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -11,7 +12,7 @@ public record IngestaoResposta(
         @Schema(description = "true quando a janela já tinha sido recebida: nada foi gravado de novo")
         boolean duplicada,
         @Schema(description = "Ensaio ao qual a janela foi associada, se havia ensaio aberto")
-        Long ensaioId,
+        @Nullable Long ensaioId,
         Instant medidoEm,
         @Schema(description = "Só aparece enquanto a máquina estiver em modo rápido: até quando o dispositivo deve "
                 + "mandar janelas de 1 s (UTC)", example = "2026-11-11T12:02:00Z",
