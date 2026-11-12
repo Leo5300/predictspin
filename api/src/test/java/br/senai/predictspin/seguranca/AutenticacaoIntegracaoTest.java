@@ -3,6 +3,7 @@ package br.senai.predictspin.seguranca;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -122,5 +123,47 @@ class AutenticacaoIntegracaoTest extends IntegracaoBase {
                 .andExpect(header().string("X-Content-Type-Options", "nosniff"))
                 .andExpect(header().string("X-Frame-Options", "DENY"))
                 .andExpect(header().string("Referrer-Policy", "no-referrer"));
+    }
+
+    @Test
+    void euDevolveOUsuarioDoTokenERecusaSemToken() throws Exception {
+        mvc.perform(comToken(get("/api/v1/auth/eu"), tokenAdmin()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(ADMIN_EMAIL))
+                .andExpect(jsonPath("$.papel").value("ADMIN"))
+                .andExpect(jsonPath("$.ativo").value(true))
+                .andExpect(jsonPath("$.senha_hash").doesNotExist());
+
+        mvc.perform(get("/api/v1/auth/eu"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401));
+        mvc.perform(comToken(get("/api/v1/auth/eu"), "token-invalido")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void euRecusaTokenDeUsuarioDesativadoDepoisDoLogin() throws Exception {
+        String operador = tokenDe("OPERADOR");
+        mvc.perform(comToken(get("/api/v1/auth/eu"), operador)).andExpect(status().isOk());
+
+        jdbc.update("UPDATE usuario SET ativo = false WHERE papel = 'OPERADOR'");
+
+        mvc.perform(comToken(get("/api/v1/auth/eu"), operador))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.mensagem").value("Sessão inválida: entre novamente"));
+    }
+
+    @Test
+    void corsLiberaAOrigemDoPainelERecusaOutra() throws Exception {
+        mvc.perform(options("/api/v1/maquinas")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "GET")
+                        .header("Access-Control-Request-Headers", "authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
+
+        mvc.perform(options("/api/v1/maquinas")
+                        .header("Origin", "http://outro.exemplo")
+                        .header("Access-Control-Request-Method", "GET"))
+                .andExpect(status().isForbidden());
     }
 }

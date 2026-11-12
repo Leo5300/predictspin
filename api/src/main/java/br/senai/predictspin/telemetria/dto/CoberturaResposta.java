@@ -23,6 +23,7 @@ public record CoberturaResposta(
         long ensaiosFaltantes,
         List<Item> itens) {
 
+    @Schema(name = "CoberturaItem")
     public record Item(Etapa etapa, Condicao condicao,
                        @Schema(description = "treino (rótulo da classificação) ou validacao (conferência de alerta, "
                                + "nunca classe de treino)")

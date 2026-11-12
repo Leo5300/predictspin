@@ -27,10 +27,12 @@ public record UltimaJanelaResposta(
         Map<String, Ponto> pontos,
         Map<String, Canal> canais) {
 
+    @Schema(name = "JanelaPonto", description = "Características de vibração de um ponto na janela")
     public record Ponto(Long pontoId, String papel, String descricao, double rmsG, double picoG, double curtose,
                         double o1x, double o2x, double o3x) {
     }
 
+    @Schema(name = "JanelaCanal", description = "Leitura de um canal auxiliar na janela")
     public record Canal(double valor, String unidade, String grandeza) {
     }
 }

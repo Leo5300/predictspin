@@ -81,7 +81,7 @@ ser trocada depois de criada; para usar outra, edite `region` nos dois blocos an
 | `DEVICE_CREDENTIAL_SALT` | você | sal do hash das chaves de dispositivo |
 | `DISPOSITIVO_TORNO_CHAVE` | você | chave do ESP32 (`ps-torno-01`); a mesma vai gravada no firmware |
 | `DISPOSITIVO_SIM_CHAVE` | você | chave do simulador (`ps-sim-01`) |
-| `CORS_ORIGENS` | você | endereço do painel web, por exemplo `https://painel.exemplo.com`; enquanto não houver painel, use `http://localhost:3000` |
+| `CORS_ORIGENS` | você | endereço do painel web publicado, por exemplo `https://painel.exemplo.com`; várias origens separadas por vírgula. Sem a variável, o padrão libera só `http://localhost:3000` e `http://localhost:5173` (painel em desenvolvimento) |
 
 As demais variáveis de [`.env.example`](../.env.example) têm padrão adequado e não precisam ser
 declaradas (`JWT_EXPIRATION_MS`, `LOGIN_MAX_TENTATIVAS_EMAIL`, `LOGIN_MAX_TENTATIVAS_IP`,

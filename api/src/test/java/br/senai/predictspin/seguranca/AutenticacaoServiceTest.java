@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import br.senai.predictspin.comum.CredenciaisInvalidasException;
 import br.senai.predictspin.comum.MuitasTentativasException;
+import br.senai.predictspin.comum.SessaoInvalidaException;
 import br.senai.predictspin.seguranca.dto.LoginRequisicao;
 
 class AutenticacaoServiceTest {
@@ -94,5 +95,25 @@ class AutenticacaoServiceTest {
         assertThatThrownBy(() -> servico.entrar(new LoginRequisicao("ana@x.com", "certa"), "1.1.1.1"))
                 .isInstanceOf(MuitasTentativasException.class);
         verify(usuarios, never()).findByEmail(anyString());
+    }
+
+    @Test
+    void euDevolveOUsuarioAtivoDoToken() {
+        when(usuarios.findById(7L)).thenReturn(Optional.of(ana));
+
+        var resposta = servico.eu(7L);
+
+        assertThat(resposta.email()).isEqualTo("ana@x.com");
+        assertThat(resposta.papel()).isEqualTo(Papel.TECNICO);
+    }
+
+    @Test
+    void euRecusaUsuarioInexistenteOuDesativado() {
+        when(usuarios.findById(8L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> servico.eu(8L)).isInstanceOf(SessaoInvalidaException.class);
+
+        ana.desativar();
+        when(usuarios.findById(7L)).thenReturn(Optional.of(ana));
+        assertThatThrownBy(() -> servico.eu(7L)).isInstanceOf(SessaoInvalidaException.class);
     }
 }

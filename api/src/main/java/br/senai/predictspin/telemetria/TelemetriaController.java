@@ -80,6 +80,7 @@ public class TelemetriaController {
 
     @GetMapping("/maquinas/{id}/ultima-janela")
     @Operation(summary = "Última janela da máquina: os pontos, os canais, a rotação e há quanto tempo chegou")
+    @ApiResponse(responseCode = "200", description = "Última janela recebida")
     @ApiResponse(responseCode = "404", description = "Máquina inexistente ou sem janela recebida")
     public UltimaJanelaResposta ultimaJanela(
             @PathVariable Long id,

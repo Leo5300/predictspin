@@ -158,7 +158,7 @@ Nenhum segredo fica no repositório. Tudo vem de variáveis de ambiente, listada
 | `PORT` | não | `8080` | porta HTTP da API |
 | `JWT_SECRET` | sim | | segredo do token, no mínimo 32 caracteres |
 | `JWT_EXPIRATION_MS` | não | `86400000` | validade do token (24 h) |
-| `CORS_ORIGENS` | não | `http://localhost:3000` | origens liberadas, separadas por vírgula |
+| `CORS_ORIGENS` | não | `http://localhost:3000,http://localhost:5173` | origens liberadas, separadas por vírgula; `5173` é a porta do painel em desenvolvimento (Vite) |
 | `LOGIN_MAX_TENTATIVAS_EMAIL`, `LOGIN_MAX_TENTATIVAS_IP`, `LOGIN_JANELA_SEGUNDOS` | não | `5`, `20`, `900` | limite de tentativas de login com falha |
 | `JAVA_OPTS` | não | | opções da JVM (memória) |
 | `ADMIN_NOME` | não | `Administrador` | nome do primeiro administrador |
@@ -176,11 +176,14 @@ depois da primeira subida não altera o que já está no banco.
 
 Base: `/api/v1`. Corpo e resposta em JSON com nomes em `snake_case`. As listas são paginadas
 (`page`, `size`; tamanho máximo 200) e voltam em um envelope com `conteudo` e os dados da página.
-A descrição completa, com exemplos, está no Swagger (`/swagger-ui`).
+A descrição completa, com exemplos, está no Swagger (`/swagger-ui`). O documento OpenAPI
+(`/v3/api-docs`) descreve o JSON como ele sai (nomes em `snake_case`, enums pelo valor, erros como
+`ErroResposta`); um teste de contrato compara as respostas reais com ele.
 
 | Método e rota | Quem acessa | O que faz |
 |---|---|---|
 | `POST /auth/login` | público | devolve o token JWT; bloqueia depois de várias tentativas com falha |
+| `GET /auth/eu` | autenticado | devolve o usuário dono do token; 401 se o token venceu ou o usuário foi desativado |
 | `POST /usuarios` | ADMIN | cria usuário (ADMIN, TECNICO ou OPERADOR) |
 | `GET /usuarios` | ADMIN | lista usuários |
 | `POST /usuarios/{id}/desativar` | ADMIN | desativa um usuário |

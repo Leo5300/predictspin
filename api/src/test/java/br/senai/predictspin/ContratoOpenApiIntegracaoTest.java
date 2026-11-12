@@ -1,0 +1,314 @@
+package br.senai.predictspin;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.ResultActions;
+
+import com.fasterxml.jackson.databind.JsonNode;
+
+/**
+ * Contrato: o JSON que a API devolve tem de ter exatamente as chaves que o documento OpenAPI
+ * (/v3/api-docs) declara para a mesma rota e o mesmo status. O painel gera o cliente a partir desse
+ * documento; se um lado mudar sem o outro, este teste quebra.
+ */
+class ContratoOpenApiIntegracaoTest extends IntegracaoBase {
+
+    /** Propriedades que a API omite de propósito quando vazias ou nulas (JsonInclude). */
+    private static final Map<String, Set<String>> PODEM_FALTAR = Map.of(
+            "ErroResposta", Set.of("campos"),
+            "IngestaoResposta", Set.of("modo_rapido_ate"));
+
+    private JsonNode documento;
+    private String admin;
+    private final Instant base = Instant.now().truncatedTo(ChronoUnit.SECONDS).minus(5, ChronoUnit.MINUTES);
+
+    @BeforeEach
+    void carregarDocumento() throws Exception {
+        documento = corpo(mvc.perform(get("/v3/api-docs")).andExpect(status().isOk()));
+        admin = tokenAdmin();
+    }
+
+    // ------------------------------------------------------------------ forma do documento
+
+    @Test
+    void esquemasUsamSnakeCaseEValoresSerializadosDosEnums() {
+        JsonNode esquemas = documento.at("/components/schemas");
+        List<String> comMaiuscula = new ArrayList<>();
+        esquemas.fields().forEachRemaining(esquema -> {
+            JsonNode propriedades = esquema.getValue().get("properties");
+            if (propriedades != null) {
+                propriedades.fieldNames().forEachRemaining(nome -> {
+                    if (!nome.equals(nome.toLowerCase())) {
+                        comMaiuscula.add(esquema.getKey() + "." + nome);
+                    }
+                });
+            }
+        });
+        assertThat(comMaiuscula).as("propriedades fora de snake_case").isEmpty();
+
+        assertThat(valores(esquemas.at("/UltimaJanelaResposta/properties/modo/enum")))
+                .containsExactly("normal", "rapido");
+        assertThat(valores(esquemas.at("/EnsaioResposta/properties/condicao/enum")))
+                .contains("ferramenta_desgastada", "sensor_solto");
+        assertThat(valores(esquemas.at("/CoberturaItem/properties/uso/enum"))).containsExactly("treino", "validacao");
+        assertThat(valores(esquemas.at("/PontoResposta/properties/papel/enum")))
+                .containsExactly("acionamento", "ferramenta", "estrutura");
+        assertThat(valores(esquemas.at("/MaquinaResposta/properties/classe/enum"))).contains("torno");
+    }
+
+    @Test
+    void respostasSaoJsonTipadoEOCsvETextoCsv() {
+        JsonNode maquinas = documento.at("/paths/~1api~1v1~1maquinas/get/responses/200/content");
+        assertThat(maquinas.has("application/json")).isTrue();
+        assertThat(maquinas.at("/application~1json/schema/$ref").asText())
+                .isEqualTo("#/components/schemas/PaginaMaquinaResposta");
+        assertThat(documento.at("/components/schemas/PaginaMaquinaResposta/properties/conteudo/items/$ref").asText())
+                .isEqualTo("#/components/schemas/MaquinaResposta");
+
+        JsonNode csv = documento.at("/paths/~1api~1v1~1ensaios~1exportar.csv/get/responses/200/content");
+        assertThat(csv.fieldNames()).toIterable().containsExactly("text/csv");
+        assertThat(csv.at("/text~1csv/schema/type").asText()).isEqualTo("string");
+    }
+
+    @Test
+    void parametrosDeConsultaTemONomeReal() {
+        assertThat(nomesDosParametros("/api/v1/ensaios/exportar.csv", "get")).containsExactlyInAnyOrder(
+                "simulado", "maquina_id");
+        assertThat(nomesDosParametros("/api/v1/pontos/{id}/telemetria", "get")).containsExactlyInAnyOrder(
+                "id", "de", "ate", "simulado", "page", "size");
+        assertThat(nomesDosParametros("/api/v1/maquinas/{id}/coleta/cobertura", "get")).containsExactlyInAnyOrder(
+                "id", "simulado", "meta", "rotacoes");
+    }
+
+    @Test
+    void todaOperacaoDeclaraUmaRespostaDeSucesso() {
+        List<String> semSucesso = new ArrayList<>();
+        documento.get("paths").fields().forEachRemaining(caminho -> caminho.getValue().fields()
+                .forEachRemaining(operacao -> {
+                    boolean temSucesso = false;
+                    Iterator<String> codigos = operacao.getValue().get("responses").fieldNames();
+                    while (codigos.hasNext()) {
+                        temSucesso |= codigos.next().startsWith("2");
+                    }
+                    if (!temSucesso) {
+                        semSucesso.add(operacao.getKey() + " " + caminho.getKey());
+                    }
+                }));
+        assertThat(semSucesso).as("operações sem resposta 2xx no documento").isEmpty();
+    }
+
+    @Test
+    void todaRespostaDeErroDasRotasDaApiApontaParaErroResposta() {
+        List<String> semErroResposta = new ArrayList<>();
+        documento.get("paths").fields().forEachRemaining(caminho -> {
+            if (!caminho.getKey().startsWith("/api/v1")) {
+                return;
+            }
+            caminho.getValue().fields().forEachRemaining(operacao -> {
+                JsonNode respostas = operacao.getValue().get("responses");
+                assertThat(respostas.has("401")).as("401 em %s %s", operacao.getKey(), caminho.getKey()).isTrue();
+                respostas.fields().forEachRemaining(resposta -> {
+                    String codigo = resposta.getKey();
+                    if (codigo.startsWith("4") || codigo.startsWith("5")) {
+                        String ref = resposta.getValue().at("/content/application~1json/schema/$ref").asText();
+                        if (!"#/components/schemas/ErroResposta".equals(ref)) {
+                            semErroResposta.add(operacao.getKey() + " " + caminho.getKey() + " " + codigo);
+                        }
+                    }
+                });
+            });
+        });
+        assertThat(semErroResposta).isEmpty();
+    }
+
+    // ------------------------------------------------------------------ JSON real contra o documento
+
+    @Test
+    void loginEUsuarioDoToken() throws Exception {
+        conferir("/api/v1/auth/login", "post", 200, login(ADMIN_EMAIL, ADMIN_SENHA, ipNovo()));
+        conferir("/api/v1/auth/eu", "get", 200, mvc.perform(comToken(get("/api/v1/auth/eu"), admin)));
+    }
+
+    @Test
+    void maquinasPontosEDispositivos() throws Exception {
+        enviarSimulado(base).andExpect(status().isCreated());
+        conferir("/api/v1/maquinas", "get", 200, mvc.perform(comToken(get("/api/v1/maquinas"), admin)));
+        conferir("/api/v1/maquinas/{id}/pontos", "get", 200,
+                mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId + "/pontos"), admin)));
+        conferir("/api/v1/maquinas/{id}/dispositivos", "get", 200,
+                mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId + "/dispositivos"), admin)));
+    }
+
+    @Test
+    void ingestaoUltimaJanelaESerieDoPonto() throws Exception {
+        conferir("/api/v1/telemetria", "post", 201, enviarSimulado(base));
+        conferir("/api/v1/telemetria", "post", 200, enviarSimulado(base));
+        conferir("/api/v1/maquinas/{id}/ultima-janela", "get", 200,
+                mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId + "/ultima-janela"), admin)));
+        Long pontoA = jdbc.queryForObject("SELECT id FROM ponto_medicao WHERE maquina_id = ? AND codigo = 'A'",
+                Long.class, maquinaId);
+        conferir("/api/v1/pontos/{id}/telemetria", "get", 200,
+                mvc.perform(comToken(get("/api/v1/pontos/" + pontoA + "/telemetria"), admin)));
+    }
+
+    @Test
+    void ensaioResumoECobertura() throws Exception {
+        ResultActions aberto = mvc.perform(comToken(post("/api/v1/maquinas/" + maquinaId + "/ensaios"), admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"etapa\":\"T1\",\"condicao\":\"normal\",\"rotacao_alvo_rpm\":900,\"material\":\"aço\","
+                        + "\"avanco_alvo\":0.15,\"observacao\":\"contrato\",\"simulado\":true}"));
+        conferir("/api/v1/maquinas/{id}/ensaios", "post", 201, aberto);
+        long ensaioId = corpo(aberto).get("id").asLong();
+        enviarSimulado(base).andExpect(status().isCreated());
+
+        conferir("/api/v1/ensaios/{id}/encerrar", "post", 200,
+                mvc.perform(comToken(post("/api/v1/ensaios/" + ensaioId + "/encerrar"), admin)));
+        conferir("/api/v1/ensaios/{id}", "get", 200, mvc.perform(comToken(get("/api/v1/ensaios/" + ensaioId), admin)));
+        conferir("/api/v1/maquinas/{id}/ensaios", "get", 200,
+                mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId + "/ensaios"), admin)));
+        conferir("/api/v1/ensaios/{id}/resumo", "get", 200,
+                mvc.perform(comToken(get("/api/v1/ensaios/" + ensaioId + "/resumo"), admin)));
+        conferir("/api/v1/maquinas/{id}/coleta/cobertura", "get", 200,
+                mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId + "/coleta/cobertura?simulado=true"), admin)));
+    }
+
+    @Test
+    void modoRapido() throws Exception {
+        String rota = "/api/v1/maquinas/" + maquinaId + "/modo-rapido";
+        conferir("/api/v1/maquinas/{id}/modo-rapido", "post", 200, mvc.perform(comToken(post(rota), admin)));
+        conferir("/api/v1/maquinas/{id}/modo-rapido", "get", 200, mvc.perform(comToken(get(rota), admin)));
+        // com o modo rápido ligado a ingestão traz o prazo: todas as chaves presentes
+        JsonNode ingestao = corpo(enviarSimulado(base).andExpect(status().isCreated()));
+        assertThat(ingestao.has("modo_rapido_ate")).isTrue();
+    }
+
+    @Test
+    void erros() throws Exception {
+        conferir("/api/v1/auth/login", "post", 401, login(ADMIN_EMAIL, "senha-errada", ipNovo()));
+        conferir("/api/v1/maquinas", "get", 401, mvc.perform(get("/api/v1/maquinas")));
+        conferir("/api/v1/maquinas/{id}/pontos", "get", 404,
+                mvc.perform(comToken(get("/api/v1/maquinas/999999/pontos"), admin)));
+        conferir("/api/v1/usuarios", "get", 403, mvc.perform(comToken(get("/api/v1/usuarios"), tokenDe("OPERADOR"))));
+        // erro de validação traz "campos"
+        ResultActions invalido = mvc.perform(post("/api/v1/auth/login").with(ipNovo())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"a@b.c\"}"));
+        conferir("/api/v1/auth/login", "post", 400, invalido);
+        assertThat(corpo(invalido).has("campos")).isTrue();
+    }
+
+    // ------------------------------------------------------------------ apoio
+
+    /** Confere o status e compara o corpo com o esquema declarado para (rota, método, status). */
+    protected void conferir(String rota, String metodo, int statusEsperado, ResultActions resultado) throws Exception {
+        resultado.andExpect(status().is(statusEsperado));
+        JsonNode conteudo = documento.get("paths").path(rota).path(metodo).path("responses")
+                .path(String.valueOf(statusEsperado)).path("content").path("application/json");
+        assertThat(conteudo.isMissingNode())
+                .as("%s %s não declara resposta %d em application/json", metodo, rota, statusEsperado).isFalse();
+        List<String> diferencas = new ArrayList<>();
+        comparar(corpo(resultado), conteudo.get("schema"), metodo + " " + rota + " " + statusEsperado, null, diferencas);
+        if (!diferencas.isEmpty()) {
+            fail("JSON real difere do documento OpenAPI:\n  " + String.join("\n  ", diferencas));
+        }
+    }
+
+    private void comparar(JsonNode valor, JsonNode esquema, String onde, String nomeEsquema, List<String> diferencas) {
+        if (valor == null || valor.isNull() || esquema == null) {
+            return;
+        }
+        if (esquema.has("$ref")) {
+            String nome = esquema.get("$ref").asText().replace("#/components/schemas/", "");
+            JsonNode alvo = documento.at("/components/schemas").get(nome);
+            if (alvo == null) {
+                diferencas.add(onde + ": esquema " + nome + " não existe no documento");
+                return;
+            }
+            comparar(valor, alvo, onde, nome, diferencas);
+            return;
+        }
+        if (esquema.has("enum")) {
+            if (!valores(esquema.get("enum")).contains(valor.asText())) {
+                diferencas.add(onde + ": valor '" + valor.asText() + "' fora do enum " + valores(esquema.get("enum")));
+            }
+            return;
+        }
+        if (valor.isArray()) {
+            if (!esquema.has("items")) {
+                diferencas.add(onde + ": veio lista, o documento não declara itens");
+                return;
+            }
+            for (int i = 0; i < valor.size(); i++) {
+                comparar(valor.get(i), esquema.get("items"), onde + "[" + i + "]", null, diferencas);
+            }
+            return;
+        }
+        if (!valor.isObject()) {
+            return;
+        }
+        JsonNode propriedades = esquema.get("properties");
+        JsonNode adicionais = esquema.get("additionalProperties");
+        if (propriedades == null && adicionais != null && adicionais.isObject()) {
+            // mapa (pontos por código, canais por código): cada valor segue o mesmo esquema
+            valor.fields().forEachRemaining(e -> comparar(e.getValue(), adicionais, onde + "." + e.getKey(), null,
+                    diferencas));
+            return;
+        }
+        if (propriedades == null) {
+            diferencas.add(onde + ": veio objeto, o documento não declara propriedades");
+            return;
+        }
+        Set<String> reais = new TreeSet<>();
+        valor.fieldNames().forEachRemaining(reais::add);
+        Set<String> declaradas = new TreeSet<>();
+        propriedades.fieldNames().forEachRemaining(declaradas::add);
+
+        Set<String> soNoJson = new TreeSet<>(reais);
+        soNoJson.removeAll(declaradas);
+        Set<String> soNoDocumento = new TreeSet<>(declaradas);
+        soNoDocumento.removeAll(reais);
+        soNoDocumento.removeAll(PODEM_FALTAR.getOrDefault(nomeEsquema == null ? "" : nomeEsquema, Set.of()));
+        if (!soNoJson.isEmpty()) {
+            diferencas.add(onde + ": chaves no JSON que o documento não declara: " + soNoJson);
+        }
+        if (!soNoDocumento.isEmpty()) {
+            diferencas.add(onde + ": propriedades do documento ausentes no JSON: " + soNoDocumento);
+        }
+        for (String chave : reais) {
+            if (declaradas.contains(chave)) {
+                comparar(valor.get(chave), propriedades.get(chave), onde + "." + chave, null, diferencas);
+            }
+        }
+    }
+
+    private List<String> nomesDosParametros(String rota, String metodo) {
+        List<String> nomes = new ArrayList<>();
+        JsonNode parametros = documento.get("paths").path(rota).path(metodo).path("parameters");
+        parametros.forEach(p -> nomes.add(p.get("name").asText()));
+        return nomes;
+    }
+
+    private static List<String> valores(JsonNode lista) {
+        List<String> saida = new ArrayList<>();
+        Iterator<JsonNode> it = lista.elements();
+        while (it.hasNext()) {
+            saida.add(it.next().asText());
+        }
+        return saida;
+    }
+}

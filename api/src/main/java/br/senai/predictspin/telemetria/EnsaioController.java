@@ -31,6 +31,7 @@ import br.senai.predictspin.telemetria.dto.ResumoEnsaioResposta;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -85,6 +86,7 @@ public class EnsaioController {
 
     @PostMapping("/ensaios/{id}/encerrar")
     @Operation(summary = "Encerra o ensaio aberto")
+    @ApiResponse(responseCode = "200", description = "Ensaio encerrado")
     @ApiResponse(responseCode = "409", description = "Ensaio já encerrado")
     public EnsaioResposta encerrar(@PathVariable Long id) {
         return ensaios.encerrar(id);
@@ -93,6 +95,7 @@ public class EnsaioController {
     @PostMapping("/ensaios/{id}/descartar")
     @Operation(summary = "Descarta o ensaio (marca, não apaga); se estiver aberto, também o encerra",
             description = "Ensaio descartado sai da cobertura e da exportação.")
+    @ApiResponse(responseCode = "200", description = "Ensaio descartado")
     @ApiResponse(responseCode = "409", description = "Ensaio já descartado")
     public EnsaioResposta descartar(@PathVariable Long id) {
         return ensaios.descartar(id);
@@ -122,7 +125,8 @@ public class EnsaioController {
     @Operation(summary = "Exporta o conjunto de treino em CSV, em fluxo",
             description = "Uma linha por janela e ponto, só de ensaios encerrados e não descartados, com os rótulos "
                     + "do ensaio e uma coluna por canal. Use simulado=false para só dado real.")
-    @ApiResponse(responseCode = "200", content = @Content(mediaType = "text/csv"))
+    @ApiResponse(responseCode = "200", description = "Arquivo CSV (UTF-8), uma linha por janela e ponto",
+            content = @Content(mediaType = "text/csv", schema = @Schema(type = "string")))
     public void exportar(
             @RequestParam(required = false) Boolean simulado,
             @Parameter(description = "Restringe a uma máquina")

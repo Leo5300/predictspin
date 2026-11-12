@@ -104,6 +104,11 @@ public class TratadorGlobalErros {
         return resposta(HttpStatus.UNAUTHORIZED, e.getMessage(), req, List.of());
     }
 
+    @ExceptionHandler(SessaoInvalidaException.class)
+    ResponseEntity<ErroResposta> sessaoInvalida(SessaoInvalidaException e, HttpServletRequest req) {
+        return resposta(HttpStatus.UNAUTHORIZED, e.getMessage(), req, List.of());
+    }
+
     @ExceptionHandler(AuthenticationException.class)
     ResponseEntity<ErroResposta> autenticacao(AuthenticationException e, HttpServletRequest req) {
         return resposta(HttpStatus.UNAUTHORIZED, "Autenticação necessária", req, List.of());

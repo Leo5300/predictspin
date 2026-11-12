@@ -43,6 +43,7 @@ public class ModoRapidoController {
 
     @GetMapping
     @Operation(summary = "Diz se o modo rápido está valendo e até quando")
+    @ApiResponse(responseCode = "200", description = "Estado do modo rápido")
     @ApiResponse(responseCode = "404", description = "Máquina inexistente")
     public ModoRapidoResposta consultar(@PathVariable Long id) {
         return servico.consultar(id);

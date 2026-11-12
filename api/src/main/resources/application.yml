@@ -53,7 +53,7 @@ predictspin:
     jwt:
       segredo: ${JWT_SECRET:}
       validade-ms: ${JWT_EXPIRATION_MS:86400000}
-    cors-origens: ${CORS_ORIGENS:http://localhost:3000}
+    cors-origens: ${CORS_ORIGENS:http://localhost:3000,http://localhost:5173}
     login:
       max-tentativas-email: ${LOGIN_MAX_TENTATIVAS_EMAIL:5}
       max-tentativas-ip: ${LOGIN_MAX_TENTATIVAS_IP:20}
@@ -70,6 +70,9 @@ predictspin:
     chave-dispositivo-simulado: ${DISPOSITIVO_SIM_CHAVE:}
 
 springdoc:
+  # As respostas são JSON; sem isto o documento diz "*/*" e o cliente gerado perde o tipo
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
   api-docs:
     path: /v3/api-docs
   swagger-ui:

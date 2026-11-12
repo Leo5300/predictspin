@@ -4,7 +4,7 @@ predictspin:
     jwt:
       segredo: segredo-dos-testes-de-integracao-com-mais-de-32-caracteres
       validade-ms: 3600000
-    cors-origens: http://localhost:3000
+    cors-origens: http://localhost:3000,http://localhost:5173
     login:
       max-tentativas-email: 3
       max-tentativas-ip: 6

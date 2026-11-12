@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.senai.predictspin.comum.CredenciaisInvalidasException;
+import br.senai.predictspin.comum.SessaoInvalidaException;
 import br.senai.predictspin.seguranca.dto.LoginRequisicao;
 import br.senai.predictspin.seguranca.dto.LoginResposta;
 import br.senai.predictspin.seguranca.dto.UsuarioResposta;
@@ -47,5 +48,14 @@ public class AutenticacaoService {
         Usuario usuario = encontrado.get();
         TokenService.TokenEmitido token = tokens.emitir(usuario);
         return new LoginResposta(token.token(), "Bearer", token.expiraEm(), UsuarioResposta.de(usuario));
+    }
+
+    /** Usuário do token, lido do banco: quem foi desativado depois do login deixa de ter sessão. */
+    @Transactional(readOnly = true)
+    public UsuarioResposta eu(Long usuarioId) {
+        return usuarios.findById(usuarioId)
+                .filter(Usuario::isAtivo)
+                .map(UsuarioResposta::de)
+                .orElseThrow(SessaoInvalidaException::new);
     }
 }
