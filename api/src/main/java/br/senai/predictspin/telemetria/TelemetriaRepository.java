@@ -1,6 +1,7 @@
 package br.senai.predictspin.telemetria;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -38,6 +39,10 @@ public interface TelemetriaRepository extends JpaRepository<Telemetria, Long> {
     Page<TelemetriaPontoResposta> seriePorPonto(@Param("pontoId") Long pontoId, @Param("de") Instant de,
                                                 @Param("ate") Instant ate, @Param("simulado") Boolean simulado,
                                                 Pageable pageable);
+
+    /** Pontos de várias janelas em uma consulta só (lista de janelas sem N+1). */
+    @Query("select t from Telemetria t join fetch t.ponto p where t.janela.id in :janelaIds order by p.codigo")
+    List<Telemetria> dasJanelas(@Param("janelaIds") Collection<Long> janelaIds);
 
     @Query("select t from Telemetria t join fetch t.ponto p where t.janela.id = :janelaId order by p.codigo")
     List<Telemetria> daJanela(@Param("janelaId") Long janelaId);

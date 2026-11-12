@@ -1,4 +1,11 @@
 # Perfil dos testes de integração. O banco vem do Testcontainers (@ServiceConnection).
+spring:
+  jpa:
+    properties:
+      hibernate:
+        # Conta os comandos enviados ao banco: os testes conferem que não há N+1
+        generate_statistics: true
+
 predictspin:
   seguranca:
     jwt:
