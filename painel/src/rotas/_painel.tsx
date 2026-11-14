@@ -1,4 +1,5 @@
-import { createFileRoute, Navigate, Outlet, useLocation } from '@tanstack/react-router'
+import { createFileRoute, Outlet, useRouter } from '@tanstack/react-router'
+import { useEffect } from 'react'
 
 import { useSessao } from '@/api/sessao'
 import { BarraSuperior } from '@/componentes/casca/BarraSuperior'
@@ -14,12 +15,24 @@ export const Route = createFileRoute('/_painel')({
 function CascaDoPainel() {
   const sessao = useSessao()
   const fonte = useFonte()
-  const caminho = useLocation({ select: (local) => local.href })
+  const roteador = useRouter()
+  const anonima = sessao.fase === 'anonima'
 
-  if (sessao.fase === 'verificando') return <TelaVerificando />
-  if (sessao.fase === 'anonima') {
-    return <Navigate to="/login" search={caminho === '/' ? {} : { voltar: caminho }} replace />
-  }
+  // Uma navegação só, quando a sessão fica anônima. Um <Navigate> aqui se repetia sem fim: enquanto
+  // a rota de login carrega, esta casca continua montada e o efeito dele disparava de novo.
+  useEffect(() => {
+    if (!anonima) return
+    const local = roteador.state.location
+    if (local.pathname === '/login') return
+    const caminho = local.href
+    void roteador.navigate({
+      to: '/login',
+      search: caminho === '/' ? {} : { voltar: caminho },
+      replace: true,
+    })
+  }, [anonima, roteador])
+
+  if (sessao.fase === 'verificando' || sessao.fase === 'anonima') return <TelaVerificando />
 
   return (
     <div className="flex min-h-dvh flex-col">
