@@ -42,11 +42,11 @@ function CascaDoPainel() {
       >
         Pular para o conteúdo
       </a>
-      <div className="sticky top-0 z-40">
+      <div className="z-40 sm:sticky sm:top-0">
         <BarraSuperior usuario={sessao.usuario} />
         {fonte === 'simulado' ? <FaixaSimulado /> : null}
       </div>
-      <main id="conteudo" className="min-w-0 flex-1 p-3">
+      <main id="conteudo" className="min-w-0 flex-1 px-4 py-3 [view-transition-name:conteudo]">
         <Outlet />
       </main>
     </div>

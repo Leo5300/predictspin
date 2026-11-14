@@ -49,8 +49,8 @@ const ROTULO_TRANSPORTE: Record<Transporte, string | null> = {
  */
 export function BarraSuperior({ usuario }: { usuario: Usuario }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-linha-forte bg-modulo">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-1.5">
+    <header className="z-40 border-b border-linha-forte bg-modulo">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1.5">
         <Link
           to="/"
           className="text-15 font-semibold tracking-tight text-texto"
@@ -74,7 +74,8 @@ export function BarraSuperior({ usuario }: { usuario: Usuario }) {
           <SeletorDeFonte />
           <SeletorDeTema />
           <div className="flex items-center gap-2">
-            <span className="flex min-w-0 flex-col leading-tight">
+            {/* no celular o nome sai da barra (fica no rótulo do botão de sair) */}
+            <span className="flex min-w-0 flex-col leading-tight max-sm:hidden">
               <span
                 className="max-w-40 truncate text-13 font-medium text-texto"
                 title={usuario.nome}
@@ -86,7 +87,12 @@ export function BarraSuperior({ usuario }: { usuario: Usuario }) {
                 <span className="rotulo">{ROTULO_PAPEL_USUARIO[usuario.papel]}</span>
               )}
             </span>
-            <Button variant="outline" onClick={sair} aria-label="Sair do painel">
+            <Button
+              variant="outline"
+              onClick={sair}
+              aria-label="Sair do painel"
+              title={`${usuario.nome} · sair do painel`}
+            >
               <LogOut aria-hidden="true" strokeWidth={1.5} />
               <span className="max-sm:sr-only">Sair</span>
             </Button>
@@ -128,8 +134,9 @@ function LinkDeNavegacao({ para, children }: { para: '/' | '/coleta'; children: 
 function Relogio() {
   const { epocaMs } = useSegundo()
   return (
+    // no celular o relógio do aparelho já está à vista
     <time
-      className="valor text-13 text-texto"
+      className="valor text-13 text-texto max-sm:hidden"
       dateTime={new Date(epocaMs).toISOString()}
       aria-label="Hora local"
     >
@@ -161,7 +168,7 @@ function Conexao() {
         className={cn('size-2.5', estado === 'acordando' && 'fill-none stroke-current stroke-[3]')}
       />
       <span className="font-medium text-texto">{ROTULO_CONEXAO[estado]}</span>
-      {detalhe ? <span>· {detalhe}</span> : null}
+      {detalhe ? <span className="max-sm:hidden">· {detalhe}</span> : null}
     </span>
   )
 }

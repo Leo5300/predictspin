@@ -132,7 +132,9 @@ export function Tacometro({ rpm, nominais, velho = false, className }: Props) {
         {/* número entre as pontas do arco, abaixo do eixo do ponteiro */}
         <span
           className={cn(
-            'matriz absolute left-1/2 -translate-x-1/2 text-72',
+            'matriz absolute left-1/2 -translate-x-1/2',
+            // 5 dígitos (leitura com defeito, até 30000 rpm) não cabem entre as pontas do arco
+            rpmSemMilhar(rpm).length > 4 ? 'text-40' : 'text-72',
             velho || !temRotacao ? 'text-fraco' : 'text-texto',
           )}
           style={{ top: `${((CY + 34) / ALTURA) * 100}%` }}

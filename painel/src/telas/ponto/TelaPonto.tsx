@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { CircleStop, Download, Radio } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, ViewTransition } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { transicaoDoPonto } from '@/lib/transicao'
 
 import {
   consultaEnsaios,
@@ -46,7 +47,7 @@ import {
   type ErroDePeriodo,
   type FonteDaTendencia,
 } from '@/dominio/periodos'
-import { rotuloDoPapel, tracoDoPonto } from '@/dominio/pontos'
+import { rotuloDoPapel } from '@/dominio/pontos'
 import {
   faixasDasJanelas,
   faixasDosEnsaios,
@@ -200,10 +201,6 @@ export function TelaPonto({ maquinaId, codigo, busca }: Props) {
   }, [podeVerEnsaios, ensaios.data, periodo.deMs, periodo.ateMs, usaBrutos, janelasDoPeriodo])
 
   const lista = pontos.data ?? []
-  const indice = Math.max(
-    0,
-    lista.findIndex((p) => p.codigo === codigo),
-  )
   const ponto = lista.find((p) => p.codigo === codigo)
   const codigoDaMaquina = maquina.data?.codigo
 
@@ -258,200 +255,194 @@ export function TelaPonto({ maquinaId, codigo, busca }: Props) {
   }
 
   return (
-    <ViewTransition enter="pagina" exit="none" default="none">
-      <div className="flex flex-col gap-3">
-        <nav aria-label="Caminho" className="text-12 text-apoio">
-          <Link to="/" className="underline underline-offset-2">
-            Visão geral
-          </Link>{' '}
-          /{' '}
-          <Link
-            to="/maquinas/$maquinaId"
-            params={{ maquinaId }}
-            className="valor underline underline-offset-2"
-          >
-            {maquina.data.codigo}
-          </Link>{' '}
-          /
-        </nav>
+    <div className="flex flex-col gap-3">
+      <nav aria-label="Caminho" className="text-12 text-apoio">
+        <Link to="/" className="underline underline-offset-2">
+          Visão geral
+        </Link>{' '}
+        /{' '}
+        <Link
+          to="/maquinas/$maquinaId"
+          params={{ maquinaId }}
+          className="valor underline underline-offset-2"
+        >
+          {maquina.data.codigo}
+        </Link>{' '}
+        /
+      </nav>
 
-        <Painel>
-          <ViewTransition name={`ponto-${codigo}`} share="modulo-ponto" default="none">
-            <div className="flex min-w-0 bg-modulo">
-              <CabecalhoDoPonto
-                ponto={ponto}
-                janela={aoVivo.ultima?.janela}
-                simulado={aoVivo.simulado && !semDados}
-                frescor={frescor}
-                idadeS={idadeS}
-                velho={velho}
-              />
-            </div>
-          </ViewTransition>
-
-          <Modulo
-            rotulo={modoRapido.ativo ? 'Ao vivo' : 'Tendência'}
+      <Painel>
+        <div className="flex min-w-0 bg-modulo" style={transicaoDoPonto(codigo)}>
+          <CabecalhoDoPonto
+            ponto={ponto}
+            janela={aoVivo.ultima?.janela}
             simulado={aoVivo.simulado && !semDados}
-            semRecuo
-            detalhe={
-              modoRapido.ativo
-                ? 'janelas de 1 s; não entram na tendência histórica'
-                : descricaoDaFonte(dados, periodo, segundosDoPeriodo)
-            }
-            acoes={
-              <ControleAoVivo
-                ativo={modoRapido.ativo}
-                restantesS={modoRapido.restantesS}
-                ocupado={modoRapido.ocupado}
-                aoLigar={modoRapido.ligar}
-                aoParar={modoRapido.parar}
-              />
-            }
-          >
-            {modoRapido.erro ? (
-              <p role="alert" className="border-b border-linha px-3 py-1 text-13 text-alarme-texto">
-                {mensagemDoErro(modoRapido.erro)}
-              </p>
-            ) : null}
+            frescor={frescor}
+            idadeS={idadeS}
+            velho={velho}
+          />
+        </div>
 
-            <div className="flex flex-wrap items-end gap-x-4 gap-y-2 border-b border-linha px-3 py-2">
-              <div>
-                <span className="rotulo mb-1 block">Período</span>
-                <ToggleGroup
-                  aria-label="Período da tendência"
-                  value={[periodo.chave]}
-                  disabled={modoRapido.ativo}
-                  onValueChange={(valores) => {
-                    const chave = valores[0] as ChavePeriodoTendencia | undefined
-                    if (!chave) return
-                    void navegar({
-                      search: (anterior) => ({ ...anterior, periodo: chave, pagina: 0 }),
-                      replace: true,
-                      resetScroll: false,
-                    })
-                  }}
-                >
-                  {PERIODOS_TENDENCIA.map((p) => (
-                    <ToggleGroupItem key={p.chave} value={p.chave} size="sm">
-                      {p.rotulo}
-                    </ToggleGroupItem>
-                  ))}
-                  <ToggleGroupItem value="personalizado" size="sm">
-                    Personalizado
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </div>
-              {periodo.chave === 'personalizado' ? (
-                <PeriodoPersonalizado
-                  de={busca.de}
-                  ate={busca.ate}
-                  erro={periodo.erro}
-                  aoAplicar={(de, ate) =>
-                    void navegar({
-                      search: (anterior) => ({
-                        ...anterior,
-                        periodo: 'personalizado',
-                        de,
-                        ate,
-                        pagina: 0,
-                      }),
-                      replace: true,
-                      resetScroll: false,
-                    })
-                  }
-                />
-              ) : null}
-              <div>
-                <span className="rotulo mb-1 block">Segundo quadro</span>
-                <ToggleGroup
-                  aria-label="Grandeza do segundo quadro"
-                  value={[busca.quadro]}
-                  disabled={modoRapido.ativo}
-                  onValueChange={(valores) => {
-                    const quadro = valores[0]
-                    if (quadro === 'ordens' || quadro === 'curtose') {
-                      void navegar({
-                        search: (anterior) => ({ ...anterior, quadro }),
-                        replace: true,
-                        resetScroll: false,
-                      })
-                    }
-                  }}
-                >
-                  <ToggleGroupItem value="ordens" size="sm">
-                    Ordens 1X–3X
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="curtose" size="sm">
-                    Curtose
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </div>
-              <Button
-                className="ml-auto"
-                onClick={exportar}
-                disabled={!dados || dados.temposS.length === 0 || modoRapido.ativo}
-              >
-                <Download aria-hidden="true" strokeWidth={1.5} />
-                Exportar CSV
-              </Button>
-            </div>
+        <Modulo
+          rotulo={modoRapido.ativo ? 'Ao vivo' : 'Tendência'}
+          simulado={aoVivo.simulado && !semDados}
+          semRecuo
+          detalhe={
+            modoRapido.ativo
+              ? 'janelas de 1 s; não entram na tendência histórica'
+              : descricaoDaFonte(dados, periodo, segundosDoPeriodo)
+          }
+          acoes={
+            <ControleAoVivo
+              ativo={modoRapido.ativo}
+              restantesS={modoRapido.restantesS}
+              ocupado={modoRapido.ocupado}
+              aoLigar={modoRapido.ligar}
+              aoParar={modoRapido.parar}
+            />
+          }
+        >
+          {modoRapido.erro ? (
+            <p role="alert" className="border-b border-linha px-3 py-1 text-13 text-alarme-texto">
+              {mensagemDoErro(modoRapido.erro)}
+            </p>
+          ) : null}
 
-            <div ref={graficoRef} className="min-w-0" data-testid="area-do-grafico">
-              {modoRapido.ativo ? (
-                <QuadroAoVivo recentes={aoVivo.recentes} codigo={codigo} indice={indice} />
-              ) : periodo.erro ? (
-                <EstadoVazio titulo={MENSAGEM_PERIODO[periodo.erro]}>
-                  Escolha o início e o fim do período personalizado e aplique.
-                </EstadoVazio>
-              ) : carregandoGrafico ? (
-                <EstadoCarregando rotulo="Carregando a tendência…" />
-              ) : erroDoGrafico ? (
-                <EstadoErro erro={erroDoGrafico} />
-              ) : !dados || dados.janelas === 0 ? (
-                <EstadoVazio
-                  titulo={`Nenhuma janela ${aoVivo.simulado ? 'simulada' : 'real'} neste período.`}
-                >
-                  A tendência aparece assim que houver janelas do ponto {codigo} no período
-                  escolhido.
-                </EstadoVazio>
-              ) : (
-                <QuadroHistorico
-                  dados={dados}
-                  faixas={faixas}
-                  quadro={busca.quadro}
-                  indice={indice}
-                  inicioS={periodo.deMs / 1000}
-                  fimS={fimDoEixoS}
-                  codigo={codigo}
-                />
-              )}
-            </div>
-          </Modulo>
-
-          <Modulo rotulo="Janelas do período" simulado={aoVivo.simulado && !semDados} semRecuo>
-            {periodo.erro ? (
-              <EstadoVazio titulo={MENSAGEM_PERIODO[periodo.erro]} />
-            ) : (
-              <TabelaDeJanelas
-                maquinaId={maquinaId}
-                simulado={aoVivo.simulado}
-                codigo={codigo}
-                deMs={periodo.deMs}
-                ateMs={periodo.ateMs}
-                pagina={busca.pagina}
-                aoMudarPagina={(pagina) =>
+          <div className="flex flex-wrap items-end gap-x-4 gap-y-2 border-b border-linha px-3 py-2">
+            <div>
+              <span className="rotulo mb-1 block">Período</span>
+              <ToggleGroup
+                aria-label="Período da tendência"
+                value={[periodo.chave]}
+                disabled={modoRapido.ativo}
+                onValueChange={(valores) => {
+                  const chave = valores[0] as ChavePeriodoTendencia | undefined
+                  if (!chave) return
                   void navegar({
-                    search: (anterior) => ({ ...anterior, pagina }),
+                    search: (anterior) => ({ ...anterior, periodo: chave, pagina: 0 }),
+                    replace: true,
+                    resetScroll: false,
+                  })
+                }}
+              >
+                {PERIODOS_TENDENCIA.map((p) => (
+                  <ToggleGroupItem key={p.chave} value={p.chave} size="sm">
+                    {p.rotulo}
+                  </ToggleGroupItem>
+                ))}
+                <ToggleGroupItem value="personalizado" size="sm">
+                  Personalizado
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+            {periodo.chave === 'personalizado' ? (
+              <PeriodoPersonalizado
+                de={busca.de}
+                ate={busca.ate}
+                erro={periodo.erro}
+                aoAplicar={(de, ate) =>
+                  void navegar({
+                    search: (anterior) => ({
+                      ...anterior,
+                      periodo: 'personalizado',
+                      de,
+                      ate,
+                      pagina: 0,
+                    }),
                     replace: true,
                     resetScroll: false,
                   })
                 }
               />
+            ) : null}
+            <div>
+              <span className="rotulo mb-1 block">Segundo quadro</span>
+              <ToggleGroup
+                aria-label="Grandeza do segundo quadro"
+                value={[busca.quadro]}
+                disabled={modoRapido.ativo}
+                onValueChange={(valores) => {
+                  const quadro = valores[0]
+                  if (quadro === 'ordens' || quadro === 'curtose') {
+                    void navegar({
+                      search: (anterior) => ({ ...anterior, quadro }),
+                      replace: true,
+                      resetScroll: false,
+                    })
+                  }
+                }}
+              >
+                <ToggleGroupItem value="ordens" size="sm">
+                  Ordens 1X–3X
+                </ToggleGroupItem>
+                <ToggleGroupItem value="curtose" size="sm">
+                  Curtose
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+            <Button
+              className="ml-auto"
+              onClick={exportar}
+              disabled={!dados || dados.temposS.length === 0 || modoRapido.ativo}
+            >
+              <Download aria-hidden="true" strokeWidth={1.5} />
+              Exportar CSV
+            </Button>
+          </div>
+
+          <div ref={graficoRef} className="min-w-0" data-testid="area-do-grafico">
+            {modoRapido.ativo ? (
+              <QuadroAoVivo recentes={aoVivo.recentes} codigo={codigo} />
+            ) : periodo.erro ? (
+              <EstadoVazio titulo={MENSAGEM_PERIODO[periodo.erro]}>
+                Escolha o início e o fim do período personalizado e aplique.
+              </EstadoVazio>
+            ) : carregandoGrafico ? (
+              <EstadoCarregando rotulo="Carregando a tendência…" />
+            ) : erroDoGrafico ? (
+              <EstadoErro erro={erroDoGrafico} />
+            ) : !dados || dados.janelas === 0 ? (
+              <EstadoVazio
+                titulo={`Nenhuma janela ${aoVivo.simulado ? 'simulada' : 'real'} neste período.`}
+              >
+                A tendência aparece assim que houver janelas do ponto {codigo} no período escolhido.
+              </EstadoVazio>
+            ) : (
+              <QuadroHistorico
+                dados={dados}
+                faixas={faixas}
+                quadro={busca.quadro}
+                inicioS={periodo.deMs / 1000}
+                fimS={fimDoEixoS}
+                codigo={codigo}
+              />
             )}
-          </Modulo>
-        </Painel>
-      </div>
-    </ViewTransition>
+          </div>
+        </Modulo>
+
+        <Modulo rotulo="Janelas do período" simulado={aoVivo.simulado && !semDados} semRecuo>
+          {periodo.erro ? (
+            <EstadoVazio titulo={MENSAGEM_PERIODO[periodo.erro]} />
+          ) : (
+            <TabelaDeJanelas
+              maquinaId={maquinaId}
+              simulado={aoVivo.simulado}
+              codigo={codigo}
+              deMs={periodo.deMs}
+              ateMs={periodo.ateMs}
+              pagina={busca.pagina}
+              aoMudarPagina={(pagina) =>
+                void navegar({
+                  search: (anterior) => ({ ...anterior, pagina }),
+                  replace: true,
+                  resetScroll: false,
+                })
+              }
+            />
+          )}
+        </Modulo>
+      </Painel>
+    </div>
   )
 }
 
@@ -499,7 +490,8 @@ function CabecalhoDoPonto({ ponto, janela, simulado, frescor, idadeS, velho }: P
             Ponto <span className="valor">{ponto.codigo}</span>
           </h1>
         </div>
-        <div className="grid flex-1 grid-cols-3 gap-x-6 gap-y-2 @min-[44rem]:grid-cols-6">
+        {/* estreito: as leituras descem para baixo do título, em duas ou três colunas, sem cortar valor */}
+        <div className="grid flex-1 basis-full grid-cols-2 gap-x-6 gap-y-2 @min-[30rem]:grid-cols-3 @min-[44rem]:basis-0 @min-[60rem]:grid-cols-6">
           <Leitura
             rotulo="RMS"
             valor={formatarG(medida?.rms_g)}
@@ -677,22 +669,12 @@ type PropsDoHistorico = {
   dados: DadosDaTendencia
   faixas: { inicioS: number; fimS: number; rotulo: string }[]
   quadro: 'ordens' | 'curtose'
-  indice: number
   inicioS: number
   fimS: number
   codigo: string
 }
 
-function QuadroHistorico({
-  dados,
-  faixas,
-  quadro,
-  indice,
-  inicioS,
-  fimS,
-  codigo,
-}: PropsDoHistorico) {
-  const traco = tracoDoPonto(indice)
+function QuadroHistorico({ dados, faixas, quadro, inicioS, fimS, codigo }: PropsDoHistorico) {
   const agregado = dados.fonte === 'agregado'
   const principais: SerieDoGrafico[] = useMemo(
     () => [
@@ -700,27 +682,27 @@ function QuadroHistorico({
         rotulo: agregado ? 'RMS méd' : 'RMS',
         valores: dados.rms,
         tom: 0,
-        tracejado: traco.tracejado,
-        espessura: 1.75,
+        espessura: 2,
       },
       {
         rotulo: agregado ? 'PICO máx' : 'PICO',
         valores: dados.pico,
         tom: 2,
-        tracejado: [2, 3],
         espessura: 1.25,
       },
     ],
-    [agregado, dados.rms, dados.pico, traco.tracejado],
+    [agregado, dados.rms, dados.pico],
   )
   const secundarias: SerieDoGrafico[] = useMemo(
     () =>
       quadro === 'curtose'
         ? [{ rotulo: 'CURT', valores: dados.curtose, tom: 0 }]
         : [
-            { rotulo: '1X', valores: dados.o1x, tom: 0 },
-            { rotulo: '2X', valores: dados.o2x, tom: 1, tracejado: [7, 4] },
-            { rotulo: '3X', valores: dados.o3x, tom: 2, tracejado: [1.5, 3.5] },
+            // séries contínuas, separadas por tom, espessura e rótulo no fim da linha: tracejado
+            // se confundiria com a lacuna (linha interrompida = sem janela)
+            { rotulo: '1X', valores: dados.o1x, tom: 0, espessura: 2 },
+            { rotulo: '2X', valores: dados.o2x, tom: 1, espessura: 1.5 },
+            { rotulo: '3X', valores: dados.o3x, tom: 2, espessura: 1.25 },
           ],
     [quadro, dados.curtose, dados.o1x, dados.o2x, dados.o3x],
   )
@@ -804,16 +786,7 @@ function FaixaDoQuadro({ rotulo, children }: { rotulo: string; children: React.R
 }
 
 /** Gráfico ao vivo: as janelas de 1 s dos últimos 60 s, com o tempo deslizando de forma linear. */
-function QuadroAoVivo({
-  recentes,
-  codigo,
-  indice,
-}: {
-  recentes: Janela[]
-  codigo: string
-  indice: number
-}) {
-  const traco = tracoDoPonto(indice)
+function QuadroAoVivo({ recentes, codigo }: { recentes: Janela[]; codigo: string }) {
   const { temposS, series, rapidas, instantesRapidos } = useMemo(() => {
     // só o trecho que pode aparecer na tela: do último instante recebido para trás
     const ultima = recentes.at(-1)
@@ -831,15 +804,15 @@ function QuadroAoVivo({
         {
           rotulo: 'RMS',
           valores: serieDe('rms_g'),
+          // o traço vivo é contínuo, na cor de sinal: tracejado leria como dado faltando
           aoVivo: true,
           tom: 0,
-          tracejado: traco.tracejado,
           espessura: 1.75,
         },
-        { rotulo: 'PICO', valores: serieDe('pico_g'), tom: 2, tracejado: [2, 3], espessura: 1.25 },
+        { rotulo: 'PICO', valores: serieDe('pico_g'), tom: 2, espessura: 1 },
       ] satisfies SerieDoGrafico[],
     }
-  }, [recentes, codigo, traco.tracejado])
+  }, [recentes, codigo])
 
   return (
     <div className="flex flex-col" data-testid="quadro-ao-vivo">

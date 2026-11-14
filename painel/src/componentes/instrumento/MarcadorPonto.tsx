@@ -1,5 +1,6 @@
 import type { Avaliacao } from '@/dominio/estado'
 import { ROTULO_AVALIACAO } from '@/dominio/estado'
+import { grafemas } from '@/dominio/texto'
 import { cn } from '@/lib/utils'
 
 import { CAMINHO_DA_FORMA, FORMA_DA_AVALIACAO } from './formasDeEstado'
@@ -28,6 +29,10 @@ export function MarcadorPonto({
   className,
 }: Props) {
   const forma = FORMA_DA_AVALIACAO[avaliacao]
+  // dentro da forma cabem 2 caracteres; código mais longo (até 10) mostra o primeiro e o nome
+  // inteiro fica na dica e no texto para leitor de tela
+  const letras = grafemas(codigo)
+  const visivel = letras.length <= 2 ? codigo : (letras[0] ?? '')
   const lado = tamanho === 'pequeno' ? 'size-5' : 'size-7'
   return (
     <span
@@ -38,6 +43,7 @@ export function MarcadorPonto({
         className,
       )}
       data-estado={avaliacao}
+      title={visivel === codigo ? undefined : `Ponto ${codigo}`}
     >
       <svg viewBox="0 0 24 24" aria-hidden="true" className="absolute inset-0 size-full">
         <path d={CAMINHO_DA_FORMA[forma]} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
@@ -50,7 +56,7 @@ export function MarcadorPonto({
         )}
         aria-hidden="true"
       >
-        {codigo}
+        {visivel}
       </span>
       <span className="sr-only">
         Ponto {codigo}

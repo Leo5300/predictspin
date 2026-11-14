@@ -25,14 +25,16 @@ export function FaixaSimulado({ className }: { className?: string }) {
     <div
       role="status"
       className={cn(
-        'hachura flex min-h-7 items-center gap-2 border-b border-linha-forte bg-modulo px-3 text-12 text-texto',
+        'hachura flex min-h-7 items-center gap-2 border-b border-linha-forte bg-modulo px-4 text-12 text-texto',
         className,
       )}
     >
       <SeloSim />
-      <span className="font-semibold tracking-[0.08em] uppercase">Dados simulados</span>
+      <span className="font-semibold tracking-[0.08em] whitespace-nowrap uppercase">
+        Dados simulados
+      </span>
       <span className="min-w-0 truncate bg-modulo px-1 text-apoio">
-        dispositivo ps-sim-01 · não é medição do torno
+        vêm do dispositivo simulado · não são medição do torno
       </span>
     </div>
   )

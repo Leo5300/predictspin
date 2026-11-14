@@ -1,3 +1,4 @@
+import { grafemas } from '@/dominio/texto'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { Referencia } from '@/dominio/estado'
@@ -165,7 +166,12 @@ export function MapaOrdens({ intervalos, linhas, simulado = false, className }: 
       className={cn('flex min-w-0 flex-col gap-2', className)}
       data-simulado={simulado || undefined}
     >
-      <div className="grid min-w-0 grid-cols-[3.25rem_minmax(0,1fr)_4.5rem] gap-x-2">
+      <div
+        className="grid min-w-0 gap-x-2"
+        style={{
+          gridTemplateColumns: `max(3.25rem, ${larguraDosRotulos(linhas)}ch) minmax(0, 1fr) 4.5rem`,
+        }}
+      >
         {/* rótulos das linhas */}
         <div className="relative" style={{ height: posicoes.altura }} aria-hidden="true">
           {linhas.map((linha, i) => (
@@ -477,4 +483,12 @@ function desenhar(ctx: CanvasRenderingContext2D, d: Desenho) {
     ctx.stroke()
     ctx.restore()
   }
+}
+
+/** Largura da coluna de rótulos, em caracteres da fonte monoespaçada: "MANCAL-T2·RMS" cabe inteiro. */
+function larguraDosRotulos(linhas: readonly { ponto: string; grandeza: string }[]): number {
+  return (
+    Math.max(0, ...linhas.map((l) => grafemas(l.ponto).length + 1 + grafemas(l.grandeza).length)) +
+    0.5
+  )
 }

@@ -18,25 +18,6 @@ export function rotuloDoPapel(papel: string | null | undefined): string {
   return papel ?? ''
 }
 
-/** Estilo de linha por ordem do ponto: 1º contínua, 2º tracejada, 3º pontilhada (e repete). */
-export type TracoDePonto = {
-  nome: 'continua' | 'tracejada' | 'pontilhada'
-  tracejado: number[]
-  variavel: string
-}
-
-const CONTINUA: TracoDePonto = { nome: 'continua', tracejado: [], variavel: '--ponto-a' }
-
-const TRACOS: readonly TracoDePonto[] = [
-  CONTINUA,
-  { nome: 'tracejada', tracejado: [7, 4], variavel: '--ponto-b' },
-  { nome: 'pontilhada', tracejado: [1.5, 3.5], variavel: '--ponto-c' },
-]
-
-export function tracoDoPonto(indice: number): TracoDePonto {
-  return TRACOS[((indice % TRACOS.length) + TRACOS.length) % TRACOS.length] ?? CONTINUA
-}
-
 /** Ordena códigos de ponto de forma estável (A, B, C, depois os demais em ordem alfabética). */
 export function ordenarCodigos(codigos: readonly string[]): string[] {
   return [...codigos].sort((a, b) => a.localeCompare(b, 'pt-BR'))

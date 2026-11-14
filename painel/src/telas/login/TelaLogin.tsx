@@ -83,7 +83,7 @@ export function TelaLogin({ voltar }: { voltar: string | undefined }) {
   })
 
   return (
-    <main className="flex min-h-dvh flex-col gap-4 p-3 sm:p-8">
+    <main className="flex min-h-dvh flex-col gap-4 px-4 py-3 sm:p-8">
       <div>
         <p className="text-24 font-semibold tracking-tight" translate="no">
           PredictSpin

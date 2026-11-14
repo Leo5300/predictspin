@@ -34,6 +34,11 @@ const roteador = createRouter({
   defaultErrorComponent: ErroDaRota,
   defaultNotFoundComponent: RotaNaoEncontrada,
   scrollRestoration: true,
+  // L1 ↔ L2 ↔ L3: o navegador anima a troca de tela (conteúdo entra em 220 ms; o módulo do ponto
+  // vira o cabeçalho da tela do ponto). Mudar só a busca (período, página, mapa) não anima.
+  defaultViewTransition: {
+    types: ({ pathChanged }) => (pathChanged ? ['tela'] : false),
+  },
 })
 
 declare module '@tanstack/react-router' {

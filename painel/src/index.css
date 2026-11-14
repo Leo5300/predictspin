@@ -293,6 +293,15 @@
     font-size: 16px;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
+    /* a barra superior fixa não cobre o elemento que recebe foco ao navegar pelo teclado */
+    scroll-padding-top: 5.5rem;
+  }
+
+  @media (width < 40rem) {
+    html {
+      /* no celular a barra rola com a página (fixa, ocuparia um terço da tela) */
+      scroll-padding-top: 0.5rem;
+    }
   }
 
   body {
@@ -489,12 +498,17 @@
   }
 }
 
-/* Troca de tela L1 ↔ L2 ↔ L3 */
-::view-transition-old(.pagina) {
+/* Troca de tela L1 ↔ L2 ↔ L3 (o roteador chama document.startViewTransition só quando o caminho
+   muda). A barra superior fica parada; o conteúdo sai em 120 ms e entra em 220 ms. */
+::view-transition-group(conteudo) {
+  animation: none;
+}
+
+::view-transition-old(conteudo) {
   animation: 120ms var(--ease-out) both sumir;
 }
 
-::view-transition-new(.pagina) {
+::view-transition-new(conteudo) {
   animation: 220ms var(--ease-out) both entrar-pagina;
 }
 

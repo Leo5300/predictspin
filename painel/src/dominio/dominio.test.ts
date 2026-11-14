@@ -39,7 +39,7 @@ import {
   planoDoPeriodo,
   validarPeriodo,
 } from './periodos'
-import { ordenarCodigos, rotuloDoPapel, tracoDoPonto } from './pontos'
+import { ordenarCodigos, rotuloDoPapel } from './pontos'
 
 describe('idade do dado e limiares', () => {
   const observacao = { idadeNaObservacaoS: 3, observadoEmMs: 10_000 }
@@ -264,14 +264,7 @@ describe('períodos', () => {
 })
 
 describe('pontos, papéis e CSV', () => {
-  it('cada ponto tem estilo de linha próprio e nenhum repete nos três primeiros', () => {
-    expect([0, 1, 2].map((i) => tracoDoPonto(i).nome)).toEqual([
-      'continua',
-      'tracejada',
-      'pontilhada',
-    ])
-    expect(tracoDoPonto(3).nome).toBe('continua')
-    expect(tracoDoPonto(0).tracejado).toEqual([])
+  it('papel do ponto por extenso e códigos em ordem estável', () => {
     expect(rotuloDoPapel('ferramenta')).toBe('ferramenta–peça')
     expect(rotuloDoPapel('outro')).toBe('outro')
     expect(rotuloDoPapel(null)).toBe('')

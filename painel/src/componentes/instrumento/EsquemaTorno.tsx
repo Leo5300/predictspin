@@ -33,6 +33,11 @@ const POSICOES_NO_TORNO: Record<
 
 export type MarcadorNoTorno = {
   codigo: string
+  /**
+   * Lugar no desenho: 'A' (acionamento, no cabeçote), 'B' (ferramenta, no carro), 'C' (estrutura,
+   * na ponta do barramento) ou 'R' (rotação). Vem do papel do ponto, não do código, que é livre.
+   */
+  lugar: 'A' | 'B' | 'C' | 'R'
   /** Texto curto com o papel do sensor (acionamento, ferramenta–peça, estrutura, rotação). */
   papel: string
   /** O marcador em si (letra + forma), normalmente dentro de um link para a tela do ponto. */
@@ -125,7 +130,7 @@ export function EsquemaTorno({ marcadores, className }: Props) {
       ))}
 
       {marcadores.map((marcador) => {
-        const posicao = POSICOES_NO_TORNO[marcador.codigo]
+        const posicao = POSICOES_NO_TORNO[marcador.lugar]
         if (!posicao) return null
         return (
           <div

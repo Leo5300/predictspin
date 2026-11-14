@@ -22,7 +22,7 @@ export type SerieDoGrafico = {
   valores: readonly (number | null)[]
   /** Tom neutro da linha: 0, 1 ou 2 (os três tons de ponto). */
   tom: 0 | 1 | 2
-  tracejado?: readonly number[]
+  /** Séries são sempre contínuas (linha interrompida = lacuna); distinguem-se por tom e espessura. */
   espessura?: number
   /** Dado ao vivo do período atual: traço na cor de sinal (só no gráfico AO VIVO). */
   aoVivo?: boolean
@@ -134,10 +134,7 @@ export function GraficoTendencia({
 
   // A estrutura (quantas séries, traços, tema) recria o gráfico; os dados só são trocados.
   const estrutura = series
-    .map(
-      (s) =>
-        `${s.rotulo}|${s.tom}|${(s.tracejado ?? []).join(',')}|${s.espessura ?? ''}|${s.aoVivo ? 'v' : ''}`,
-    )
+    .map((s) => `${s.rotulo}|${s.tom}|${s.espessura ?? ''}|${s.aoVivo ? 'v' : ''}`)
     .join(';')
   const pronto = largura > 0
 
@@ -217,16 +214,27 @@ export function GraficoTendencia({
   }, [deslizarS, pronto, estrutura, cores])
 
   const instante = cursor === null ? undefined : temposS[cursor]
+  const vazio = semValores(series)
 
   return (
     <div className={cn('flex min-w-0 flex-col', className)}>
-      <div
-        ref={caixaRef}
-        role="img"
-        aria-label={descricao}
-        className="min-w-0 overflow-hidden"
-        style={{ height: altura }}
-      />
+      <div className="relative min-w-0">
+        <div
+          ref={caixaRef}
+          role="img"
+          aria-label={vazio ? `${descricao}: nenhum valor no período` : descricao}
+          className="min-w-0 overflow-hidden"
+          style={{ height: altura }}
+        />
+        {vazio ? (
+          <p
+            className="pointer-events-none absolute inset-0 flex items-center justify-center text-13 text-apoio"
+            aria-hidden="true"
+          >
+            Nenhum valor no período.
+          </p>
+        ) : null}
+      </div>
       <div
         className="valor flex min-h-6 flex-wrap items-center gap-x-4 gap-y-0.5 px-2 text-12 text-apoio"
         aria-hidden="true"
@@ -269,7 +277,6 @@ function Traco({ serie, cores }: { serie: SerieDoGrafico; cores: CoresDoCanvas }
         y2="3"
         stroke={serie.aoVivo ? cores.sinal : cores.pontos[serie.tom]}
         strokeWidth={serie.espessura ?? 1.5}
-        strokeDasharray={(serie.tracejado ?? []).join(' ') || undefined}
       />
     </svg>
   )
@@ -329,8 +336,13 @@ function montarOpcoes({
         gap: 4,
         grid: { show: false },
         ticks: { show: true, stroke: cores.linhaForte, width: 1, size: 4 },
-        // os rótulos caem sobre as divisões da retícula (uma a cada duas)
-        splits: (_u, _eixo, min, max) => divisoes(min, max, RETICULA_COLUNAS / 2),
+        // os rótulos caem sobre as divisões da retícula (uma a cada duas); em gráfico estreito,
+        // menos rótulos, para as horas não se sobreporem (cada uma pede uns 96 px)
+        splits: (u, _eixo, min, max) => {
+          const larguraCss = u.over.clientWidth || largura
+          const partes = [RETICULA_COLUNAS / 2, 2, 1].find((p) => larguraCss / p >= 96) ?? 1
+          return divisoes(min, max, partes)
+        },
         values: (_u, marcas) => {
           const comSegundos = (marcas.at(-1) ?? 0) - (marcas[0] ?? 0) <= 3600
           return marcas.map((s) =>
@@ -341,12 +353,23 @@ function montarOpcoes({
       {
         stroke: cores.apoio,
         font: FONTE,
-        size: 58,
+        // largura pelo rótulo mais longo (fonte monoespaçada de 12 px: 7,2 px por caractere), para
+        // "1.000,000" não ser cortado
+        size: (_u, rotulos) => {
+          // na primeira passada o uPlot ainda não tem os rótulos (chegam nulos, apesar da tipagem)
+          const lista: readonly string[] = Array.isArray(rotulos) ? rotulos : []
+          const maior = Math.max(5, ...lista.map((r) => r.length))
+          return Math.ceil(maior * 7.2) + 14
+        },
         gap: 4,
         grid: { show: false },
         ticks: { show: true, stroke: cores.linhaForte, width: 1, size: 4 },
         splits: (_u, _eixo, min, max) => divisoes(min, max, RETICULA_LINHAS / 2),
-        values: (_u, marcas) => marcas.map((v) => formatarNumero(v, extras.current.casas)),
+        // sem nenhum valor, a escala seria inventada: o eixo fica sem números
+        values: (_u, marcas) =>
+          semValores(extras.current.series)
+            ? marcas.map(() => '')
+            : marcas.map((v) => formatarNumero(v, extras.current.casas)),
       },
     ],
     series: [
@@ -355,7 +378,6 @@ function montarOpcoes({
         label: s.rotulo,
         stroke: s.aoVivo ? cores.sinal : cores.pontos[s.tom],
         width: s.espessura ?? 1.5,
-        dash: s.tracejado && s.tracejado.length > 0 ? [...s.tracejado] : undefined,
         spanGaps: false,
         points: {
           show: true,
@@ -560,4 +582,9 @@ function desenharRotulosNoFim(u: uPlot, series: readonly SerieDoGrafico[], cores
     }
   })
   ctx.restore()
+}
+
+/** Nenhuma série tem um valor finito: não há o que desenhar nem escala honesta para mostrar. */
+function semValores(series: readonly SerieDoGrafico[]): boolean {
+  return series.every((s) => s.valores.every((v) => v === null || !Number.isFinite(v)))
 }

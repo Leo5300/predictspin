@@ -1,6 +1,6 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { useEffect, useMemo, ViewTransition } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import {
   INTERVALO_DE_CONSULTA_MS,
@@ -89,72 +89,73 @@ export function TelaVisaoGeral() {
   const semMedicaoReal = !simulado && carregouUltimas && ultimas.every((u) => u.data === null)
 
   return (
-    <ViewTransition enter="pagina" exit="none" default="none">
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-baseline gap-x-3">
-          <h1 className="text-18 font-semibold">Visão geral</h1>
-          {maquinas.data ? (
-            <p className="text-13 text-apoio">
-              <span className="valor text-texto">{maquinas.data.total_elementos}</span>{' '}
-              {maquinas.data.total_elementos === 1 ? 'máquina' : 'máquinas'}
-            </p>
-          ) : null}
-        </div>
-
-        {semMedicaoReal ? (
-          <Painel>
-            <Modulo rotulo="Medição real" semRecuo>
-              <EstadoVazio
-                titulo="Nenhuma medição real recebida."
-                acao={<Button onClick={() => definirFonte('simulado')}>Ver dados simulados</Button>}
-              >
-                O dispositivo do torno ainda não enviou janelas. Os dados simulados servem para
-                conhecer o painel e nunca substituem medição.
-              </EstadoVazio>
-            </Modulo>
-          </Painel>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-baseline gap-x-3">
+        <h1 className="text-18 font-semibold">Visão geral</h1>
+        {maquinas.data ? (
+          <p className="text-13 text-apoio">
+            <span className="valor text-texto">{maquinas.data.total_elementos}</span>{' '}
+            {maquinas.data.total_elementos === 1 ? 'máquina' : 'máquinas'}
+            {maquinas.data.total_elementos > maquinas.data.conteudo.length ? (
+              <> · mostrando as primeiras {maquinas.data.conteudo.length}</>
+            ) : null}
+          </p>
         ) : null}
+      </div>
 
+      {semMedicaoReal ? (
         <Painel>
-          <Modulo rotulo="Máquinas" simulado={simulado} semRecuo>
-            {maquinas.isPending ? (
-              <EstadoCarregando rotulo="Carregando máquinas…" />
-            ) : maquinas.isError ? (
-              <EstadoErro erro={maquinas.error} aoTentarDeNovo={() => void maquinas.refetch()} />
-            ) : lista.length === 0 ? (
-              <EstadoVazio titulo="Nenhuma máquina cadastrada.">
-                As máquinas são cadastradas na API. Quando houver uma, ela aparece aqui.
-              </EstadoVazio>
-            ) : (
-              <div role="table" aria-label="Máquinas">
-                <div
-                  role="row"
-                  className={cn(
-                    'hidden gap-x-4 border-b border-linha px-3 py-1 @min-[84rem]:grid',
-                    COLUNAS,
-                  )}
-                >
-                  {CABECALHOS.map((titulo, i) => (
-                    <span key={i} role="columnheader" className="rotulo">
-                      {titulo}
-                    </span>
-                  ))}
-                </div>
-                {lista.map((maquina, i) => (
-                  <LinhaDaMaquina
-                    key={maquina.id}
-                    maquina={maquina}
-                    simulado={simulado}
-                    ultima={ultimas[i]?.data}
-                    carregando={ultimas[i]?.isPending ?? true}
-                  />
-                ))}
-              </div>
-            )}
+          <Modulo rotulo="Medição real" semRecuo>
+            <EstadoVazio
+              titulo="Nenhuma medição real recebida."
+              acao={<Button onClick={() => definirFonte('simulado')}>Ver dados simulados</Button>}
+            >
+              O dispositivo do torno ainda não enviou janelas. Os dados simulados servem para
+              conhecer o painel e nunca substituem medição.
+            </EstadoVazio>
           </Modulo>
         </Painel>
-      </div>
-    </ViewTransition>
+      ) : null}
+
+      <Painel>
+        <Modulo rotulo="Máquinas" simulado={simulado} semRecuo>
+          {maquinas.isPending ? (
+            <EstadoCarregando rotulo="Carregando máquinas…" />
+          ) : maquinas.isError ? (
+            <EstadoErro erro={maquinas.error} aoTentarDeNovo={() => void maquinas.refetch()} />
+          ) : lista.length === 0 ? (
+            <EstadoVazio titulo="Nenhuma máquina cadastrada.">
+              As máquinas são cadastradas na API. Quando houver uma, ela aparece aqui.
+            </EstadoVazio>
+          ) : (
+            <div role="table" aria-label="Máquinas">
+              <div
+                role="row"
+                className={cn(
+                  'hidden gap-x-4 border-b border-linha px-3 py-1 @min-[84rem]:grid',
+                  COLUNAS,
+                )}
+              >
+                {CABECALHOS.map((titulo, i) => (
+                  <span key={i} role="columnheader" className="rotulo">
+                    {titulo}
+                  </span>
+                ))}
+              </div>
+              {lista.map((maquina, i) => (
+                <LinhaDaMaquina
+                  key={maquina.id}
+                  maquina={maquina}
+                  simulado={simulado}
+                  ultima={ultimas[i]?.data}
+                  carregando={ultimas[i]?.isPending ?? true}
+                />
+              ))}
+            </div>
+          )}
+        </Modulo>
+      </Painel>
+    </div>
   )
 }
 

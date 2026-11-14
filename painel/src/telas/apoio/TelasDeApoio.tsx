@@ -76,7 +76,7 @@ export function ExigePapel({ area, children }: { area: Area; children: ReactNode
 /** Enquanto a sessão guardada é conferida com a API (que pode estar acordando). */
 export function TelaVerificando() {
   return (
-    <div className="p-3">
+    <div className="px-4 py-3">
       <p className="mb-3 text-15 font-semibold tracking-tight" translate="no">
         PredictSpin
       </p>

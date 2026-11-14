@@ -92,7 +92,7 @@ export function Galeria() {
 
   return (
     <TooltipProvider>
-      <main className="flex flex-col gap-6 p-3" data-galeria={MARCA_DA_GALERIA}>
+      <main className="flex flex-col gap-6 px-4 py-3" data-galeria={MARCA_DA_GALERIA}>
         <header className="flex flex-wrap items-center gap-3 border-b border-linha-forte pb-2">
           <h1 className="text-18 font-semibold">Galeria de componentes</h1>
           <span className="text-13 text-apoio">
@@ -263,7 +263,7 @@ export function Galeria() {
         </Secao>
 
         <Secao titulo="Sparkline">
-          <Caso titulo="normal (ponto B, tracejada)">
+          <Caso titulo="normal (contínua, último trecho em sinal)">
             <Sparkline valores={SPARK_NORMAL} descricao="exemplo" />
           </Caso>
           <Caso titulo="com lacuna">
@@ -371,7 +371,7 @@ export function Galeria() {
                 temposS={TEMPOS_TENDENCIA}
                 series={[
                   { rotulo: 'RMS', valores: RMS_TENDENCIA, tom: 0, espessura: 1.75 },
-                  { rotulo: 'PICO', valores: PICO_TENDENCIA, tom: 2, tracejado: [2, 3] },
+                  { rotulo: 'PICO', valores: PICO_TENDENCIA, tom: 2, espessura: 1 },
                 ]}
                 altura={240}
                 unidade="g"
@@ -404,17 +404,25 @@ export function Galeria() {
                 marcadores={[
                   {
                     codigo: 'A',
+                    lugar: 'A',
                     papel: 'acionamento',
                     conteudo: <MarcadorPonto codigo="A" avaliacao="alarme" />,
                   },
                   {
                     codigo: 'B',
+                    lugar: 'B',
                     papel: 'ferramenta–peça',
                     conteudo: <MarcadorPonto codigo="B" avaliacao="atencao" />,
                   },
-                  { codigo: 'C', papel: 'estrutura', conteudo: <MarcadorPonto codigo="C" /> },
+                  {
+                    codigo: 'C',
+                    lugar: 'C',
+                    papel: 'estrutura',
+                    conteudo: <MarcadorPonto codigo="C" />,
+                  },
                   {
                     codigo: 'R',
+                    lugar: 'R',
                     papel: 'rotação',
                     conteudo: <MarcadorPonto codigo="R" tamanho="pequeno" />,
                   },
