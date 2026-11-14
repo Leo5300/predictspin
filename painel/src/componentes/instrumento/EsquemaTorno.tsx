@@ -8,7 +8,7 @@ const ALTURA = 222
 const PARTES = [
   { nome: 'cabeçote', x: 84 },
   { nome: 'placa', x: 180 },
-  { nome: 'barramento', x: 262 },
+  { nome: 'barramento', x: 292 },
   { nome: 'carro', x: 382 },
   { nome: 'contraponto', x: 556 },
 ] as const
@@ -52,6 +52,8 @@ export type MarcadorNoTorno = {
 
 type Props = {
   marcadores: readonly MarcadorNoTorno[]
+  /** Dado velho: barras e leituras perdem a cor de sinal e ficam em cinza claro. */
+  velho?: boolean
   className?: string
 }
 
@@ -61,7 +63,7 @@ type Props = {
  * porta-ferramenta ao centro e contraponto à direita. Não é 3D, não gira e não brilha: serve para
  * dizer onde cada sensor está.
  */
-export function EsquemaTorno({ marcadores, className }: Props) {
+export function EsquemaTorno({ marcadores, velho = false, className }: Props) {
   return (
     <div
       className={cn('@container relative w-full @max-[30rem]:mb-4', className)}
@@ -107,7 +109,7 @@ export function EsquemaTorno({ marcadores, className }: Props) {
 
         {/* traços que ligam cada parte ao nome dela, abaixo do desenho */}
         <path
-          d="M84 200V184M180 200V156M262 200V146M382 200V170M556 200V152"
+          d="M84 200V184M180 200V156M292 200V146M382 200V170M556 200V152"
           className="stroke-linha"
           strokeWidth="1"
         />
@@ -158,7 +160,10 @@ export function EsquemaTorno({ marcadores, className }: Props) {
                 )}
               >
                 <span
-                  className="block border-t-2 border-sinal bg-apoio"
+                  className={cn(
+                    'block border-t-2',
+                    velho ? 'border-linha-forte bg-linha' : 'border-sinal bg-apoio',
+                  )}
                   style={{
                     height: `${Math.round(Math.min(1, Math.max(0, marcador.nivel)) * 100)}%`,
                   }}
@@ -166,7 +171,13 @@ export function EsquemaTorno({ marcadores, className }: Props) {
               </span>
             ) : null}
             {marcador.leitura ? (
-              <span className="valor absolute left-full ml-1 bg-modulo px-0.5 text-12 whitespace-nowrap text-texto">
+              <span
+                className={cn(
+                  'valor absolute left-full ml-1 bg-modulo px-0.5 text-12 whitespace-nowrap',
+                  velho ? 'text-fraco' : 'text-texto',
+                )}
+                data-velho={velho || undefined}
+              >
                 {marcador.leitura}
               </span>
             ) : null}

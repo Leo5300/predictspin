@@ -9,7 +9,10 @@ const toggleVariants = cva(
     'relevo inline-flex cursor-default items-center justify-center gap-1 rounded-2 border border-linha-forte bg-modulo',
     'text-13 font-medium whitespace-nowrap text-texto select-none',
     'min-h-8 min-w-8 px-2.5 pointer-coarse:min-h-11 max-md:min-h-11',
-    'disabled:pointer-events-none disabled:opacity-50',
+    // desabilitado sem transparência: o item marcado continua legível (realce e texto), o resto em
+    // texto de apoio
+    'disabled:pointer-events-none disabled:text-apoio disabled:border-linha',
+    'disabled:aria-pressed:bg-realce disabled:aria-pressed:text-texto disabled:aria-pressed:border-linha-forte',
     'aria-pressed:bg-acao aria-pressed:text-acao-texto aria-pressed:border-acao',
     '[@media(hover:hover)_and_(pointer:fine)]:hover:not-aria-pressed:bg-realce',
     "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",

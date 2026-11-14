@@ -51,7 +51,8 @@ export function rpmSemMilhar(rpm: number | null | undefined): string {
 
 /**
  * Marcas do tacômetro com a posição de cada rótulo: o rótulo que cairia a menos de `afastamento`
- * graus do anterior vai para a fileira de dentro (265 e 280 rpm ficam a 1,5° um do outro).
+ * graus do anterior vai para uma segunda fileira, por fora (265 e 280 rpm ficam a poucos graus um
+ * do outro).
  */
 export function marcasDoTacometro(
   nominais: readonly number[],
@@ -59,16 +60,16 @@ export function marcasDoTacometro(
   maximo: number,
   aberturaGraus: number,
   afastamentoGraus: number,
-): { nominal: number; fracao: number; dentro: boolean }[] {
+): { nominal: number; fracao: number; segundaFileira: boolean }[] {
   const ordenadas = [...nominais].filter((r) => r > 0).sort((a, b) => a - b)
-  const saida: { nominal: number; fracao: number; dentro: boolean }[] = []
+  const saida: { nominal: number; fracao: number; segundaFileira: boolean }[] = []
   let ultimoRotulo = Number.NEGATIVE_INFINITY
   for (const nominal of ordenadas) {
     const fracao = fracaoLog(nominal, minimo, maximo)
     const graus = fracao * aberturaGraus
-    const dentro = graus - ultimoRotulo < afastamentoGraus
-    if (!dentro) ultimoRotulo = graus
-    saida.push({ nominal, fracao, dentro })
+    const segundaFileira = graus - ultimoRotulo < afastamentoGraus
+    if (!segundaFileira) ultimoRotulo = graus
+    saida.push({ nominal, fracao, segundaFileira })
   }
   return saida
 }

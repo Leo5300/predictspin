@@ -144,10 +144,11 @@ describe('Simulado e dado velho', () => {
   })
 
   it('marca de idade: vivo discreto, velho com "sem dados há"', () => {
-    const { rerender } = render(<MarcaDeIdade frescor="vivo" idadeS={3} />)
-    expect(screen.getByText('há 3 s')).toBeInTheDocument()
+    const { container, rerender } = render(<MarcaDeIdade frescor="vivo" idadeS={3} />)
+    // número em fonte de valor, unidade separada por espaço fino
+    expect(container).toHaveTextContent('há 3 s', { normalizeWhitespace: false })
     rerender(<MarcaDeIdade frescor="velho" idadeS={137} />)
-    expect(screen.getByText(/sem dados há/)).toHaveTextContent('sem dados há 2 min')
+    expect(container).toHaveTextContent('sem dados há 2 min', { normalizeWhitespace: false })
     rerender(<MarcaDeIdade frescor="ausente" idadeS={null} />)
     expect(screen.getByText('sem dados')).toBeInTheDocument()
   })

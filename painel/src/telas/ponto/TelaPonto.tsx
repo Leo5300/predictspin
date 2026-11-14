@@ -65,6 +65,7 @@ import { useModoRapido } from '@/hooks/useModoRapido'
 import type { BuscaDoPonto } from '@/rotas/_painel/maquinas.$maquinaId.pontos.$codigo'
 
 import { TabelaDeJanelas } from './TabelaDeJanelas'
+import { Unidade } from '@/componentes/instrumento/Unidade'
 
 type Props = {
   maquinaId: number
@@ -472,7 +473,8 @@ function CabecalhoDoPonto({ ponto, janela, simulado, frescor, idadeS, velho }: P
   const medida = janela?.pontos[ponto.codigo]
   return (
     <Modulo
-      rotulo={`Ponto ${ponto.codigo}`}
+      // o título da tela (h1) já diz "Ponto B": o módulo diz o que mostra
+      rotulo="Leitura atual"
       detalhe={`${rotuloDoPapel(ponto.papel)} · ${ponto.descricao}`}
       simulado={simulado}
       className="flex-1"
@@ -714,7 +716,13 @@ function QuadroHistorico({ dados, faixas, quadro, inicioS, fimS, codigo }: Props
 
   return (
     <div className="flex flex-col">
-      <FaixaDoQuadro rotulo={`RMS e pico · g`}>
+      <FaixaDoQuadro
+        rotulo={
+          <>
+            RMS e pico · <Unidade>g</Unidade>
+          </>
+        }
+      >
         <GraficoTendencia
           temposS={dados.temposS}
           series={principais}
@@ -731,7 +739,17 @@ function QuadroHistorico({ dados, faixas, quadro, inicioS, fimS, codigo }: Props
           descricao={`Tendência de RMS e pico do ponto ${codigo}`}
         />
       </FaixaDoQuadro>
-      <FaixaDoQuadro rotulo={quadro === 'curtose' ? 'Curtose' : 'Ordens 1X, 2X e 3X · g'}>
+      <FaixaDoQuadro
+        rotulo={
+          quadro === 'curtose' ? (
+            'Curtose'
+          ) : (
+            <>
+              Ordens 1X, 2X e 3X · <Unidade>g</Unidade>
+            </>
+          )
+        }
+      >
         <GraficoTendencia
           temposS={dados.temposS}
           series={secundarias}
@@ -765,7 +783,8 @@ function QuadroHistorico({ dados, faixas, quadro, inicioS, fimS, codigo }: Props
       <p className="flex flex-wrap gap-x-4 gap-y-0.5 border-t border-linha px-3 py-1.5 text-12 text-apoio">
         <span>
           <span className="valor text-texto">{formatarNumero(dados.janelas)}</span>{' '}
-          {dados.janelas === 1 ? 'janela' : 'janelas'} no período
+          {dados.janelas === 1 ? 'janela normal' : 'janelas normais'} no gráfico (as rápidas, de 1
+          s, ficam fora da tendência)
         </span>
         <span>linha interrompida = lacuna (sem janela)</span>
         <span>▼ no topo = janela saturada</span>
@@ -776,7 +795,13 @@ function QuadroHistorico({ dados, faixas, quadro, inicioS, fimS, codigo }: Props
   )
 }
 
-function FaixaDoQuadro({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+function FaixaDoQuadro({
+  rotulo,
+  children,
+}: {
+  rotulo: React.ReactNode
+  children: React.ReactNode
+}) {
   return (
     <div className="border-b border-linha px-1 pt-1 last:border-b-0">
       <span className="rotulo px-2">{rotulo}</span>
@@ -816,7 +841,13 @@ function QuadroAoVivo({ recentes, codigo }: { recentes: Janela[]; codigo: string
 
   return (
     <div className="flex flex-col" data-testid="quadro-ao-vivo">
-      <FaixaDoQuadro rotulo="RMS e pico · g · últimos 60 s">
+      <FaixaDoQuadro
+        rotulo={
+          <>
+            RMS e pico · <Unidade>g</Unidade> · últimos 60 <Unidade>s</Unidade>
+          </>
+        }
+      >
         <GraficoTendencia
           temposS={temposS}
           series={series}

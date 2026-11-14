@@ -76,3 +76,30 @@ export function limitesDoEixo(valores: readonly (number | null | undefined)[]): 
   const teto = passos.map((p) => p * ordem).find((p) => p >= maximo * 1.05) ?? maximo * 1.1
   return [0, teto]
 }
+
+/** Passos "redondos" do eixo de tempo, em segundos: 1, 2, 5, 10, 15, 30 s; 1 a 30 min; 1 a 12 h; 1 d. */
+const PASSOS_DE_TEMPO_S = [
+  1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 10_800, 21_600, 43_200, 86_400,
+]
+
+/**
+ * Marcas do eixo de tempo em horários redondos (04:00, 04:05, 04:10...) em vez de divisões iguais do
+ * período (04:02:58, 04:05:57...). Escolhe o menor passo que deixa no máximo `maxMarcas` marcas. O
+ * alinhamento é pela hora local (`deslocamentoS` = fuso em segundos, a leste positivo).
+ */
+export function marcasDeTempo(
+  inicioS: number,
+  fimS: number,
+  maxMarcas: number,
+  deslocamentoS = 0,
+): { marcas: number[]; passoS: number } {
+  if (!(fimS > inicioS) || maxMarcas < 1) return { marcas: [], passoS: 0 }
+  const duracao = fimS - inicioS
+  const passoS =
+    PASSOS_DE_TEMPO_S.find((p) => Math.floor(duracao / p) + 1 <= maxMarcas) ??
+    Math.ceil(duracao / maxMarcas / 86_400) * 86_400
+  const primeira = Math.ceil((inicioS + deslocamentoS) / passoS) * passoS - deslocamentoS
+  const marcas: number[] = []
+  for (let t = primeira; t <= fimS + 1e-6; t += passoS) marcas.push(t)
+  return { marcas, passoS }
+}

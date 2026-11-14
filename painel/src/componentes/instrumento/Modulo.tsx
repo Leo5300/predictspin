@@ -54,7 +54,13 @@ export function Modulo({
         </h2>
         {simulado ? <SeloSim /> : null}
         {detalhe ? (
-          <div className="min-w-0 flex-1 truncate text-12 text-apoio">{detalhe}</div>
+          // módulo estreito: o detalhe desce para uma linha própria em vez de virar "f…"
+          <div
+            className="min-w-0 flex-1 truncate text-12 text-apoio @max-[36rem]:order-last @max-[36rem]:basis-full"
+            title={typeof detalhe === 'string' ? detalhe : undefined}
+          >
+            {detalhe}
+          </div>
         ) : null}
         {acoes ? (
           <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">{acoes}</div>

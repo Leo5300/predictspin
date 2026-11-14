@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/componentes/ui/tooltip'
+import { TRACO } from '@/dominio/formato'
 import { cn } from '@/lib/utils'
 
 type Tamanho = 'pequeno' | 'medio' | 'grande' | 'destaque'
@@ -80,7 +81,8 @@ export function Leitura({
         <span className="valor truncate font-medium text-texto" title={valor}>
           {valor}
         </span>
-        {unidade ? (
+        {/* sem valor, só o traço: unidade ao lado de nada parece um valor */}
+        {unidade && valor !== TRACO ? (
           <span className="shrink-0 text-[0.7em] leading-none text-apoio">{unidade}</span>
         ) : null}
         {trocas > 0 && !velho ? (

@@ -18,14 +18,15 @@ type Props = {
 }
 
 const LARGURA = 360
-const ALTURA = 280
+const ALTURA = 296
 const CX = 180
-const CY = 140
+// espaço em cima para a segunda fileira de rótulos (por fora do arco)
+const CY = 156
 const RAIO = 118
 /** O arco vai de 210° a −30° (240° de abertura), como num tacômetro de painel. */
 const INICIO_GRAUS = 210
 const ABERTURA_GRAUS = 240
-/** Rótulos mais próximos que isto do anterior vão para a fileira de dentro. */
+/** Rótulos mais próximos que isto do anterior vão para a segunda fileira, por fora. */
 const AFASTAMENTO_MINIMO_GRAUS = 9
 
 function angulo(fracao: number): number {
@@ -77,11 +78,18 @@ export function Tacometro({ rpm, nominais, velho = false, className }: Props) {
           className="w-full"
         >
           <path d={arco} fill="none" stroke="var(--linha-forte)" strokeWidth="1.5" />
-          {marcas.map(({ nominal, fracao: f, dentro }) => {
+          {marcas.map(({ nominal, fracao: f, segundaFileira }) => {
             const destaque = nominal === marcha && !velho
             const externo = ponto(f, RAIO)
             const interno = ponto(f, RAIO - (destaque ? 14 : 9))
-            const rotulo = ponto(f, dentro ? RAIO - 26 : RAIO + 13)
+            // o texto sai do traço para fora: começa depois dele à direita, termina antes dele à
+            // esquerda e fica centrado no alto do arco, sem cruzar traço nem arco
+            const cosseno = Math.cos(angulo(f))
+            const ancora = cosseno > 0.35 ? 'start' : cosseno < -0.35 ? 'end' : 'middle'
+            const rotulo = ponto(
+              f,
+              RAIO + (ancora === 'middle' ? 11 : 7) + (segundaFileira ? 14 : 0),
+            )
             return (
               <g key={nominal}>
                 <line
@@ -95,7 +103,7 @@ export function Tacometro({ rpm, nominais, velho = false, className }: Props) {
                 <text
                   x={rotulo.x}
                   y={rotulo.y}
-                  textAnchor="middle"
+                  textAnchor={ancora}
                   dominantBaseline="middle"
                   className="valor"
                   fontSize={destaque ? 12.5 : 10.5}

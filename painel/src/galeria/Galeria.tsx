@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 
-import { ErroApi, ErroRede } from '@/api/erros'
+import { ErroApi } from '@/api/erros'
 import { EsquemaTorno } from '@/componentes/instrumento/EsquemaTorno'
 import {
   EstadoAcordando,
@@ -323,7 +323,6 @@ export function Galeria() {
           </Caso>
           <Caso titulo="API acordando">
             <EstadoAcordando />
-            <EstadoErro erro={new ErroRede()} />
           </Caso>
         </Secao>
 

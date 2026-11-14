@@ -222,7 +222,8 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
         ) : (
           <PlacaEstado estado={estado} />
         )}
-        {frescor !== 'vivo' && !carregando ? (
+        {/* a placa já diz "SEM DADOS"; a marca só acrescenta há quanto tempo, quando se sabe */}
+        {frescor === 'velho' && !carregando ? (
           <MarcaDeIdade frescor={frescor} idadeS={idadeS} className="mt-1" />
         ) : null}
       </Celula>
@@ -249,7 +250,9 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
                   <span className="valor text-15 font-medium text-texto">
                     {formatarG(janela?.pontos[codigo]?.rms_g)}
                   </span>
-                  <span className="text-12 text-apoio">g</span>
+                  {formatarG(janela?.pontos[codigo]?.rms_g) === TRACO ? null : (
+                    <span className="text-12 text-apoio">g</span>
+                  )}
                 </span>
                 <Sparkline
                   valores={

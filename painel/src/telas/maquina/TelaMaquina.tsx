@@ -106,7 +106,7 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
             </span>
           ) : null}
           <SeloAvaliacao avaliacao="sem_referencia" />
-          <PlacaEstado estado={estado} className="w-52" />
+          <PlacaEstado estado={estado} matriz={false} className="w-44" />
         </div>
       </header>
 
@@ -142,17 +142,28 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
         <Modulo
           rotulo="Sensores na máquina"
           className="xl:col-span-4 [&>div:last-child]:flex [&>div:last-child]:flex-col [&>div:last-child]:justify-center"
+          acoes={
+            frescor === 'vivo' ? undefined : <MarcaDeIdade frescor={frescor} idadeS={idadeS} />
+          }
         >
           {maquina.data.classe === 'torno' ? (
-            <EsquemaTorno
-              marcadores={marcadoresDoTorno(
-                maquinaId,
-                pontosAtivos,
-                janela,
-                aoVivo.recentes,
-                aoVivo.porEventos && !velho ? (janela?.id ?? null) : null,
-              )}
-            />
+            <>
+              <EsquemaTorno
+                marcadores={marcadoresDoTorno(
+                  maquinaId,
+                  pontosAtivos,
+                  janela,
+                  aoVivo.recentes,
+                  aoVivo.porEventos && !velho ? (janela?.id ?? null) : null,
+                )}
+                velho={velho}
+              />
+              {/* o que as marcas do desenho querem dizer */}
+              <p className="mt-6 text-12 text-apoio">
+                Barra ao lado do ponto: RMS atual em relação ao maior RMS dos últimos 15 min. Anel:
+                janela que acabou de chegar. Clique no ponto para abrir a tendência.
+              </p>
+            </>
           ) : (
             <ul className="flex flex-col gap-1">
               {pontosAtivos.map((p) => (
@@ -435,7 +446,7 @@ function ModuloDoPonto({
       className="flex-1"
       acoes={
         <>
-          {velho && janela ? <MarcaDeIdade frescor={frescor} idadeS={idadeS} /> : null}
+          {velho ? <MarcaDeIdade frescor={frescor} idadeS={idadeS} /> : null}
           <Link
             to="/maquinas/$maquinaId/pontos/$codigo"
             params={{ maquinaId, codigo: ponto.codigo }}

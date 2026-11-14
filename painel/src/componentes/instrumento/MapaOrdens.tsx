@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 
 import { cinzaDoNivel, DEGRAUS_DA_RAMPA, useCoresDoCanvas, type CoresDoCanvas } from './cores'
 import { SeloSim } from './SeloSim'
+import { Unidade } from './Unidade'
 
 export type IntervaloDoMapa = {
   inicio: string
@@ -279,7 +280,9 @@ export function MapaOrdens({ intervalos, linhas, simulado = false, className }: 
           <span>{meio ? formatarHoraMinuto(meio.inicio) : ''}</span>
           <span>{ultimo ? formatarHoraMinuto(ultimo.fim) : TRACO}</span>
         </div>
-        <span className="rotulo pt-1">máx g</span>
+        <span className="rotulo pt-1">
+          máx <Unidade>g</Unidade>
+        </span>
       </div>
 
       {/* leitura do intervalo sob o cursor */}
@@ -454,6 +457,28 @@ function desenhar(ctx: CanvasRenderingContext2D, d: Desenho) {
       ctx.fillRect(x0, y, Math.max(1, x1 - x0), ALTURA_DA_LINHA - 1)
     }
   })
+
+  // lacuna (intervalo sem janela depois da primeira): contorno tracejado, como na legenda, para não
+  // se confundir com "sem dado" (pontos) nem com o fundo
+  if (primeiroComDado !== -1) {
+    ctx.save()
+    ctx.strokeStyle = d.cores.linhaForte
+    ctx.lineWidth = 1
+    ctx.setLineDash([2, 2])
+    let k = primeiroComDado
+    while (k < total) {
+      if ((d.intervalos[k]?.janelas ?? 0) > 0) {
+        k++
+        continue
+      }
+      const inicio = k
+      while (k < total && (d.intervalos[k]?.janelas ?? 0) === 0) k++
+      const x0 = Math.floor(inicio * passo) + 0.5
+      const x1 = Math.floor(k * passo) - 0.5
+      for (const y of d.ys) ctx.strokeRect(x0, y + 0.5, Math.max(1, x1 - x0), ALTURA_DA_LINHA - 2)
+    }
+    ctx.restore()
+  }
 
   // marca de saturação no topo do intervalo
   ctx.fillStyle = d.cores.texto

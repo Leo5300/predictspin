@@ -52,7 +52,19 @@ const FORMA_DO_ESTADO: Record<EstadoMaquina, Forma> = {
  * desvio, então a placa é neutra; o que os distingue é o texto, a forma e, no SEM DADOS, o tom
  * fraco com borda tracejada.
  */
-export function PlacaEstado({ estado, className }: { estado: EstadoMaquina; className?: string }) {
+export function PlacaEstado({
+  estado,
+  matriz = true,
+  className,
+}: {
+  estado: EstadoMaquina
+  /**
+   * A fonte de matriz de pontos é só da placa na visão geral (direção, item 9); na tela da máquina,
+   * onde o herói é a rotação, a placa usa a fonte monoespaçada.
+   */
+  matriz?: boolean
+  className?: string
+}) {
   const semDados = estado === 'sem_dados'
   return (
     <span
@@ -67,7 +79,14 @@ export function PlacaEstado({ estado, className }: { estado: EstadoMaquina; clas
         forma={FORMA_DO_ESTADO[estado]}
         className={cn('size-3.5', estado === 'operando' && 'rotate-90')}
       />
-      <span className="matriz truncate text-24">{ROTULO_ESTADO[estado]}</span>
+      <span
+        className={cn(
+          'truncate',
+          matriz ? 'matriz text-24' : 'valor text-15 font-semibold tracking-[0.08em]',
+        )}
+      >
+        {ROTULO_ESTADO[estado]}
+      </span>
     </span>
   )
 }

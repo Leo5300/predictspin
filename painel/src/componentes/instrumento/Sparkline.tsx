@@ -23,7 +23,7 @@ type Ponto = { x: number; y: number } | null
  * Sparkline: tendência curta ao lado de uma leitura, sem eixos. Linha contínua em cinza neutro (a
  * letra do ponto já está no módulo; estilos de traço por ponto ficam para os gráficos que dividem o
  * eixo), último trecho e último ponto na cor de sinal. Só é desenhada com dado real: com menos de
- * dois valores aparece um traço.
+ * dois valores, o espaço fica vazio.
  */
 export function Sparkline({
   valores,
@@ -44,7 +44,7 @@ export function Sparkline({
         style={{ width: largura, height: altura }}
         data-vazio="true"
       >
-        <span aria-hidden="true">—</span>
+        {/* sem dado suficiente, o espaço fica vazio: o valor ao lado já mostra o traço */}
         <span className="sr-only">{descricao}: sem dados suficientes</span>
       </span>
     )

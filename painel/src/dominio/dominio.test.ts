@@ -12,6 +12,7 @@ import {
   corDaCelula,
   escalaDaLinha,
   limitesDoEixo,
+  marcasDeTempo,
   nivelDeCinza,
   posicaoNaRegua,
 } from './escalas'
@@ -296,5 +297,28 @@ describe('pontos, papéis e CSV', () => {
       '',
     ])
     expect(nomeDeArquivo(['TORNO-01', 'ponto A', '15 min'])).toBe('TORNO-01_ponto-A_15-min.csv')
+  })
+})
+
+describe('marcas do eixo de tempo', () => {
+  it('caem em horários redondos e respeitam o máximo de marcas', () => {
+    // 15 min começando em 04:02:58 (UTC), no máximo 6 marcas: passo de 5 min
+    const inicio = Date.UTC(2026, 10, 14, 4, 2, 58) / 1000
+    const { marcas, passoS } = marcasDeTempo(inicio, inicio + 900, 6)
+    expect(passoS).toBe(300)
+    expect(marcas.map((t) => new Date(t * 1000).toISOString().slice(11, 19))).toEqual([
+      '04:05:00',
+      '04:10:00',
+      '04:15:00',
+    ])
+  })
+
+  it('alinham pela hora local e não quebram com período vazio', () => {
+    const inicio = Date.UTC(2026, 10, 14, 0, 30, 0) / 1000
+    // 8 h com no máximo 3 marcas em UTC−3: passo de 3 h alinhado às 00, 03, 06... locais
+    const { marcas, passoS } = marcasDeTempo(inicio, inicio + 8 * 3600, 3, -3 * 3600)
+    expect(passoS).toBe(10_800)
+    expect(marcas.map((t) => new Date((t - 3 * 3600) * 1000).getUTCHours())).toEqual([0, 3])
+    expect(marcasDeTempo(10, 10, 5).marcas).toEqual([])
   })
 })

@@ -22,6 +22,7 @@ import {
   fracao,
   TRACO,
 } from '@/dominio/formato'
+import { Unidade } from '@/componentes/instrumento/Unidade'
 
 type Props = {
   maquinaId: number
@@ -64,16 +65,26 @@ export function TabelaDeJanelas({
         <TableHeader>
           <TableRow>
             <TableHead>Medida em</TableHead>
-            <TableHead className="text-right">RMS g</TableHead>
-            <TableHead className="text-right">Pico g</TableHead>
+            <TableHead className="text-right">
+              RMS <Unidade>g</Unidade>
+            </TableHead>
+            <TableHead className="text-right">
+              Pico <Unidade>g</Unidade>
+            </TableHead>
             <TableHead className="text-right">
               <abbr title="curtose" className="no-underline">
                 Curt
               </abbr>
             </TableHead>
-            <TableHead className="text-right">1X g</TableHead>
-            <TableHead className="text-right">2X g</TableHead>
-            <TableHead className="text-right">3X g</TableHead>
+            <TableHead className="text-right">
+              1X <Unidade>g</Unidade>
+            </TableHead>
+            <TableHead className="text-right">
+              2X <Unidade>g</Unidade>
+            </TableHead>
+            <TableHead className="text-right">
+              3X <Unidade>g</Unidade>
+            </TableHead>
             <TableHead className="text-right">RPM</TableHead>
             <TableHead className="text-right">Amostras</TableHead>
             <TableHead>Marcas</TableHead>
@@ -127,8 +138,8 @@ export function TabelaDeJanelas({
           <span className="valor text-texto">
             {formatarNumero(primeira)}–{formatarNumero(ultima)}
           </span>{' '}
-          de <span className="valor text-texto">{formatarNumero(total)}</span> janelas · página{' '}
-          <span className="valor text-texto">{pagina + 1}</span> de{' '}
+          de <span className="valor text-texto">{formatarNumero(total)}</span> janelas (normais e
+          rápidas) · página <span className="valor text-texto">{pagina + 1}</span> de{' '}
           <span className="valor text-texto">{paginas}</span>
         </p>
         <div className="flex gap-2">

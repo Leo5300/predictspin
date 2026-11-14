@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import uPlot from 'uplot'
 
 import type { Referencia } from '@/dominio/estado'
-import { limitesDoEixo } from '@/dominio/escalas'
+import { limitesDoEixo, marcasDeTempo } from '@/dominio/escalas'
 import {
   formatarDataHora,
   formatarHora,
@@ -13,7 +13,7 @@ import {
 import { cn } from '@/lib/utils'
 
 import { useCoresDoCanvas, type CoresDoCanvas } from './cores'
-import { desenharReticula, RETICULA_COLUNAS, RETICULA_LINHAS } from './desenhoDaReticula'
+import { desenharReticula, RETICULA_LINHAS } from './desenhoDaReticula'
 
 export type SerieDoGrafico = {
   /** Texto curto escrito no fim da linha (A, B, C, RMS, PICO, 1X...). */
@@ -68,7 +68,7 @@ type Extras = Pick<
 }
 
 const FONTE = '12px "IBM Plex Mono", monospace'
-const MARGEM_DIREITA = 44
+const MARGEM_DIREITA = 60
 
 /**
  * Gráfico de tendência (uPlot) com retícula de osciloscópio 10 × 8 ao fundo. As linhas usam tons
@@ -338,15 +338,18 @@ function montarOpcoes({
         ticks: { show: true, stroke: cores.linhaForte, width: 1, size: 4 },
         // os rótulos caem sobre as divisões da retícula (uma a cada duas); em gráfico estreito,
         // menos rótulos, para as horas não se sobreporem (cada uma pede uns 96 px)
+        // marcas em horários redondos (04:05, 04:10...), tantas quantas couberem (cada hora pede
+        // uns 96 px); a retícula 10×8 continua ao fundo
         splits: (u, _eixo, min, max) => {
           const larguraCss = u.over.clientWidth || largura
-          const partes = [RETICULA_COLUNAS / 2, 2, 1].find((p) => larguraCss / p >= 96) ?? 1
-          return divisoes(min, max, partes)
+          const maxMarcas = Math.max(2, Math.min(7, Math.floor(larguraCss / 96)))
+          const fusoS = -new Date(min * 1000).getTimezoneOffset() * 60
+          return marcasDeTempo(min, max, maxMarcas, fusoS).marcas
         },
         values: (_u, marcas) => {
-          const comSegundos = (marcas.at(-1) ?? 0) - (marcas[0] ?? 0) <= 3600
+          const passo = marcas.length > 1 ? (marcas[1] ?? 0) - (marcas[0] ?? 0) : 3600
           return marcas.map((s) =>
-            comSegundos ? formatarHora(s * 1000) : formatarHoraMinuto(s * 1000),
+            passo < 60 ? formatarHora(s * 1000) : formatarHoraMinuto(s * 1000),
           )
         },
       },
@@ -547,17 +550,17 @@ function desenharSaturadas(u: uPlot, saturadas: readonly number[], cores: CoresD
   ctx.restore()
 }
 
-/** O rótulo de cada série (A, B, C, RMS, PICO...) escrito no fim da linha. */
+/**
+ * O rótulo de cada série (RMS, PICO, 1X...) na margem direita, à altura do último valor da linha.
+ * Fica fora da área do gráfico, onde nenhum traço passa, e os rótulos se afastam para não se
+ * encostarem (12 px de altura cada).
+ */
 function desenharRotulosNoFim(u: uPlot, series: readonly SerieDoGrafico[], cores: CoresDoCanvas) {
   const { left, top, width, height } = u.bbox
   const escala = devicePixelRatio
   const ctx = u.ctx
   const tempos = u.data[0]
-  ctx.save()
-  ctx.font = `600 ${12 * escala}px "IBM Plex Mono", monospace`
-  ctx.textBaseline = 'middle'
-  ctx.fillStyle = cores.texto
-  const usados: number[] = []
+  const desejados: { rotulo: string; y: number }[] = []
   series.forEach((serie, k) => {
     const valores = u.data[k + 1]
     if (!valores) return
@@ -568,19 +571,33 @@ function desenharRotulosNoFim(u: uPlot, series: readonly SerieDoGrafico[], cores
       const x = u.valToPos(t, 'x', true)
       if (x > left + width + 1) continue
       if (x < left) break
-      let y = Math.min(
-        top + height - 7 * escala,
-        Math.max(top + 7 * escala, u.valToPos(v, 'y', true)),
-      )
-      // afasta rótulos que cairiam um sobre o outro
-      for (const outro of usados) {
-        if (Math.abs(outro - y) < 13 * escala) y = outro + 13 * escala
-      }
-      usados.push(y)
-      ctx.fillText(serie.rotulo, Math.min(x, left + width) + 5 * escala, y)
+      desejados.push({ rotulo: serie.rotulo, y: u.valToPos(v, 'y', true) })
       break
     }
   })
+  const passo = 13 * escala
+  const minimo = top + 6 * escala
+  const maximo = top + height - 6 * escala
+  desejados.sort((a, b) => a.y - b.y)
+  // de cima para baixo, cada rótulo pelo menos um passo abaixo do anterior...
+  let anterior = Number.NEGATIVE_INFINITY
+  for (const d of desejados) {
+    d.y = Math.max(minimo, d.y, anterior + passo)
+    anterior = d.y
+  }
+  // ...e, se o último passou do fundo, sobem juntos
+  let seguinte = Number.POSITIVE_INFINITY
+  for (let i = desejados.length - 1; i >= 0; i--) {
+    const d = desejados[i]
+    if (!d) continue
+    d.y = Math.min(d.y, maximo, seguinte - passo)
+    seguinte = d.y
+  }
+  ctx.save()
+  ctx.font = `600 ${12 * escala}px "IBM Plex Mono", monospace`
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = cores.texto
+  for (const d of desejados) ctx.fillText(d.rotulo, left + width + 6 * escala, d.y)
   ctx.restore()
 }
 
