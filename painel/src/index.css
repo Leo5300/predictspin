@@ -165,6 +165,10 @@
   --sinal: var(--ciano-420);
   --sinal-suave: oklch(0.42 0.07 205 / 0.16);
 
+  /* REC: vermelho de gravador (convenção), o ÚNICO uso de vermelho fora de alarme. Só no botão REC e
+     no ponto que pulsa enquanto grava. */
+  --rec: var(--vermelho-530);
+
   --simulado: oklch(0.42 0 0 / 0.38);
   --reticula: var(--cinza-890);
   --reticula-fina: var(--cinza-925);
@@ -215,6 +219,8 @@
   --sinal: var(--ciano-820);
   --sinal-suave: oklch(0.82 0.12 200 / 0.16);
 
+  --rec: var(--vermelho-620);
+
   --simulado: oklch(0.8 0 0 / 0.3);
   --reticula: var(--cinza-250);
   --reticula-fina: var(--cinza-215);
@@ -252,6 +258,7 @@
   --color-ponto-b: var(--ponto-b);
   --color-ponto-c: var(--ponto-c);
   --color-simulado: var(--simulado);
+  --color-rec: var(--rec);
   --color-foco: var(--foco);
   --color-sinal: var(--sinal);
   --color-sinal-suave: var(--sinal-suave);
@@ -520,6 +527,27 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Ponto do REC enquanto grava: pulso lento de opacidade (só opacidade, sem quique) */
+@keyframes pulso-rec {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Célula da cobertura que acabou de ganhar uma gravação: "carimba" (0,96 → 1 em 160 ms) */
+@keyframes carimbo {
+  from {
+    transform: scale(0.96);
+  }
+  to {
+    transform: scale(1);
   }
 }
 

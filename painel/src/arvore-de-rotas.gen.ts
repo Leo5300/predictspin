@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './rotas/__root'
 import { Route as PainelRouteImport } from './rotas/_painel'
 import { Route as LoginRouteImport } from './rotas/login'
 import { Route as PainelIndexRouteImport } from './rotas/_painel/index'
-import { Route as PainelColetaRouteImport } from './rotas/_painel/coleta'
+import { Route as PainelColetaIndexRouteImport } from './rotas/_painel/coleta.index'
+import { Route as PainelColetaPrepararRouteImport } from './rotas/_painel/coleta.preparar'
+import { Route as PainelColetaEnsaiosIndexRouteImport } from './rotas/_painel/coleta.ensaios.index'
 import { Route as PainelMaquinasMaquinaIdIndexRouteImport } from './rotas/_painel/maquinas.$maquinaId.index'
 import { Route as PainelMaquinasMaquinaIdPontosCodigoRouteImport } from './rotas/_painel/maquinas.$maquinaId.pontos.$codigo'
 
@@ -30,11 +32,22 @@ const PainelIndexRoute = PainelIndexRouteImport.update({
   path: '/',
   getParentRoute: () => PainelRoute,
 } as any)
-const PainelColetaRoute = PainelColetaRouteImport.update({
-  id: '/coleta',
-  path: '/coleta',
+const PainelColetaIndexRoute = PainelColetaIndexRouteImport.update({
+  id: '/coleta/',
+  path: '/coleta/',
   getParentRoute: () => PainelRoute,
 } as any)
+const PainelColetaPrepararRoute = PainelColetaPrepararRouteImport.update({
+  id: '/coleta/preparar',
+  path: '/coleta/preparar',
+  getParentRoute: () => PainelRoute,
+} as any)
+const PainelColetaEnsaiosIndexRoute =
+  PainelColetaEnsaiosIndexRouteImport.update({
+    id: '/coleta/ensaios/',
+    path: '/coleta/ensaios/',
+    getParentRoute: () => PainelRoute,
+  } as any)
 const PainelMaquinasMaquinaIdIndexRoute =
   PainelMaquinasMaquinaIdIndexRouteImport.update({
     id: '/maquinas/$maquinaId/',
@@ -51,14 +64,18 @@ const PainelMaquinasMaquinaIdPontosCodigoRoute =
 export interface FileRoutesByFullPath {
   '/': typeof PainelIndexRoute
   '/login': typeof LoginRoute
-  '/coleta': typeof PainelColetaRoute
+  '/coleta/preparar': typeof PainelColetaPrepararRoute
+  '/coleta/': typeof PainelColetaIndexRoute
+  '/coleta/ensaios/': typeof PainelColetaEnsaiosIndexRoute
   '/maquinas/$maquinaId/': typeof PainelMaquinasMaquinaIdIndexRoute
   '/maquinas/$maquinaId/pontos/$codigo': typeof PainelMaquinasMaquinaIdPontosCodigoRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
-  '/coleta': typeof PainelColetaRoute
   '/': typeof PainelIndexRoute
+  '/coleta/preparar': typeof PainelColetaPrepararRoute
+  '/coleta': typeof PainelColetaIndexRoute
+  '/coleta/ensaios': typeof PainelColetaEnsaiosIndexRoute
   '/maquinas/$maquinaId': typeof PainelMaquinasMaquinaIdIndexRoute
   '/maquinas/$maquinaId/pontos/$codigo': typeof PainelMaquinasMaquinaIdPontosCodigoRoute
 }
@@ -66,8 +83,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_painel': typeof PainelRouteWithChildren
   '/login': typeof LoginRoute
-  '/_painel/coleta': typeof PainelColetaRoute
   '/_painel/': typeof PainelIndexRoute
+  '/_painel/coleta/preparar': typeof PainelColetaPrepararRoute
+  '/_painel/coleta/': typeof PainelColetaIndexRoute
+  '/_painel/coleta/ensaios/': typeof PainelColetaEnsaiosIndexRoute
   '/_painel/maquinas/$maquinaId/': typeof PainelMaquinasMaquinaIdIndexRoute
   '/_painel/maquinas/$maquinaId/pontos/$codigo': typeof PainelMaquinasMaquinaIdPontosCodigoRoute
 }
@@ -76,22 +95,28 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
-    | '/coleta'
+    | '/coleta/preparar'
+    | '/coleta/'
+    | '/coleta/ensaios/'
     | '/maquinas/$maquinaId/'
     | '/maquinas/$maquinaId/pontos/$codigo'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
-    | '/coleta'
     | '/'
+    | '/coleta/preparar'
+    | '/coleta'
+    | '/coleta/ensaios'
     | '/maquinas/$maquinaId'
     | '/maquinas/$maquinaId/pontos/$codigo'
   id:
     | '__root__'
     | '/_painel'
     | '/login'
-    | '/_painel/coleta'
     | '/_painel/'
+    | '/_painel/coleta/preparar'
+    | '/_painel/coleta/'
+    | '/_painel/coleta/ensaios/'
     | '/_painel/maquinas/$maquinaId/'
     | '/_painel/maquinas/$maquinaId/pontos/$codigo'
   fileRoutesById: FileRoutesById
@@ -124,11 +149,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelIndexRouteImport
       parentRoute: typeof PainelRoute
     }
-    '/_painel/coleta': {
-      id: '/_painel/coleta'
+    '/_painel/coleta/': {
+      id: '/_painel/coleta/'
       path: '/coleta'
-      fullPath: '/coleta'
-      preLoaderRoute: typeof PainelColetaRouteImport
+      fullPath: '/coleta/'
+      preLoaderRoute: typeof PainelColetaIndexRouteImport
+      parentRoute: typeof PainelRoute
+    }
+    '/_painel/coleta/preparar': {
+      id: '/_painel/coleta/preparar'
+      path: '/coleta/preparar'
+      fullPath: '/coleta/preparar'
+      preLoaderRoute: typeof PainelColetaPrepararRouteImport
+      parentRoute: typeof PainelRoute
+    }
+    '/_painel/coleta/ensaios/': {
+      id: '/_painel/coleta/ensaios/'
+      path: '/coleta/ensaios'
+      fullPath: '/coleta/ensaios/'
+      preLoaderRoute: typeof PainelColetaEnsaiosIndexRouteImport
       parentRoute: typeof PainelRoute
     }
     '/_painel/maquinas/$maquinaId/': {
@@ -149,15 +188,19 @@ declare module '@tanstack/react-router' {
 }
 
 interface PainelRouteChildren {
-  PainelColetaRoute: typeof PainelColetaRoute
   PainelIndexRoute: typeof PainelIndexRoute
+  PainelColetaPrepararRoute: typeof PainelColetaPrepararRoute
+  PainelColetaIndexRoute: typeof PainelColetaIndexRoute
+  PainelColetaEnsaiosIndexRoute: typeof PainelColetaEnsaiosIndexRoute
   PainelMaquinasMaquinaIdIndexRoute: typeof PainelMaquinasMaquinaIdIndexRoute
   PainelMaquinasMaquinaIdPontosCodigoRoute: typeof PainelMaquinasMaquinaIdPontosCodigoRoute
 }
 
 const PainelRouteChildren: PainelRouteChildren = {
-  PainelColetaRoute: PainelColetaRoute,
   PainelIndexRoute: PainelIndexRoute,
+  PainelColetaPrepararRoute: PainelColetaPrepararRoute,
+  PainelColetaIndexRoute: PainelColetaIndexRoute,
+  PainelColetaEnsaiosIndexRoute: PainelColetaEnsaiosIndexRoute,
   PainelMaquinasMaquinaIdIndexRoute: PainelMaquinasMaquinaIdIndexRoute,
   PainelMaquinasMaquinaIdPontosCodigoRoute:
     PainelMaquinasMaquinaIdPontosCodigoRoute,

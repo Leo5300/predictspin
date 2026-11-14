@@ -1,14 +1,17 @@
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
 
 import { useTema } from '@/estado/preferencias'
+import { useTelaEstreita } from '@/hooks/useTelaEstreita'
 
 /** Avisos (Sonner) no visual do painel: módulo com linha de 1 px, sem sombra e sem ícone decorativo. */
 function Toaster(props: ToasterProps) {
   const tema = useTema()
+  // no celular a parte de baixo é a zona do polegar (REC, Encerrar, Marcar evento): aviso vai em cima
+  const estreita = useTelaEstreita()
   return (
     <Sonner
       theme={tema === 'grafite' ? 'dark' : 'light'}
-      position="bottom-right"
+      position={estreita ? 'top-center' : 'bottom-right'}
       visibleToasts={3}
       toastOptions={{
         unstyled: true,

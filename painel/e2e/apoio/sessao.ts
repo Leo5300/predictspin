@@ -38,7 +38,7 @@ export async function loginComIpProprio(page: Page) {
 
 const rand = () => Math.floor(Math.random() * 250) + 1
 
-async function tokenDoAdmin(request: APIRequestContext): Promise<string> {
+export async function tokenDoAdmin(request: APIRequestContext): Promise<string> {
   const resposta = await request.post(`${URL_API}/api/v1/auth/login`, { data: ADMIN })
   expect(resposta.ok()).toBeTruthy()
   const corpo = (await resposta.json()) as { token: string }
@@ -66,4 +66,18 @@ export async function desativarUsuario(request: APIRequestContext, id: number) {
   await request.post(`${URL_API}/api/v1/usuarios/${id}/desativar`, {
     headers: { Authorization: `Bearer ${token}` },
   })
+}
+
+/** Grava o plano de coleta da máquina (rotações da grade de cobertura) pela API local. */
+export async function definirPlano(
+  request: APIRequestContext,
+  maquinaId: number,
+  rotacoes: number[],
+) {
+  const token = await tokenDoAdmin(request)
+  const resposta = await request.put(`${URL_API}/api/v1/maquinas/${maquinaId}/coleta/plano`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { rotacoes_rpm: rotacoes },
+  })
+  expect(resposta.ok()).toBeTruthy()
 }

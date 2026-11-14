@@ -9,7 +9,10 @@ import { criarLeitorSse, esperaDeReconexaoS } from '@/dominio/eventosSse'
 import { AVISO_SESSAO_EXPIRADA, URL_API } from './cliente'
 import { lerRetryAfter } from './erros'
 import { encerrarSessao, tokenAtual } from './sessao'
+import type { components } from './esquema'
 import type { EnsaioEvento, Janela, ModoRapido } from './tipos'
+
+export type EventoMarcadoSse = components['schemas']['EventoMarcadoResposta']
 
 export type EstadoEventos = 'conectando' | 'ao_vivo' | 'reconectando'
 
@@ -19,6 +22,8 @@ export type OpcoesDeEventos = {
   aoReceberJanela: (janela: Janela) => void
   aoReceberEnsaio: (evento: EnsaioEvento) => void
   aoReceberModoRapido: (estado: ModoRapido) => void
+  /** Evento marcado num ensaio aberto (só para ADMIN e TECNICO). */
+  aoReceberEventoMarcado?: (evento: EventoMarcadoSse) => void
   aoMudarEstado: (estado: EstadoEventos) => void
 }
 
@@ -127,6 +132,7 @@ function entregar(nome: string, dados: string, opcoes: OpcoesDeEventos) {
   if (nome === 'janela') opcoes.aoReceberJanela(corpo as Janela)
   else if (nome === 'ensaio') opcoes.aoReceberEnsaio(corpo as EnsaioEvento)
   else if (nome === 'modo_rapido') opcoes.aoReceberModoRapido(corpo as ModoRapido)
+  else if (nome === 'evento_marcado') opcoes.aoReceberEventoMarcado?.(corpo as EventoMarcadoSse)
 }
 
 function dormir(ms: number, sinal: AbortSignal): Promise<void> {

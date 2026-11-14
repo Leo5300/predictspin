@@ -3,7 +3,8 @@ import path from 'node:path'
 
 import { test, type Page } from '@playwright/test'
 
-import { entrarPelaTela, usarFonte } from './apoio/sessao'
+import { abrirEnsaioPelaApi, encerrarPelaApi, itemDoCatalogo, liberarMaquina } from './apoio/api'
+import { definirPlano, entrarPelaTela, usarFonte } from './apoio/sessao'
 import { ligarSimulador, type Simulador } from './apoio/simulador'
 
 /**
@@ -37,8 +38,9 @@ test.describe.configure({ mode: 'serial' })
 test.skip(!ATIVO, 'prints só com PRINTS=1')
 
 let simulador: Simulador | null = null
-test.beforeAll(() => {
+test.beforeAll(async ({ request }) => {
   mkdirSync(PASTA, { recursive: true })
+  await definirPlano(request, 1, [450, 900, 1120])
   // com um simulador já rodando em segundo plano, PRINTS_SIMULADOR=0 evita o segundo
   if (process.env.PRINTS_SIMULADOR !== '0') simulador = ligarSimulador()
 })
@@ -66,7 +68,137 @@ async function fotografar(page: Page, nome: string, tela: Tela) {
   await page.screenshot({ path: arquivo, fullPage: tela.inteira ?? true })
 }
 
+async function gravando(page: Page) {
+  await liberarMaquina(page.request)
+  const material = await itemDoCatalogo(page.request, 'materiais', 'Aço SAE 1045')
+  const ferramenta = await itemDoCatalogo(
+    page.request,
+    'ferramentas',
+    'Bit de metal duro, ângulo 60°',
+  )
+  await abrirEnsaioPelaApi(page.request, {
+    etapa: 'T3',
+    condicao: 'normal',
+    rotacao_alvo_rpm: 1120,
+    simulado: true,
+    material_id: material,
+    ferramenta_id: ferramenta,
+    avanco_alvo: 0.12,
+    profundidade_corte_mm: 1.5,
+    diametro_peca_mm: 38,
+    fluido_corte: 'emulsao',
+  })
+  await page.goto('/coleta')
+  await page.getByTestId('gravacao').waitFor()
+  await page.waitForTimeout(11_000)
+}
+
 export const TELAS: Tela[] = [
+  {
+    nome: 'coleta-gravando',
+    fonte: 'simulado',
+    inteira: false,
+    abrir: gravando,
+  },
+  {
+    nome: 'coleta-evento',
+    fonte: 'simulado',
+    inteira: false,
+    abrir: async (page) => {
+      await gravando(page)
+      await page
+        .getByRole('button', { name: /Marcar evento/ })
+        .filter({ visible: true })
+        .click()
+      await page.getByTestId('painel-evento').waitFor()
+      await page.getByTestId('painel-evento').scrollIntoViewIfNeeded()
+    },
+  },
+  {
+    nome: 'coleta-resumo',
+    fonte: 'simulado',
+    abrir: async (page) => {
+      await gravando(page)
+      await page.getByRole('button', { name: 'Encerrar' }).filter({ visible: true }).click()
+      await page.getByTestId('resumo-gravacao').waitFor()
+      await page.waitForTimeout(1200)
+    },
+  },
+  {
+    nome: 'coleta-ensaios',
+    fonte: 'simulado',
+    abrir: async (page) => {
+      await liberarMaquina(page.request)
+      const e = await abrirEnsaioPelaApi(page.request, {
+        etapa: 'T3',
+        condicao: 'avanco_excessivo',
+        rotacao_alvo_rpm: 1120,
+        avanco_alvo: 0.15,
+        simulado: true,
+      })
+      await encerrarPelaApi(page.request, e.id)
+      await page.goto(`/coleta/ensaios?maquina=1&ensaio=${e.id}`)
+      const linha = page.locator(`[data-ensaio="${e.codigo}"]`)
+      await linha.getByRole('button', { name: 'Corrigir receita' }).click()
+      await linha.getByLabel('Avanço').fill('0,1')
+      await linha.getByRole('button', { name: 'Gravar correção' }).click()
+      await linha.getByTestId('historico').waitFor()
+      await page.waitForTimeout(600)
+    },
+  },
+  {
+    nome: 'coleta-entrada',
+    fonte: 'simulado',
+    abrir: async (page) => {
+      await page.goto('/coleta')
+      await page.getByTestId('matriz-cobertura').waitFor()
+      await page.waitForTimeout(800)
+    },
+  },
+  {
+    nome: 'coleta-preparar',
+    fonte: 'simulado',
+    inteira: false,
+    abrir: async (page) => {
+      await page.goto('/coleta/preparar?maquina=1&etapa=T3&condicao=normal&rotacao=1120')
+      await page.getByRole('heading', { name: /Preparar/ }).waitFor()
+      await page.waitForTimeout(800)
+    },
+  },
+  {
+    nome: 'coleta-preparar-inteira',
+    fonte: 'simulado',
+    abrir: async (page) => {
+      await page.goto('/coleta/preparar?maquina=1&etapa=T3&condicao=normal&rotacao=1120')
+      await page.getByRole('heading', { name: /Preparar/ }).waitFor()
+      await page.waitForTimeout(800)
+    },
+  },
+  {
+    nome: 'coleta-receita',
+    fonte: 'simulado',
+    inteira: false,
+    abrir: async (page) => {
+      await page.goto('/coleta/preparar?maquina=1&etapa=T3&condicao=normal&rotacao=1120')
+      await page.getByRole('heading', { name: /Preparar/ }).waitFor()
+      const passo = page.getByRole('button', { name: '2 Receita', exact: true })
+      if (await passo.isVisible()) await passo.click()
+      await page.getByLabel('Material').fill('aço 1045')
+      await page.waitForTimeout(800)
+    },
+  },
+  {
+    nome: 'coleta-checagem',
+    fonte: 'simulado',
+    inteira: false,
+    abrir: async (page) => {
+      await page.goto('/coleta/preparar?maquina=1&etapa=T3&condicao=normal&rotacao=1120')
+      await page.getByRole('heading', { name: /Preparar/ }).waitFor()
+      const passo = page.getByRole('button', { name: '3 Checagem', exact: true })
+      if (await passo.isVisible()) await passo.click()
+      await page.waitForTimeout(1500)
+    },
+  },
   {
     nome: 'galeria-mapa',
     semLogin: true,

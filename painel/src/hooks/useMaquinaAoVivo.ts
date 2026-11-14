@@ -72,8 +72,16 @@ export function useMaquinaAoVivo(maquinaId: number): MaquinaAoVivo {
         cliente.setQueryData(chaves.ultimaJanela(maquinaId, simulado), () => observada)
         registrarJanela(cliente, maquinaId, simulado, janela)
       },
-      aoReceberEnsaio: () => {
+      aoReceberEnsaio: (evento) => {
         void cliente.invalidateQueries({ queryKey: chaves.ensaios(maquinaId, simulado) })
+        // a Coleta acompanha: ensaio aberto, cobertura, lista e o próprio ensaio
+        void cliente.invalidateQueries({ queryKey: ['ensaio-aberto', maquinaId] })
+        void cliente.invalidateQueries({ queryKey: ['cobertura', maquinaId] })
+        void cliente.invalidateQueries({ queryKey: ['ensaios-lista', maquinaId] })
+        void cliente.invalidateQueries({ queryKey: ['ensaio', evento.ensaio.id] })
+      },
+      aoReceberEventoMarcado: (evento) => {
+        void cliente.invalidateQueries({ queryKey: ['ensaio-eventos', evento.ensaio_id] })
       },
       aoReceberModoRapido: (estado) => {
         cliente.setQueryData(chaves.modoRapido(maquinaId), estado)
