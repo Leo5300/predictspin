@@ -1,0 +1,4171 @@
+{
+  "components": {
+    "schemas": {
+      "CampoInvalido": {
+        "properties": {
+          "campo": {
+            "type": "string"
+          },
+          "mensagem": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "campo",
+          "mensagem"
+        ]
+      },
+      "CoberturaItem": {
+        "properties": {
+          "condicao": {
+            "enum": [
+              "normal",
+              "ferramenta_desgastada",
+              "avanco_excessivo",
+              "rotacao_inadequada",
+              "desbalanceamento",
+              "sensor_solto"
+            ],
+            "type": "string"
+          },
+          "ensaios_validos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "etapa": {
+            "enum": [
+              "T0",
+              "T1",
+              "T2",
+              "T3"
+            ],
+            "type": "string"
+          },
+          "faltam": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "rotacao_alvo_rpm": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "uso": {
+            "description": "treino (rótulo da classificação) ou validacao (conferência de alerta, nunca classe de treino)",
+            "enum": [
+              "treino",
+              "validacao"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "condicao",
+          "ensaios_validos",
+          "etapa",
+          "faltam",
+          "rotacao_alvo_rpm",
+          "uso"
+        ]
+      },
+      "CoberturaResposta": {
+        "properties": {
+          "combinacoes": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "combinacoes_completas": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ensaios_faltantes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "ensaios_validos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "itens": {
+            "items": {
+              "$ref": "#/components/schemas/CoberturaItem"
+            },
+            "type": "array"
+          },
+          "maquina_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "meta": {
+            "description": "Ensaios válidos desejados por combinação",
+            "format": "int32",
+            "type": "integer"
+          },
+          "origem_rotacoes": {
+            "description": "De onde vieram as rotações: parametro (informadas na consulta), plano (plano de coleta da máquina) ou usadas (rotações alvo dos ensaios já feitos)",
+            "enum": [
+              "parametro",
+              "plano",
+              "usadas"
+            ],
+            "type": "string"
+          },
+          "rotacoes_rpm": {
+            "description": "Rotações consideradas na grade",
+            "items": {
+              "description": "Rotações consideradas na grade",
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "simulado": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "combinacoes",
+          "combinacoes_completas",
+          "ensaios_faltantes",
+          "ensaios_validos",
+          "itens",
+          "maquina_id",
+          "meta",
+          "origem_rotacoes",
+          "rotacoes_rpm",
+          "simulado"
+        ]
+      },
+      "DispositivoResposta": {
+        "properties": {
+          "ativo": {
+            "type": "boolean"
+          },
+          "firmware_versao": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "identificador": {
+            "type": "string"
+          },
+          "simulado": {
+            "type": "boolean"
+          },
+          "ultimo_contato": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "ativo",
+          "firmware_versao",
+          "id",
+          "identificador",
+          "simulado",
+          "ultimo_contato"
+        ]
+      },
+      "EnsaioEvento": {
+        "properties": {
+          "acao": {
+            "description": "O que aconteceu com o ensaio: aberto, encerrado ou descartado",
+            "enum": [
+              "aberto",
+              "encerrado",
+              "descartado"
+            ],
+            "type": "string"
+          },
+          "ensaio": {
+            "$ref": "#/components/schemas/EnsaioResposta"
+          }
+        },
+        "required": [
+          "acao",
+          "ensaio"
+        ]
+      },
+      "EnsaioResposta": {
+        "properties": {
+          "aberto": {
+            "type": "boolean"
+          },
+          "avanco_alvo": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "condicao": {
+            "enum": [
+              "normal",
+              "ferramenta_desgastada",
+              "avanco_excessivo",
+              "rotacao_inadequada",
+              "desbalanceamento",
+              "sensor_solto"
+            ],
+            "type": "string"
+          },
+          "descartado": {
+            "type": "boolean"
+          },
+          "encerrado_em": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "etapa": {
+            "enum": [
+              "T0",
+              "T1",
+              "T2",
+              "T3"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "iniciado_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "maquina_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "material": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "observacao": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "repeticao": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "rotacao_alvo_rpm": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "simulado": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "aberto",
+          "avanco_alvo",
+          "codigo",
+          "condicao",
+          "descartado",
+          "encerrado_em",
+          "etapa",
+          "id",
+          "iniciado_em",
+          "maquina_id",
+          "material",
+          "observacao",
+          "repeticao",
+          "rotacao_alvo_rpm",
+          "simulado"
+        ]
+      },
+      "ErroResposta": {
+        "properties": {
+          "caminho": {
+            "type": "string"
+          },
+          "campos": {
+            "items": {
+              "$ref": "#/components/schemas/CampoInvalido"
+            },
+            "type": "array"
+          },
+          "erro": {
+            "type": "string"
+          },
+          "mensagem": {
+            "type": "string"
+          },
+          "status": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "caminho",
+          "erro",
+          "mensagem",
+          "status",
+          "timestamp"
+        ]
+      },
+      "IngestaoResposta": {
+        "properties": {
+          "duplicada": {
+            "description": "true quando a janela já tinha sido recebida: nada foi gravado de novo",
+            "type": "boolean"
+          },
+          "ensaio_id": {
+            "description": "Ensaio ao qual a janela foi associada, se havia ensaio aberto",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "janela_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "medido_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "modo_rapido_ate": {
+            "description": "Só aparece enquanto a máquina estiver em modo rápido: até quando o dispositivo deve mandar janelas de 1 s (UTC)",
+            "example": "2026-11-11T12:02:00Z",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "duplicada",
+          "ensaio_id",
+          "janela_id",
+          "medido_em"
+        ]
+      },
+      "JanelaCanal": {
+        "description": "Leitura de um canal auxiliar na janela",
+        "properties": {
+          "grandeza": {
+            "type": "string"
+          },
+          "unidade": {
+            "type": "string"
+          },
+          "valor": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "grandeza",
+          "unidade",
+          "valor"
+        ]
+      },
+      "JanelaPonto": {
+        "description": "Características de vibração de um ponto na janela",
+        "properties": {
+          "curtose": {
+            "format": "double",
+            "type": "number"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "o1x": {
+            "format": "double",
+            "type": "number"
+          },
+          "o2x": {
+            "format": "double",
+            "type": "number"
+          },
+          "o3x": {
+            "format": "double",
+            "type": "number"
+          },
+          "papel": {
+            "type": "string"
+          },
+          "pico_g": {
+            "format": "double",
+            "type": "number"
+          },
+          "ponto_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "rms_g": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "curtose",
+          "descricao",
+          "o1x",
+          "o2x",
+          "o3x",
+          "papel",
+          "pico_g",
+          "ponto_id",
+          "rms_g"
+        ]
+      },
+      "JanelaResposta": {
+        "properties": {
+          "amostras": {
+            "description": "Menor número de amostras lidas entre os sensores; nulo se o dispositivo não informou",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "amostras_esperadas": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "canais": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JanelaCanal"
+            },
+            "description": "Leituras por código do canal; vazio se a janela não trouxe canais",
+            "type": "object"
+          },
+          "dispositivo": {
+            "type": "string"
+          },
+          "ensaio_codigo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ensaio_id": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "medido_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "modo": {
+            "description": "normal (janela de 5 s) ou rapido (janela de 1 s)",
+            "enum": [
+              "normal",
+              "rapido"
+            ],
+            "type": "string"
+          },
+          "pontos": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JanelaPonto"
+            },
+            "description": "Características por código do ponto (A, B, C)",
+            "type": "object"
+          },
+          "recebido_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "rotacao_rpm": {
+            "format": "double",
+            "type": "number"
+          },
+          "saturou": {
+            "type": "boolean"
+          },
+          "simulado": {
+            "description": "true quando a janela veio de dispositivo simulado",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "amostras",
+          "amostras_esperadas",
+          "canais",
+          "dispositivo",
+          "ensaio_codigo",
+          "ensaio_id",
+          "id",
+          "medido_em",
+          "modo",
+          "pontos",
+          "recebido_em",
+          "rotacao_rpm",
+          "saturou",
+          "simulado"
+        ]
+      },
+      "LocalResposta": {
+        "properties": {
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "uf": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "tipo",
+          "uf"
+        ]
+      },
+      "LoginRequisicao": {
+        "properties": {
+          "email": {
+            "maxLength": 160,
+            "minLength": 0,
+            "type": "string"
+          },
+          "senha": {
+            "maxLength": 72,
+            "minLength": 0,
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "senha"
+        ]
+      },
+      "LoginResposta": {
+        "properties": {
+          "expira_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/UsuarioResposta"
+          }
+        },
+        "required": [
+          "expira_em",
+          "tipo",
+          "token",
+          "usuario"
+        ]
+      },
+      "MaquinaResposta": {
+        "properties": {
+          "ativa": {
+            "type": "boolean"
+          },
+          "classe": {
+            "enum": [
+              "sonda",
+              "torno",
+              "furadeira",
+              "fresadora",
+              "cnc"
+            ],
+            "type": "string"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "data_instalacao": {
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "fabricante": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "local": {
+            "$ref": "#/components/schemas/LocalResposta"
+          },
+          "modelo": {
+            "type": "string"
+          },
+          "rotacoes_coleta_rpm": {
+            "description": "Rotações escolhidas para a grade de cobertura da coleta; vazio = sem plano",
+            "items": {
+              "description": "Rotações escolhidas para a grade de cobertura da coleta; vazio = sem plano",
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "rotacoes_nominais_rpm": {
+            "description": "Rotações que a máquina oferece (placa de rotações), em rpm",
+            "items": {
+              "description": "Rotações que a máquina oferece (placa de rotações), em rpm",
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ativa",
+          "classe",
+          "codigo",
+          "data_instalacao",
+          "fabricante",
+          "id",
+          "local",
+          "modelo",
+          "rotacoes_coleta_rpm",
+          "rotacoes_nominais_rpm"
+        ]
+      },
+      "MedidaPonto": {
+        "description": "Características por ponto de medição, pelo código do ponto (A, B, C)",
+        "properties": {
+          "curtose": {
+            "example": 3.1,
+            "format": "double",
+            "maximum": 1000000,
+            "type": "number"
+          },
+          "o1x": {
+            "example": 0.08,
+            "format": "double",
+            "maximum": 1000,
+            "minimum": 0,
+            "type": "number"
+          },
+          "o2x": {
+            "example": 0.03,
+            "format": "double",
+            "maximum": 1000,
+            "minimum": 0,
+            "type": "number"
+          },
+          "o3x": {
+            "example": 0.01,
+            "format": "double",
+            "maximum": 1000,
+            "minimum": 0,
+            "type": "number"
+          },
+          "pico_g": {
+            "example": 0.45,
+            "format": "double",
+            "maximum": 1000,
+            "minimum": 0,
+            "type": "number"
+          },
+          "rms_g": {
+            "example": 0.12,
+            "format": "double",
+            "maximum": 1000,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "curtose",
+          "o1x",
+          "o2x",
+          "o3x",
+          "pico_g",
+          "rms_g"
+        ]
+      },
+      "ModoRapidoResposta": {
+        "properties": {
+          "ativo": {
+            "description": "true enquanto o prazo estiver no futuro",
+            "type": "boolean"
+          },
+          "maquina_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "modo_rapido_ate": {
+            "description": "Até quando o modo rápido vale (UTC); nulo quando desligado",
+            "example": "2026-11-11T12:02:00Z",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "ativo",
+          "maquina_id",
+          "modo_rapido_ate"
+        ]
+      },
+      "NovoEnsaioRequisicao": {
+        "properties": {
+          "avanco_alvo": {
+            "description": "Avanço alvo em mm/volta (opcional)",
+            "example": 0.15,
+            "minimum": 0,
+            "type": "number"
+          },
+          "condicao": {
+            "enum": [
+              "normal",
+              "ferramenta_desgastada",
+              "avanco_excessivo",
+              "rotacao_inadequada",
+              "desbalanceamento",
+              "sensor_solto"
+            ],
+            "example": "normal",
+            "type": "string"
+          },
+          "etapa": {
+            "enum": [
+              "T0",
+              "T1",
+              "T2",
+              "T3"
+            ],
+            "example": "T1",
+            "type": "string"
+          },
+          "material": {
+            "example": "aço SAE 1045",
+            "maxLength": 80,
+            "minLength": 0,
+            "type": "string"
+          },
+          "observacao": {
+            "maxLength": 2000,
+            "minLength": 0,
+            "type": "string"
+          },
+          "repeticao": {
+            "description": "Padrão 1",
+            "example": 1,
+            "format": "int32",
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "rotacao_alvo_rpm": {
+            "example": 1200,
+            "format": "int32",
+            "maximum": 30000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "simulado": {
+            "description": "Marca o ensaio como simulado. Também vira simulado quando a máquina só tem dispositivo simulado ativo.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "condicao",
+          "etapa",
+          "rotacao_alvo_rpm"
+        ]
+      },
+      "NovoUsuarioRequisicao": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "maxLength": 160,
+            "minLength": 0,
+            "type": "string"
+          },
+          "nome": {
+            "maxLength": 120,
+            "minLength": 0,
+            "type": "string"
+          },
+          "papel": {
+            "enum": [
+              "ADMIN",
+              "TECNICO",
+              "OPERADOR"
+            ],
+            "type": "string"
+          },
+          "senha": {
+            "maxLength": 72,
+            "minLength": 8,
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "nome",
+          "papel",
+          "senha"
+        ]
+      },
+      "PaginaDispositivoResposta": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/DispositivoResposta"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
+        ]
+      },
+      "PaginaEnsaioResposta": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/EnsaioResposta"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
+        ]
+      },
+      "PaginaJanelaResposta": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/JanelaResposta"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
+        ]
+      },
+      "PaginaMaquinaResposta": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/MaquinaResposta"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
+        ]
+      },
+      "PaginaPontoResposta": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/PontoResposta"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
+        ]
+      },
+      "PaginaTelemetriaPontoResposta": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/TelemetriaPontoResposta"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
+        ]
+      },
+      "PaginaUsuarioResposta": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/UsuarioResposta"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
+        ]
+      },
+      "PlanoColetaRequisicao": {
+        "properties": {
+          "rotacoes_rpm": {
+            "description": "Rotações alvo em rpm; repetidas são ignoradas e a lista é gravada em ordem crescente",
+            "example": [
+              280,
+              560,
+              1120
+            ],
+            "items": {
+              "description": "Rotações alvo em rpm; repetidas são ignoradas e a lista é gravada em ordem crescente",
+              "format": "int32",
+              "maximum": 30000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "maxItems": 40,
+            "minItems": 0,
+            "type": "array"
+          }
+        },
+        "required": [
+          "rotacoes_rpm"
+        ]
+      },
+      "PontoResposta": {
+        "properties": {
+          "ativo": {
+            "type": "boolean"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "fixacao": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "papel": {
+            "enum": [
+              "acionamento",
+              "ferramenta",
+              "estrutura"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "ativo",
+          "codigo",
+          "descricao",
+          "fixacao",
+          "id",
+          "papel"
+        ]
+      },
+      "ResumoEnsaioResposta": {
+        "properties": {
+          "aberto": {
+            "type": "boolean"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "descartado": {
+            "type": "boolean"
+          },
+          "duracao_segundos": {
+            "description": "Do início ao encerramento (ou até agora, se aberto)",
+            "format": "int64",
+            "type": "integer"
+          },
+          "encerrado_em": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ensaio_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "iniciado_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "janelas": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "janelas_saturadas": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "primeira_medicao": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rotacao_media_rpm": {
+            "description": "Média de rotacao_rpm das janelas; nulo se não houver janela",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "simulado": {
+            "type": "boolean"
+          },
+          "ultima_medicao": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "aberto",
+          "codigo",
+          "descartado",
+          "duracao_segundos",
+          "encerrado_em",
+          "ensaio_id",
+          "iniciado_em",
+          "janelas",
+          "janelas_saturadas",
+          "primeira_medicao",
+          "rotacao_media_rpm",
+          "simulado",
+          "ultima_medicao"
+        ]
+      },
+      "SerieAgregadaResposta": {
+        "properties": {
+          "ate": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "baldes": {
+            "description": "Quantidade de intervalos em que o período foi dividido",
+            "format": "int32",
+            "type": "integer"
+          },
+          "de": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "intervalos": {
+            "items": {
+              "$ref": "#/components/schemas/SerieIntervalo"
+            },
+            "type": "array"
+          },
+          "maquina_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "pontos": {
+            "description": "Códigos dos pontos que aparecem em algum intervalo",
+            "items": {
+              "description": "Códigos dos pontos que aparecem em algum intervalo",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "segundos_por_balde": {
+            "description": "Duração de cada intervalo, em segundos",
+            "format": "double",
+            "type": "number"
+          },
+          "simulado": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "ate",
+          "baldes",
+          "de",
+          "intervalos",
+          "maquina_id",
+          "pontos",
+          "segundos_por_balde",
+          "simulado"
+        ]
+      },
+      "SerieIntervalo": {
+        "properties": {
+          "fim": {
+            "description": "Fim do intervalo, exclusivo",
+            "format": "date-time",
+            "type": "string"
+          },
+          "indice": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "inicio": {
+            "description": "Início do intervalo, inclusivo",
+            "format": "date-time",
+            "type": "string"
+          },
+          "janelas": {
+            "description": "Janelas normais recebidas no intervalo; 0 = lacuna",
+            "format": "int64",
+            "type": "integer"
+          },
+          "pontos": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SeriePonto"
+            },
+            "description": "Agregados por código do ponto; vazio na lacuna",
+            "type": "object"
+          },
+          "rotacao_media_rpm": {
+            "description": "Média de rotacao_rpm; nulo na lacuna",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "saturou": {
+            "description": "Alguma janela do intervalo saturou",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "fim",
+          "indice",
+          "inicio",
+          "janelas",
+          "pontos",
+          "rotacao_media_rpm",
+          "saturou"
+        ]
+      },
+      "SeriePonto": {
+        "description": "Agregados por código do ponto; vazio na lacuna",
+        "properties": {
+          "curtose_media": {
+            "format": "double",
+            "type": "number"
+          },
+          "o1x_media": {
+            "format": "double",
+            "type": "number"
+          },
+          "o2x_media": {
+            "format": "double",
+            "type": "number"
+          },
+          "o3x_media": {
+            "format": "double",
+            "type": "number"
+          },
+          "pico_max_g": {
+            "format": "double",
+            "type": "number"
+          },
+          "rms_max_g": {
+            "format": "double",
+            "type": "number"
+          },
+          "rms_media_g": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "curtose_media",
+          "o1x_media",
+          "o2x_media",
+          "o3x_media",
+          "pico_max_g",
+          "rms_max_g",
+          "rms_media_g"
+        ]
+      },
+      "SseEmitter": {
+        "properties": {
+          "timeout": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "timeout"
+        ]
+      },
+      "TelemetriaPontoResposta": {
+        "properties": {
+          "curtose": {
+            "format": "double",
+            "type": "number"
+          },
+          "dispositivo": {
+            "type": "string"
+          },
+          "ensaio_id": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "janela_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "medido_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "o1x": {
+            "format": "double",
+            "type": "number"
+          },
+          "o2x": {
+            "format": "double",
+            "type": "number"
+          },
+          "o3x": {
+            "format": "double",
+            "type": "number"
+          },
+          "pico_g": {
+            "format": "double",
+            "type": "number"
+          },
+          "recebido_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "rms_g": {
+            "format": "double",
+            "type": "number"
+          },
+          "rotacao_rpm": {
+            "format": "double",
+            "type": "number"
+          },
+          "saturou": {
+            "type": "boolean"
+          },
+          "simulado": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "curtose",
+          "dispositivo",
+          "ensaio_id",
+          "janela_id",
+          "medido_em",
+          "o1x",
+          "o2x",
+          "o3x",
+          "pico_g",
+          "recebido_em",
+          "rms_g",
+          "rotacao_rpm",
+          "saturou",
+          "simulado"
+        ]
+      },
+      "TelemetriaRequisicao": {
+        "properties": {
+          "amostras": {
+            "description": "Opcional. Menor número de amostras lidas entre os sensores nesta janela",
+            "example": 8000,
+            "format": "int32",
+            "maximum": 1000000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "amostras_esperadas": {
+            "description": "Opcional. Amostras que a janela deveria ter (taxa × duração)",
+            "example": 8000,
+            "format": "int32",
+            "maximum": 1000000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "canais": {
+            "additionalProperties": {
+              "description": "Opcional. Valor de cada canal auxiliar, pelo código do canal; cada chave é opcional",
+              "format": "double",
+              "type": "number"
+            },
+            "description": "Opcional. Valor de cada canal auxiliar, pelo código do canal; cada chave é opcional",
+            "type": "object"
+          },
+          "dispositivo": {
+            "example": "ps-torno-01",
+            "maxLength": 60,
+            "minLength": 0,
+            "type": "string"
+          },
+          "medido_em": {
+            "description": "Instante da medição, em UTC (ISO-8601)",
+            "example": "2026-11-10T12:00:00Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "modo": {
+            "description": "Opcional. normal (janela de 5 s) ou rapido (janela de 1 s); ausente = normal",
+            "enum": [
+              "normal",
+              "rapido"
+            ],
+            "example": "normal",
+            "type": "string"
+          },
+          "pontos": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MedidaPonto"
+            },
+            "description": "Características por ponto de medição, pelo código do ponto (A, B, C)",
+            "minProperties": 1,
+            "type": "object"
+          },
+          "rotacao_rpm": {
+            "example": 1200,
+            "format": "double",
+            "maximum": 30000,
+            "minimum": 0,
+            "type": "number"
+          },
+          "saturou": {
+            "description": "Algum acelerômetro chegou ao fundo de escala nesta janela",
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "dispositivo",
+          "medido_em",
+          "pontos",
+          "rotacao_rpm",
+          "saturou"
+        ]
+      },
+      "UltimaJanelaResposta": {
+        "properties": {
+          "amostras": {
+            "description": "Menor número de amostras lidas entre os sensores; nulo se o dispositivo não informou",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "amostras_esperadas": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "canais": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JanelaCanal"
+            },
+            "type": "object"
+          },
+          "dispositivo": {
+            "type": "string"
+          },
+          "ensaio_codigo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ensaio_id": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "janela_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "medido_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "modo": {
+            "description": "normal (janela de 5 s) ou rapido (janela de 1 s)",
+            "enum": [
+              "normal",
+              "rapido"
+            ],
+            "type": "string"
+          },
+          "pontos": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JanelaPonto"
+            },
+            "type": "object"
+          },
+          "recebido_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "rotacao_rpm": {
+            "format": "double",
+            "type": "number"
+          },
+          "saturou": {
+            "type": "boolean"
+          },
+          "segundos_desde_recebimento": {
+            "description": "Segundos desde que a janela chegou à API",
+            "format": "int64",
+            "type": "integer"
+          },
+          "simulado": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "amostras",
+          "amostras_esperadas",
+          "canais",
+          "dispositivo",
+          "ensaio_codigo",
+          "ensaio_id",
+          "janela_id",
+          "medido_em",
+          "modo",
+          "pontos",
+          "recebido_em",
+          "rotacao_rpm",
+          "saturou",
+          "segundos_desde_recebimento",
+          "simulado"
+        ]
+      },
+      "UsuarioResposta": {
+        "properties": {
+          "ativo": {
+            "type": "boolean"
+          },
+          "criado_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "papel": {
+            "enum": [
+              "ADMIN",
+              "TECNICO",
+              "OPERADOR"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "ativo",
+          "criado_em",
+          "email",
+          "id",
+          "nome",
+          "papel"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "dispositivoChave": {
+        "in": "header",
+        "name": "X-Dispositivo-Chave",
+        "type": "apiKey"
+      },
+      "dispositivoId": {
+        "in": "header",
+        "name": "X-Dispositivo-Id",
+        "type": "apiKey"
+      },
+      "jwt": {
+        "bearerFormat": "JWT",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "Monitoramento de vibração em máquinas rotativas: ingestão de telemetria do ESP32,\nconsultas, eventos ao vivo, ensaios de coleta rotulada e exportação para treino.\n\nUsuários entram em POST /api/v1/auth/login e usam o token em Authorization: Bearer.\nDispositivos enviam telemetria com os cabeçalhos X-Dispositivo-Id e X-Dispositivo-Chave.\nCorpo e resposta em JSON com nomes em snake_case.\n",
+    "title": "PredictSpin API",
+    "version": "v1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/auth/eu": {
+      "get": {
+        "description": "Serve para o painel validar a sessão ao abrir. Token vencido ou de usuário desativado responde 401.",
+        "operationId": "eu",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResposta"
+                }
+              }
+            },
+            "description": "Usuário do token"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Token ausente, inválido ou de usuário desativado"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          }
+        },
+        "summary": "Devolve o usuário dono do token",
+        "tags": [
+          "Autenticação"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "Falhas seguidas do mesmo IP ou e-mail são limitadas: ao atingir o limite a resposta é 429 com Retry-After.",
+        "operationId": "entrar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResposta"
+                }
+              }
+            },
+            "description": "Token emitido"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "E-mail ou senha inválidos, ou usuário inativo"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Muitas tentativas com falha"
+          }
+        },
+        "security": [],
+        "summary": "Entra com e-mail e senha e recebe um JWT",
+        "tags": [
+          "Autenticação"
+        ]
+      }
+    },
+    "/api/v1/ensaios/exportar.csv": {
+      "get": {
+        "description": "Uma linha por janela e ponto, só de ensaios encerrados e não descartados, com os rótulos do ensaio e uma coluna por canal. Use simulado=false para só dado real.",
+        "operationId": "exportar",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Restringe a uma máquina",
+            "in": "query",
+            "name": "maquina_id",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Arquivo CSV (UTF-8), uma linha por janela e ponto"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          }
+        },
+        "summary": "Exporta o conjunto de treino em CSV, em fluxo",
+        "tags": [
+          "Ensaios"
+        ]
+      }
+    },
+    "/api/v1/ensaios/{id}": {
+      "get": {
+        "operationId": "buscar_1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsaioResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Detalha um ensaio",
+        "tags": [
+          "Ensaios"
+        ]
+      }
+    },
+    "/api/v1/ensaios/{id}/descartar": {
+      "post": {
+        "description": "Ensaio descartado sai da cobertura e da exportação.",
+        "operationId": "descartar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsaioResposta"
+                }
+              }
+            },
+            "description": "Ensaio descartado"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Ensaio já descartado"
+          }
+        },
+        "summary": "Descarta o ensaio (marca, não apaga); se estiver aberto, também o encerra",
+        "tags": [
+          "Ensaios"
+        ]
+      }
+    },
+    "/api/v1/ensaios/{id}/encerrar": {
+      "post": {
+        "operationId": "encerrar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsaioResposta"
+                }
+              }
+            },
+            "description": "Ensaio encerrado"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Ensaio já encerrado"
+          }
+        },
+        "summary": "Encerra o ensaio aberto",
+        "tags": [
+          "Ensaios"
+        ]
+      }
+    },
+    "/api/v1/ensaios/{id}/janelas": {
+      "get": {
+        "description": "Somente ADMIN e TECNICO, como as demais rotas de ensaio.",
+        "operationId": "janelasDoEnsaio",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaJanelaResposta"
+                }
+              }
+            },
+            "description": "Página de janelas do ensaio"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Janelas completas de um ensaio, em ordem crescente de medido_em (replay), paginadas",
+        "tags": [
+          "Telemetria"
+        ]
+      }
+    },
+    "/api/v1/ensaios/{id}/resumo": {
+      "get": {
+        "operationId": "resumo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumoEnsaioResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Duração, número de janelas, janelas saturadas e rotação média do ensaio",
+        "tags": [
+          "Ensaios"
+        ]
+      }
+    },
+    "/api/v1/maquinas": {
+      "get": {
+        "operationId": "listar_2",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaMaquinaResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          }
+        },
+        "summary": "Lista máquinas com o local, paginado",
+        "tags": [
+          "Máquinas"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}": {
+      "get": {
+        "operationId": "buscar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaquinaResposta"
+                }
+              }
+            },
+            "description": "Máquina"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Detalha uma máquina, com o local, as rotações nominais e o plano de coleta",
+        "tags": [
+          "Máquinas"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/coleta/cobertura": {
+      "get": {
+        "description": "Válido = encerrado, não descartado e com ao menos uma janela. Sem 'rotacoes', a grade usa o plano de coleta da máquina (PUT .../coleta/plano); com o plano vazio, as rotações alvo já usadas em ensaios da máquina.",
+        "operationId": "cobertura",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Ensaios válidos desejados por combinação",
+            "in": "query",
+            "name": "meta",
+            "required": false,
+            "schema": {
+              "default": 3,
+              "format": "int32",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Rotações alvo da grade, separadas por vírgula (ex.: 500,1000,1500)",
+            "in": "query",
+            "name": "rotacoes",
+            "required": false,
+            "schema": {
+              "items": {
+                "format": "int32",
+                "maximum": 30000,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoberturaResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Ensaios válidos por etapa, condição e rotação, e quantos faltam para a meta",
+        "tags": [
+          "Ensaios"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/coleta/plano": {
+      "put": {
+        "description": "Somente ADMIN e TECNICO. A cobertura (GET .../coleta/cobertura) passa a usar estas rotações quando o parâmetro 'rotacoes' não é informado. Lista vazia limpa o plano.",
+        "operationId": "definirPlanoDeColeta",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanoColetaRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaquinaResposta"
+                }
+              }
+            },
+            "description": "Máquina com o plano gravado"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Grava as rotações escolhidas para a grade de cobertura da coleta",
+        "tags": [
+          "Máquinas"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/dispositivos": {
+      "get": {
+        "operationId": "dispositivos",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filtra dispositivos simulados (true) ou reais (false)",
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDispositivoResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Lista os dispositivos da máquina com o último contato, paginado",
+        "tags": [
+          "Máquinas"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/ensaios": {
+      "get": {
+        "operationId": "listar_1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "etapa",
+            "required": false,
+            "schema": {
+              "enum": [
+                "T0",
+                "T1",
+                "T2",
+                "T3"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "normal, ferramenta_desgastada, avanco_excessivo ou rotacao_inadequada",
+            "in": "query",
+            "name": "condicao",
+            "required": false,
+            "schema": {
+              "enum": [
+                "normal",
+                "ferramenta_desgastada",
+                "avanco_excessivo",
+                "rotacao_inadequada",
+                "desbalanceamento",
+                "sensor_solto"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "descartado",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "true: só abertos; false: só encerrados",
+            "in": "query",
+            "name": "aberto",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaEnsaioResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Lista ensaios da máquina, mais recente primeiro, paginado e com filtros",
+        "tags": [
+          "Ensaios"
+        ]
+      },
+      "post": {
+        "description": "O código é gerado pela API. As janelas recebidas enquanto o ensaio está aberto são gravadas com ele. Só um ensaio aberto por máquina.",
+        "operationId": "abrir",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoEnsaioRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsaioResposta"
+                }
+              }
+            },
+            "description": "Ensaio aberto"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Já existe ensaio aberto na máquina"
+          }
+        },
+        "summary": "Abre um ensaio na máquina",
+        "tags": [
+          "Ensaios"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/eventos": {
+      "get": {
+        "description": "Fluxo text/event-stream. O token vai no cabeçalho Authorization, nunca na URL. Eventos:\n\n- `janela`: janela nova gravada, com o corpo de JanelaResposta (reenvio não gera evento);\n- `ensaio`: ensaio aberto, encerrado ou descartado, com o corpo de EnsaioEvento (só ADMIN e TECNICO);\n- `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o primeiro evento de toda conexão, com o estado atual.\n\nLinhas de comentário (`:batimento`) chegam a cada 15 s sem evento. A conexão é encerrada pelo servidor depois de 30 min; o cliente deve reconectar. Cliente que não consome é descartado.\n",
+        "operationId": "eventos",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Só eventos de dado simulado (true) ou real (false); sem o parâmetro, os dois",
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Fluxo de eventos"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Limite de conexões de eventos por usuário atingido"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Limite total de conexões de eventos do servidor atingido"
+          }
+        },
+        "summary": "Eventos ao vivo da máquina (Server-Sent Events)",
+        "tags": [
+          "Eventos ao vivo"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/janelas": {
+      "get": {
+        "description": "Sem 'de', usa as últimas 24 h até 'ate' (ou agora). Cada página custa um número fixo de consultas ao banco.",
+        "operationId": "janelasDaMaquina",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Início, inclusivo (ISO-8601, ex.: 2026-11-10T00:00:00Z)",
+            "in": "query",
+            "name": "de",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Fim, exclusivo (ISO-8601)",
+            "in": "query",
+            "name": "ate",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Só dados de dispositivo simulado (true) ou real (false)",
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Só janelas normais (5 s) ou só rápidas (1 s); sem o parâmetro, as duas",
+            "in": "query",
+            "name": "modo",
+            "required": false,
+            "schema": {
+              "enum": [
+                "normal",
+                "rapido"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Ordem de medido_em: desc (padrão, mais recente primeiro) ou asc",
+            "in": "query",
+            "name": "ordem",
+            "required": false,
+            "schema": {
+              "default": "DESC",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaJanelaResposta"
+                }
+              }
+            },
+            "description": "Página de janelas"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Janelas completas da máquina (envio, pontos e canais), paginadas",
+        "tags": [
+          "Telemetria"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/modo-rapido": {
+      "delete": {
+        "operationId": "desligar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModoRapidoResposta"
+                }
+              }
+            },
+            "description": "Modo rápido desligado"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Máquina inexistente"
+          }
+        },
+        "summary": "Desliga o modo rápido; o dispositivo volta a janelas de 5 s no envio seguinte",
+        "tags": [
+          "Máquinas"
+        ]
+      },
+      "get": {
+        "operationId": "consultar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModoRapidoResposta"
+                }
+              }
+            },
+            "description": "Estado do modo rápido"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Máquina inexistente"
+          }
+        },
+        "summary": "Diz se o modo rápido está valendo e até quando",
+        "tags": [
+          "Máquinas"
+        ]
+      },
+      "post": {
+        "description": "Qualquer usuário autenticado. Chamar de novo renova o prazo. Enquanto valer, a resposta da ingestão dos dispositivos da máquina traz modo_rapido_ate.",
+        "operationId": "ligar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModoRapidoResposta"
+                }
+              }
+            },
+            "description": "Modo rápido ligado, com o prazo"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Máquina inexistente"
+          }
+        },
+        "summary": "Liga o modo rápido (janelas de 1 s) por 2 minutos a partir de agora",
+        "tags": [
+          "Máquinas"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/pontos": {
+      "get": {
+        "operationId": "pontos",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaPontoResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Lista os pontos de medição da máquina, paginado",
+        "tags": [
+          "Máquinas"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/serie": {
+      "get": {
+        "description": "Por intervalo e por ponto: média e máximo de rms_g, máximo de pico_g, média de curtose e das ordens 1X, 2X e 3X. Por intervalo: rotação média, número de janelas e se houve saturação. Janelas do modo rápido ficam fora. Intervalo sem janela volta vazio (lacuna), nunca interpolado. Sem 'de', usa as últimas 24 h; período máximo de 31 dias.",
+        "operationId": "serieAgregada",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Início, inclusivo (ISO-8601)",
+            "in": "query",
+            "name": "de",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Fim, exclusivo (ISO-8601)",
+            "in": "query",
+            "name": "ate",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Só dados de dispositivo simulado (true) ou real (false)",
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Número de intervalos (1 a 600)",
+            "in": "query",
+            "name": "baldes",
+            "required": false,
+            "schema": {
+              "default": 120,
+              "format": "int32",
+              "maximum": 600,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SerieAgregadaResposta"
+                }
+              }
+            },
+            "description": "Série com todos os intervalos, inclusive os vazios"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Série agregada da máquina: o período dividido em intervalos iguais",
+        "tags": [
+          "Telemetria"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/ultima-janela": {
+      "get": {
+        "operationId": "ultimaJanela",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Só dados de dispositivo simulado (true) ou real (false)",
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UltimaJanelaResposta"
+                }
+              }
+            },
+            "description": "Última janela recebida"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Máquina inexistente ou sem janela recebida"
+          }
+        },
+        "summary": "Última janela da máquina: os pontos, os canais, a rotação e há quanto tempo chegou",
+        "tags": [
+          "Telemetria"
+        ]
+      }
+    },
+    "/api/v1/pontos/{id}/telemetria": {
+      "get": {
+        "description": "Sem 'de', usa as últimas 24 h até 'ate' (ou agora).",
+        "operationId": "seriePorPonto",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Início, inclusivo (ISO-8601, ex.: 2026-11-10T00:00:00Z)",
+            "in": "query",
+            "name": "de",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Fim, exclusivo (ISO-8601)",
+            "in": "query",
+            "name": "ate",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Só dados de dispositivo simulado (true) ou real (false)",
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaTelemetriaPontoResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Série temporal de um ponto de medição, mais recente primeiro, paginada",
+        "tags": [
+          "Telemetria"
+        ]
+      }
+    },
+    "/api/v1/telemetria": {
+      "post": {
+        "description": "Autenticação por X-Dispositivo-Id e X-Dispositivo-Chave. Idempotente por (dispositivo, medido_em): o reenvio responde 200 e não grava nada. Contrato em docs/payload.md.",
+        "operationId": "receber",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelemetriaRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestaoResposta"
+                }
+              }
+            },
+            "description": "Janela já recebida antes (reenvio)"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestaoResposta"
+                }
+              }
+            },
+            "description": "Janela gravada"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Payload inválido, ponto ou canal desconhecido, medido_em no futuro"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Credencial de dispositivo ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Campo 'dispositivo' diferente do cabeçalho"
+          }
+        },
+        "security": [
+          {
+            "dispositivoId": []
+          },
+          {
+            "dispositivoChave": []
+          }
+        ],
+        "summary": "Recebe uma janela de telemetria do dispositivo",
+        "tags": [
+          "Telemetria"
+        ]
+      }
+    },
+    "/api/v1/usuarios": {
+      "get": {
+        "operationId": "listar",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaUsuarioResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          }
+        },
+        "summary": "Lista usuários, paginado (page, size)",
+        "tags": [
+          "Usuários"
+        ]
+      },
+      "post": {
+        "operationId": "criar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoUsuarioRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResposta"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          }
+        },
+        "summary": "Cria usuário (ADMIN, TECNICO ou OPERADOR)",
+        "tags": [
+          "Usuários"
+        ]
+      }
+    },
+    "/api/v1/usuarios/{id}/desativar": {
+      "post": {
+        "operationId": "desativar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Desativa usuário: ele deixa de conseguir entrar",
+        "tags": [
+          "Usuários"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "jwt": []
+    }
+  ],
+  "tags": [
+    {
+      "description": "Máquinas, pontos de medição e dispositivos. Qualquer usuário autenticado.",
+      "name": "Máquinas"
+    },
+    {
+      "description": "Coleta rotulada para treinar a classificação. Somente ADMIN e TECNICO.",
+      "name": "Ensaios"
+    },
+    {
+      "description": "Fluxo SSE com o que acontece na máquina. Qualquer usuário autenticado.",
+      "name": "Eventos ao vivo"
+    },
+    {
+      "description": "Ingestão pelo dispositivo e consultas pelos usuários",
+      "name": "Telemetria"
+    },
+    {
+      "description": "Cadastro de usuários. Somente ADMIN.",
+      "name": "Usuários"
+    }
+  ]
+}

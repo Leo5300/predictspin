@@ -1,0 +1,517 @@
+/*
+ * Sistema visual do painel: HMI de alto desempenho (ISA-101) com linguagem de instrumento de
+ * bancada. A direção completa está em docs/painel.md, seção "Direção visual".
+ *
+ * Tokens em duas camadas:
+ *   1. primitivos  (--cinza-*, --ambar-*, --vermelho-*, --ardosia-*): valores brutos em OKLCH;
+ *   2. semânticos  (--superficie-*, --linha*, --texto*, --estado-*, --ponto-*, --simulado...):
+ *      o papel de cada cor, definido por tema a partir dos primitivos.
+ * Componentes só usam os semânticos (as utilidades geradas em "@theme inline").
+ */
+
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+
+/* Matriz de pontos: Doto (SIL OFL 1.1), peso 900. A Geist Pixel do pacote "geist" tem licença livre e
+   os arquivos servem fora do Next.js, mas a 24-32 px (os tamanhos que a escala permite) a grade dela
+   é fina demais e o texto parece uma fonte comum; a Doto lê como mostrador de pontos. */
+@import '@fontsource/doto/900.css';
+
+/* As variantes "dark:" dos componentes do shadcn seguem o tema grafite */
+@custom-variant dark (&:is([data-theme='grafite'] *));
+
+/* ------------------------------------------------------------------ camada 1: primitivos */
+@theme {
+  --color-*: initial;
+  --font-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --ease-*: initial;
+
+  /* cinzas neutros; o número é a luminosidade OKLCH x 1000 */
+  --cinza-970: oklch(0.97 0 0);
+  --cinza-945: oklch(0.945 0 0);
+  --cinza-925: oklch(0.925 0 0);
+  --cinza-905: oklch(0.905 0 0);
+  --cinza-890: oklch(0.89 0 0);
+  --cinza-860: oklch(0.86 0 0);
+  --cinza-820: oklch(0.82 0 0);
+  --cinza-740: oklch(0.74 0 0);
+  --cinza-720: oklch(0.72 0 0);
+  --cinza-660: oklch(0.66 0 0);
+  --cinza-580: oklch(0.58 0 0);
+  --cinza-560: oklch(0.56 0 0);
+  --cinza-500: oklch(0.5 0 0);
+  --cinza-460: oklch(0.46 0 0);
+  --cinza-420: oklch(0.42 0 0);
+  --cinza-400: oklch(0.4 0 0);
+  --cinza-370: oklch(0.37 0 0);
+  --cinza-310: oklch(0.31 0 0);
+  --cinza-300: oklch(0.3 0 0);
+  --cinza-255: oklch(0.255 0 0);
+  --cinza-250: oklch(0.25 0 0);
+  --cinza-240: oklch(0.24 0 0);
+  --cinza-225: oklch(0.225 0 0);
+  --cinza-215: oklch(0.215 0 0);
+  --cinza-200: oklch(0.2 0 0);
+  --cinza-185: oklch(0.185 0 0);
+  --cinza-150: oklch(0.15 0 0);
+
+  /* âmbar e vermelho: só para desvio e alarme */
+  --ambar-820: oklch(0.82 0.14 80);
+  --ambar-800: oklch(0.8 0.15 80);
+  --ambar-400: oklch(0.4 0.09 70);
+  --vermelho-720: oklch(0.72 0.17 27);
+  --vermelho-620: oklch(0.62 0.21 27);
+  --vermelho-530: oklch(0.53 0.2 27);
+  --vermelho-450: oklch(0.45 0.18 27);
+
+  /* ardósia: informação, bem dessaturada */
+  --ardosia-750: oklch(0.75 0.05 250);
+  --ardosia-420: oklch(0.42 0.05 250);
+
+  /* tipografia */
+  --font-sans: 'IBM Plex Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-matriz: 'Doto', 'IBM Plex Mono', monospace;
+
+  /* escala 12 / 13 / 15 / 18 / 24 / 32 */
+  --text-12: 0.75rem;
+  --text-12--line-height: 1rem;
+  --text-13: 0.8125rem;
+  --text-13--line-height: 1.125rem;
+  --text-15: 0.9375rem;
+  --text-15--line-height: 1.375rem;
+  --text-18: 1.125rem;
+  --text-18--line-height: 1.5rem;
+  --text-24: 1.5rem;
+  --text-24--line-height: 1.75rem;
+  --text-32: 2rem;
+  --text-32--line-height: 2.25rem;
+
+  /* cantos retos ou raio de 2 px */
+  --radius-0: 0;
+  --radius-2: 2px;
+
+  /* movimento */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* ------------------------------------------------------------------ camada 2: semânticos por tema */
+:root,
+[data-theme='claro'] {
+  color-scheme: light;
+
+  --superficie-fundo: var(--cinza-860);
+  --superficie-modulo: var(--cinza-905);
+  --superficie-rebaixo: var(--cinza-945);
+  --superficie-realce: var(--cinza-820);
+
+  --linha: var(--cinza-720);
+  --linha-forte: var(--cinza-500);
+
+  --texto: var(--cinza-240);
+  --texto-apoio: var(--cinza-400);
+  --texto-fraco: var(--cinza-460);
+
+  --acao: var(--cinza-300);
+  --acao-realce: var(--cinza-370);
+  --acao-texto: var(--cinza-970);
+
+  --estado-normal: var(--cinza-500);
+  --estado-atencao: var(--ambar-800);
+  --estado-atencao-sobre: var(--cinza-200);
+  --estado-atencao-texto: var(--ambar-400);
+  --estado-alarme: var(--vermelho-530);
+  --estado-alarme-sobre: var(--cinza-970);
+  --estado-alarme-texto: var(--vermelho-450);
+  --estado-info: var(--ardosia-420);
+
+  --ponto-a: var(--cinza-250);
+  --ponto-b: var(--cinza-420);
+  --ponto-c: var(--cinza-560);
+
+  --simulado: oklch(0.42 0 0 / 0.38);
+  --reticula: var(--cinza-890);
+  --reticula-fina: var(--cinza-925);
+  --foco: var(--cinza-240);
+
+  /* 1 px de luz em cima e 1 px de sombra embaixo dos botões */
+  --relevo-luz: oklch(1 0 0 / 0.55);
+  --relevo-sombra: oklch(0 0 0 / 0.22);
+  --relevo-luz-acao: oklch(1 0 0 / 0.2);
+  --relevo-sombra-acao: oklch(0 0 0 / 0.45);
+}
+
+[data-theme='grafite'] {
+  color-scheme: dark;
+
+  --superficie-fundo: var(--cinza-215);
+  --superficie-modulo: var(--cinza-255);
+  --superficie-rebaixo: var(--cinza-185);
+  --superficie-realce: var(--cinza-310);
+
+  --linha: var(--cinza-370);
+  --linha-forte: var(--cinza-580);
+
+  --texto: var(--cinza-905);
+  --texto-apoio: var(--cinza-740);
+  --texto-fraco: var(--cinza-660);
+
+  --acao: var(--cinza-860);
+  --acao-realce: var(--cinza-945);
+  --acao-texto: var(--cinza-200);
+
+  --estado-normal: var(--cinza-580);
+  --estado-atencao: var(--ambar-800);
+  --estado-atencao-sobre: var(--cinza-200);
+  --estado-atencao-texto: var(--ambar-820);
+  --estado-alarme: var(--vermelho-620);
+  --estado-alarme-sobre: var(--cinza-150);
+  --estado-alarme-texto: var(--vermelho-720);
+  --estado-info: var(--ardosia-750);
+
+  --ponto-a: var(--cinza-925);
+  --ponto-b: var(--cinza-740);
+  --ponto-c: var(--cinza-580);
+
+  --simulado: oklch(0.8 0 0 / 0.3);
+  --reticula: var(--cinza-250);
+  --reticula-fina: var(--cinza-215);
+  --foco: var(--cinza-905);
+
+  --relevo-luz: oklch(1 0 0 / 0.1);
+  --relevo-sombra: oklch(0 0 0 / 0.5);
+  --relevo-luz-acao: oklch(1 0 0 / 0.5);
+  --relevo-sombra-acao: oklch(0 0 0 / 0.3);
+}
+
+/* ------------------------------------------------------------------ utilidades semânticas */
+@theme inline {
+  --color-fundo: var(--superficie-fundo);
+  --color-modulo: var(--superficie-modulo);
+  --color-rebaixo: var(--superficie-rebaixo);
+  --color-realce: var(--superficie-realce);
+  --color-linha: var(--linha);
+  --color-linha-forte: var(--linha-forte);
+  --color-texto: var(--texto);
+  --color-apoio: var(--texto-apoio);
+  --color-fraco: var(--texto-fraco);
+  --color-acao: var(--acao);
+  --color-acao-realce: var(--acao-realce);
+  --color-acao-texto: var(--acao-texto);
+  --color-normal: var(--estado-normal);
+  --color-atencao: var(--estado-atencao);
+  --color-atencao-sobre: var(--estado-atencao-sobre);
+  --color-atencao-texto: var(--estado-atencao-texto);
+  --color-alarme: var(--estado-alarme);
+  --color-alarme-sobre: var(--estado-alarme-sobre);
+  --color-alarme-texto: var(--estado-alarme-texto);
+  --color-info: var(--estado-info);
+  --color-ponto-a: var(--ponto-a);
+  --color-ponto-b: var(--ponto-b);
+  --color-ponto-c: var(--ponto-c);
+  --color-simulado: var(--simulado);
+  --color-foco: var(--foco);
+
+  /* nomes que os componentes do shadcn esperam, apontando para os mesmos papéis */
+  --color-background: var(--superficie-fundo);
+  --color-foreground: var(--texto);
+  --color-card: var(--superficie-modulo);
+  --color-card-foreground: var(--texto);
+  --color-popover: var(--superficie-modulo);
+  --color-popover-foreground: var(--texto);
+  --color-primary: var(--acao);
+  --color-primary-foreground: var(--acao-texto);
+  --color-secondary: var(--superficie-realce);
+  --color-secondary-foreground: var(--texto);
+  --color-muted: var(--superficie-rebaixo);
+  --color-muted-foreground: var(--texto-apoio);
+  --color-accent: var(--superficie-realce);
+  --color-accent-foreground: var(--texto);
+  --color-destructive: var(--estado-alarme-texto);
+  --color-border: var(--linha);
+  --color-input: var(--linha-forte);
+  --color-ring: var(--foco);
+
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
+}
+
+/* ------------------------------------------------------------------ base */
+@layer base {
+  * {
+    border-color: var(--linha);
+  }
+
+  html {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--superficie-fundo);
+    color: var(--texto);
+    font-size: var(--text-13);
+    line-height: var(--text-13--line-height);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Foco sempre visível, com o mesmo desenho em todo o painel */
+  :focus-visible {
+    outline: 2px solid var(--foco);
+    outline-offset: 2px;
+  }
+
+  button,
+  [role='button'],
+  a,
+  input,
+  select,
+  summary {
+    touch-action: manipulation;
+  }
+
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background-color: var(--acao);
+    color: var(--acao-texto);
+  }
+}
+
+/* ------------------------------------------------------------------ utilidades de instrumento */
+
+/* Valores numéricos, letras A/B/C e códigos */
+@utility valor {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'zero' 1;
+}
+
+/* Rótulo curto em caixa-alta pequena, com espaçamento */
+@utility rotulo {
+  font-family: var(--font-sans);
+  font-size: var(--text-12);
+  line-height: var(--text-12--line-height);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-apoio);
+}
+
+/* Matriz de pontos: só rotação, placa de estado e cronômetro; nunca abaixo de 24 px */
+@utility matriz {
+  font-family: var(--font-matriz);
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+/* Hachura diagonal: marca de dado simulado */
+@utility hachura {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--simulado) 0,
+    var(--simulado) 1px,
+    transparent 1px,
+    transparent 7px
+  );
+}
+
+/* Botão com espessura: 1 px de luz em cima e 1 px de sombra embaixo, que se invertem ao pressionar */
+@utility relevo {
+  box-shadow:
+    inset 0 1px 0 var(--relevo-luz),
+    inset 0 -1px 0 var(--relevo-sombra);
+  transition: transform 120ms var(--ease-out);
+
+  &:active:not(:disabled),
+  &[data-pressed]:not(:disabled) {
+    box-shadow:
+      inset 0 1px 0 var(--relevo-sombra),
+      inset 0 -1px 0 var(--relevo-luz);
+    transform: scale(0.97);
+  }
+}
+
+@utility relevo-acao {
+  box-shadow:
+    inset 0 1px 0 var(--relevo-luz-acao),
+    inset 0 -1px 0 var(--relevo-sombra-acao);
+  transition: transform 120ms var(--ease-out);
+
+  &:active:not(:disabled) {
+    box-shadow:
+      inset 0 1px 0 var(--relevo-sombra-acao),
+      inset 0 -1px 0 var(--relevo-luz-acao);
+    transform: scale(0.97);
+  }
+}
+
+/* Dado velho: o valor perde o peso e fica no tom fraco; nunca parece valor vivo */
+[data-velho='true'] .valor,
+.valor[data-velho='true'] {
+  color: var(--texto-fraco);
+  font-weight: 400;
+}
+
+/* ------------------------------------------------------------------ movimento */
+
+/* Navegação máquina <-> ponto: o módulo do ponto se transforma na tela do ponto */
+::view-transition-group(.modulo-ponto) {
+  animation-duration: 220ms;
+  animation-timing-function: var(--ease-out);
+}
+
+::view-transition-old(.modulo-ponto),
+::view-transition-new(.modulo-ponto) {
+  animation-duration: 160ms;
+  animation-timing-function: var(--ease-out);
+  height: 100%;
+  object-fit: fill;
+}
+
+/* O restante da tela troca seco: sem esmaecer a raiz */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(root) {
+  display: none;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ------------------------------------------------------------------ uPlot */
+.uplot,
+.uplot *,
+.uplot *::before,
+.uplot *::after {
+  box-sizing: border-box;
+}
+
+.uplot {
+  font-family: var(--font-mono);
+  line-height: 1.5;
+  width: min-content;
+}
+
+.u-wrap {
+  position: relative;
+  user-select: none;
+}
+
+.u-over,
+.u-under {
+  position: absolute;
+}
+
+.u-under {
+  overflow: hidden;
+}
+
+.uplot canvas {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.u-axis {
+  position: absolute;
+}
+
+.u-legend {
+  display: none;
+}
+
+.u-select {
+  background: var(--simulado);
+  position: absolute;
+  pointer-events: none;
+}
+
+.u-cursor-x,
+.u-cursor-y {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.u-hz .u-cursor-x,
+.u-vt .u-cursor-y {
+  height: 100%;
+  border-right: 1px dashed var(--linha-forte);
+}
+
+.u-hz .u-cursor-y,
+.u-vt .u-cursor-x {
+  width: 100%;
+  border-bottom: 1px dashed var(--linha-forte);
+}
+
+.u-cursor-pt {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  border: 0 solid;
+  pointer-events: none;
+  will-change: transform;
+  background-clip: padding-box !important;
+}
+
+.u-axis.u-off,
+.u-select.u-off,
+.u-cursor-x.u-off,
+.u-cursor-y.u-off,
+.u-cursor-pt.u-off {
+  display: none;
+}

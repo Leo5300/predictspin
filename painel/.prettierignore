@@ -1,0 +1,8 @@
+dist
+node_modules
+openapi.json
+src/api/esquema.d.ts
+src/arvore-de-rotas.gen.ts
+playwright-report
+test-results
+prints

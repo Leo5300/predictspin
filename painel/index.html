@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="claro">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#cfcfcf" />
+    <title>PredictSpin · Centro de controle</title>
+    <script>
+      // Aplica o tema salvo antes da primeira pintura, para a tela não piscar no tema errado.
+      try {
+        var tema = localStorage.getItem('ps.tema')
+        if (tema === 'grafite' || tema === 'claro') document.documentElement.dataset.theme = tema
+      } catch (erro) {
+        /* armazenamento indisponível: fica o tema padrão */
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
