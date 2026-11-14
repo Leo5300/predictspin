@@ -56,6 +56,8 @@ Detalhes de cada camada, fluxo de ingestão e decisões estruturais estão em
 - **Borda:** ESP32, C++ (Arduino-ESP32 2.0.17, PlatformIO), U8g2, Adafruit NeoPixel
 - **Backend:** Java 21, Spring Boot 3.5, PostgreSQL 16, Flyway, JWT (HS256)
 - **Testes:** JUnit 5, Testcontainers, JaCoCo, pytest, Unity (testes nativos do firmware), k6
+- **Painel web:** React 19, TypeScript 5.9, Vite 8, Tailwind 4, TanStack Query e Router, uPlot,
+  cliente gerado do OpenAPI (openapi-typescript e openapi-fetch), Vitest e Playwright
 - **Análise:** Python (NumPy, Matplotlib) para processamento offline do sinal bruto e simulador
 - **Infra:** Docker Compose (desenvolvimento), GitHub Actions (integração contínua), Render
   (publicação)
@@ -63,17 +65,18 @@ Detalhes de cada camada, fluxo de ingestão e decisões estruturais estão em
 
 ## Status atual
 
-Situação em 11/11/2026.
+Situação em 14/11/2026.
 
 | Parte | Situação |
 |---|---|
-| API (`api/`) | Pronta para a coleta e para o firmware de 3 sensores: login, usuários e papéis, máquinas, ingestão de telemetria (com `modo`, `amostras` e `amostras_esperadas` opcionais), modo rápido, consultas, ensaios rotulados, cobertura da coleta e exportação CSV com treino e validação separados. 149 testes automatizados. |
-| Banco | PostgreSQL 16 com o modelo criado pelo Flyway (`V1`), carga inicial (`V2`: máquina `TORNO-01`, pontos A, B e C, canais) e `V3` (condições `desbalanceamento` e `sensor_solto`, modo e amostras da janela, modo rápido da máquina). |
+| API (`api/`) | Pronta para a coleta e para o firmware de 3 sensores: login, usuários e papéis, máquinas, ingestão de telemetria (com `modo`, `amostras` e `amostras_esperadas` opcionais), modo rápido, consultas, ensaios rotulados, cobertura da coleta e exportação CSV com treino e validação separados; para o painel, documento OpenAPI fiel ao JSON, `GET /auth/eu`, janelas completas, série agregada, eventos ao vivo (SSE) e plano de coleta. 216 testes automatizados. |
+| Banco | PostgreSQL 16 com o modelo criado pelo Flyway (`V1`), carga inicial (`V2`: máquina `TORNO-01`, pontos A, B e C, canais) e `V3` (condições `desbalanceamento` e `sensor_solto`, modo e amostras da janela, modo rápido da máquina) e `V4` (plano de coleta da máquina). |
 | Alerta e ordem de serviço | Tabelas e entidades existem; **ainda não há regra nem rota**. |
 | Classificação da condição | **Não iniciada.** |
 | Firmware (`firmware/`) | Reescrito para 3 ADXL345 e o FC-51: aquisição no núcleo 1 (FIFO a 1600 Hz), características em fluxo, envio HTTPS à API com fila em RAM e LittleFS, modo rápido, tela, LEDs e sinal bruto binário pela serial. Compila e passa em 44 testes nativos; **não foi testado em hardware**. Roteiro de bancada em [`docs/teste-bancada-firmware.md`](docs/teste-bancada-firmware.md). |
 | Análise (`analise/`) | Captura da serial (`captura.py`, binário de 3 sensores e texto antigo de 1), espectro com janela de Hann e ordens (`espectro.py`) e simulador de telemetria (`simulador.py`, que obedece ao modo rápido). |
-| Painel web e aplicativo (`mobile/`) | **Não iniciados.** |
+| Painel web (`painel/`) | **Parte A pronta (leitura):** login, visão geral, tela da máquina (tacômetro, esquema do torno, pontos, mapa de ordens) e tela do ponto (tendência, janelas, exportação CSV), ao vivo por eventos (SSE) com volta à consulta, e modo AO VIVO (janelas de 1 s). Testado localmente com dados simulados; **não publicado**. Coleta de ensaios, replay, diagnóstico e alarmes são a Parte B ([`docs/painel.md`](docs/painel.md)). |
+| Aplicativo (`mobile/`) | **Não iniciado.** |
 | Integração contínua | Workflow em `.github/workflows/ci.yml` (API e `analise/`); o resultado no GitHub não foi conferido nesta atualização. Os testes nativos do firmware não estão no CI. |
 | Publicação no Render | `render.yaml` e roteiro escritos; segundo o responsável, a API está publicada (não conferido nesta atualização). |
 
@@ -86,6 +89,7 @@ ESP32 real ainda não foi feito.
 predictspin
 ├── api                  backend Spring Boot (código, migrações, testes, Dockerfile)
 ├── firmware             código do ESP32 (PlatformIO): src/ hardware, lib/ lógica pura, test/ testes nativos
+├── painel               painel web (React + Vite): telas, componentes de instrumento, testes
 ├── analise              scripts Python: captura, espectro, simulador e seus testes
 ├── carga                teste de carga com k6
 ├── docs                 arquitetura, modelo de dados, contrato, firmware, implantação, testes
@@ -143,6 +147,30 @@ Para parar: `docker compose down`. Para parar e apagar os dados do banco: `docke
 
 Se a porta 5432 já estiver ocupada na sua máquina, mude `DB_PORT` no `.env`; ela só afeta o acesso
 ao banco de fora do compose.
+
+### Painel web
+
+Com a API do passo 2 no ar (requer Node 24):
+
+```powershell
+python analise/simulador.py continuo --url http://localhost:8080   # janelas simuladas, em outro terminal
+cd painel
+npm ci
+npm run dev                                                         # http://localhost:5173
+```
+
+Entre com `ADMIN_EMAIL` e `ADMIN_SENHA`. A fonte começa em **Real** (vazia enquanto o ESP32 não
+envia); **Ver dados simulados** mostra as janelas do simulador, sempre marcadas como simuladas. O
+endereço da API vem de `VITE_API_URL` (padrão `http://localhost:8080`). Rotas, decisões, direção
+visual e o funcionamento dos eventos estão em [`docs/painel.md`](docs/painel.md).
+
+| Rota do painel | Tela |
+|---|---|
+| `/login` | entrada |
+| `/` | visão geral: uma linha por máquina |
+| `/maquinas/:id` | máquina: tacômetro, esquema do torno, pontos A, B, C e mapa de ordens |
+| `/maquinas/:id/pontos/:codigo` | ponto: leituras, tendência, AO VIVO e janelas do período |
+| `/coleta` | reservada à Parte B (só ADMIN e TECNICO) |
 
 ## Variáveis de ambiente
 
@@ -230,10 +258,24 @@ cd api
 .\mvnw.cmd -B verify
 ```
 
-Resultado em 11/11/2026: **149 testes, nenhuma falha**. Cobertura de linhas medida pelo JaCoCo:
-**99,3 %** nas classes de regra (`*Service`) e **92,6 %** no projeto inteiro. O build falha se a
+Resultado em 14/11/2026: **216 testes, nenhuma falha**. Cobertura de linhas medida pelo JaCoCo:
+**99,4 %** nas classes de regra (`*Service`) e **94,3 %** no projeto inteiro. O build falha se a
 cobertura das classes de regra ficar abaixo de 70 %. O relatório fica em
 `api/target/site/jacoco/index.html`.
+
+**Painel web.** Os testes de ponta a ponta usam o compose local e ligam o próprio simulador; leem as
+credenciais do `.env` e ignoram variáveis de ambiente do computador.
+
+```powershell
+cd painel
+npm run lint; npm run typecheck; npm test
+npx playwright install chromium     # uma vez
+npm run test:e2e
+```
+
+Resultado em 14/11/2026: ESLint e TypeScript sem avisos; **72 testes no Vitest** (6 arquivos) e
+**18 cenários no Playwright**, nenhuma falha. Inclui axe (zero violações graves ou críticas nos dois
+temas), teclado e os piores casos (textos e valores no limite do banco e do contrato).
 
 **Análise (simulador, captura e espectro).**
 
@@ -334,6 +376,7 @@ Etapas do protocolo de ensaios, como o simulador as representa:
 | Documento | Conteúdo |
 |---|---|
 | [`docs/arquitetura.md`](docs/arquitetura.md) | camadas, fluxo de ingestão, decisões |
+| [`docs/painel.md`](docs/painel.md) | painel web: como rodar, decisões, direção visual, tokens, eventos e AO VIVO, revisão, Parte B |
 | [`docs/der.md`](docs/der.md) | modelo de dados |
 | [`docs/payload.md`](docs/payload.md) | contrato de `POST /api/v1/telemetria` e modo rápido |
 | [`docs/firmware.md`](docs/firmware.md) | firmware: pinos, núcleos, filtragem, fila, protocolo serial, limites |
