@@ -17,8 +17,9 @@ function Toaster(props: ToasterProps) {
             'flex w-[min(22rem,calc(100vw-2rem))] items-start gap-2 rounded-2 border border-linha-forte bg-modulo px-3 py-2 text-13 text-texto',
           title: 'font-medium',
           description: 'text-apoio',
-          error: 'border-alarme-texto',
-          warning: 'border-atencao-texto',
+          // erro e aviso de operação não são estado da máquina: borda tracejada, sem cor
+          error: 'border-dashed border-texto',
+          warning: 'border-dashed border-texto',
         },
       }}
       {...props}

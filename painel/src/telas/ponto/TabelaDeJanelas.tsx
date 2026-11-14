@@ -80,7 +80,7 @@ export function TabelaDeJanelas({
       <Table aria-label={`Janelas do período, ponto ${codigo}`}>
         <TableHeader>
           <TableRow>
-            <TableHead className="sticky left-0 z-[1] bg-modulo @max-[60rem]:border-r @max-[60rem]:border-linha">
+            <TableHead className="bg-modulo @max-[60rem]:sticky @max-[60rem]:left-0 @max-[60rem]:z-[1] @max-[60rem]:border-r @max-[60rem]:border-linha">
               Medida em
             </TableHead>
             <TableHead className="text-right">
@@ -121,7 +121,7 @@ export function TabelaDeJanelas({
             ].filter(Boolean)
             return (
               <TableRow key={janela.id}>
-                <TableCell className="valor sticky left-0 z-[1] bg-modulo @max-[60rem]:border-r @max-[60rem]:border-linha">
+                <TableCell className="valor bg-modulo @max-[60rem]:sticky @max-[60rem]:left-0 @max-[60rem]:z-[1] @max-[60rem]:border-r @max-[60rem]:border-linha">
                   {formatarDataHora(janela.medido_em)}
                 </TableCell>
                 <TableCell className="valor text-right font-medium">

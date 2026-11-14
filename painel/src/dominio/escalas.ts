@@ -98,12 +98,18 @@ export function marcasDeTempo(
   deslocamentoS = 0,
 ): { marcas: number[]; passoS: number } {
   if (!(fimS > inicioS) || maxMarcas < 1) return { marcas: [], passoS: 0 }
-  const duracao = fimS - inicioS
-  const passoS =
-    PASSOS_DE_TEMPO_S.find((p) => Math.floor(duracao / p) + 1 <= maxMarcas) ??
-    Math.ceil(duracao / maxMarcas / 86_400) * 86_400
-  const primeira = Math.ceil((inicioS + deslocamentoS) / passoS) * passoS - deslocamentoS
-  const marcas: number[] = []
-  for (let t = primeira; t <= fimS + 1e-6; t += passoS) marcas.push(t)
+  const contar = (passoS: number) => {
+    const primeira = Math.ceil((inicioS + deslocamentoS) / passoS) * passoS - deslocamentoS
+    const marcas: number[] = []
+    for (let t = primeira; t <= fimS + 1e-6; t += passoS) marcas.push(t)
+    return marcas
+  }
+  // o menor passo cujas marcas de fato visíveis (contadas, não estimadas) cabem no máximo
+  for (const passoS of PASSOS_DE_TEMPO_S) {
+    const marcas = contar(passoS)
+    if (marcas.length <= maxMarcas) return { marcas, passoS }
+  }
+  const passoS = Math.ceil((fimS - inicioS) / maxMarcas / 86_400) * 86_400
+  const marcas = contar(passoS)
   return { marcas, passoS }
 }

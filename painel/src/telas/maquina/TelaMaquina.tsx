@@ -3,6 +3,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 import { transicaoDoPonto } from '@/lib/transicao'
+import { cn } from '@/lib/utils'
 
 import {
   consultaDispositivos,
@@ -203,7 +204,15 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
             <QualidadeDaJanela janela={janela} velho={velho} frescor={frescor} idadeS={idadeS} />
           </Modulo>
 
-          <Modulo rotulo="Dispositivos e canais" className="flex-1">
+          <Modulo
+            rotulo="Dispositivos e canais"
+            className="flex-1"
+            acoes={
+              frescor === 'vivo' || !janela ? undefined : (
+                <MarcaDeIdade frescor={frescor} idadeS={idadeS} />
+              )
+            }
+          >
             <div className="grid grid-cols-1 gap-x-6 gap-y-3 @min-[30rem]:grid-cols-2">
               {dispositivos.isPending ? (
                 <span className="text-13 text-apoio">Carregando…</span>
@@ -402,11 +411,20 @@ function Canais({ janela, velho }: { janela: Janela; velho: boolean }) {
             {/* a API dá a grandeza e o código do canal (não há nome por extenso): a grandeza é o
                 rótulo e o código, que distingue dois canais da mesma grandeza, vem ao lado */}
             <dt className="flex min-w-0 items-baseline gap-2 text-13" title={codigo}>
-              <span className="shrink-0 text-texto first-letter:uppercase">{canal.grandeza}</span>
+              <span
+                className={cn(
+                  'shrink-0 first-letter:uppercase',
+                  velho ? 'text-fraco' : 'text-texto',
+                )}
+              >
+                {canal.grandeza}
+              </span>
               <span className="valor truncate text-12 text-fraco">{codigo}</span>
             </dt>
             <dd className="text-right">
-              <span className="valor text-13 font-medium text-texto">
+              <span
+                className={cn('valor text-13 font-medium', velho ? 'text-fraco' : 'text-texto')}
+              >
                 {formatarNumero(canal.valor, 1)}
               </span>{' '}
               <span className="text-12 text-apoio">{canal.unidade}</span>

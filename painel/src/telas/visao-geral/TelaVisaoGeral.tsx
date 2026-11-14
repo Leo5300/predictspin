@@ -152,7 +152,10 @@ export function TelaVisaoGeral() {
                   />
                 ))}
               </div>
-              <p className="border-t border-linha px-3 py-1.5 text-12 text-apoio">
+              <p
+                className="border-t border-linha px-3 py-1.5 text-12 text-apoio"
+                hidden={semMedicaoReal}
+              >
                 RMS · 15 min: média de cada intervalo de 15 s; linha interrompida = intervalo sem
                 janela; o ponto no fim é o valor mais recente.
               </p>
@@ -197,7 +200,8 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
       data-estado={estado}
       className={cn(
         'relative grid grid-cols-2 items-center gap-x-4 gap-y-3 border-b border-linha px-3 py-2 last:border-b-0 @min-[40rem]:grid-cols-3',
-        '[@media(hover:hover)_and_(pointer:fine)]:hover:bg-realce',
+        // hover no tom rebaixado: o texto de dado velho continua com contraste AA sobre ele
+        '[@media(hover:hover)_and_(pointer:fine)]:hover:bg-rebaixo',
         COLUNAS,
       )}
     >
@@ -268,7 +272,7 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
                     ) ?? []
                   }
                   velho={velho}
-                  largura={88}
+                  largura={128}
                   altura={22}
                   descricao={`RMS do ponto ${codigo} nos últimos 15 minutos`}
                 />

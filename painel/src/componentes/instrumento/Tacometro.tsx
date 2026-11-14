@@ -66,7 +66,7 @@ export function Tacometro({ rpm, nominais, velho = false, className }: Props) {
 
   return (
     <div className={cn('flex flex-col items-center', className)} data-velho={velho || undefined}>
-      <div className="relative w-full max-w-sm">
+      <div className="@container relative w-full max-w-sm">
         <svg
           viewBox={`0 0 ${LARGURA} ${ALTURA}`}
           role="img"
@@ -144,7 +144,10 @@ export function Tacometro({ rpm, nominais, velho = false, className }: Props) {
           className={cn(
             'matriz absolute left-1/2 -translate-x-1/2',
             // 5 dígitos (leitura com defeito, até 30000 rpm) não cabem entre as pontas do arco
-            rpmSemMilhar(rpm).length > 4 ? 'text-40' : 'text-72',
+            // o número acompanha a largura do mostrador (no celular, 72 px encostaria nas pontas)
+            rpmSemMilhar(rpm).length > 4
+              ? 'text-[min(2.5rem,11cqw)] leading-none'
+              : 'text-[min(4.5rem,19cqw)] leading-none',
             velho || !temRotacao ? 'text-fraco' : 'text-texto',
           )}
           style={{ top: `${((CY + 34) / ALTURA) * 100}%` }}

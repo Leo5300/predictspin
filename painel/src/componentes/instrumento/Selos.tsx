@@ -82,7 +82,8 @@ export function PlacaEstado({
       <span
         className={cn(
           'truncate',
-          matriz ? 'matriz text-24' : 'valor text-15 font-semibold tracking-[0.08em]',
+          // fora da visão geral: Plex Sans em caixa-alta (palavra não vai em fonte de valor)
+          matriz ? 'matriz text-24' : 'text-15 font-semibold tracking-[0.08em] uppercase',
         )}
       >
         {ROTULO_ESTADO[estado]}

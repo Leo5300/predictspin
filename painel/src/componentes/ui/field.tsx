@@ -1,3 +1,4 @@
+import { CircleAlert } from 'lucide-react'
 import type * as React from 'react'
 
 import { Label } from '@/componentes/ui/label'
@@ -30,7 +31,7 @@ function FieldLabel({ className, ...props }: React.ComponentProps<typeof Label>)
   return (
     <Label
       data-slot="field-label"
-      className={cn('group-data-[invalid=true]/field:text-alarme-texto', className)}
+      className={cn('group-data-[invalid=true]/field:text-texto', className)}
       {...props}
     />
   )
@@ -45,13 +46,15 @@ function FieldDescription({ className, ...props }: React.ComponentProps<'p'>) {
 function FieldError({ className, children, ...props }: React.ComponentProps<'p'>) {
   if (!children) return null
   return (
+    // erro de formulário não é alarme da máquina: sem vermelho (ISA-101), com forma e texto
     <p
       role="alert"
       data-slot="field-error"
-      className={cn('text-13 text-alarme-texto', className)}
+      className={cn('flex items-start gap-1.5 text-13 font-medium text-texto', className)}
       {...props}
     >
-      {children}
+      <CircleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" strokeWidth={1.75} />
+      <span>{children}</span>
     </p>
   )
 }

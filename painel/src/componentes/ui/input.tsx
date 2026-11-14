@@ -12,7 +12,8 @@ function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
         'min-h-8 w-full min-w-0 rounded-2 border border-linha-forte bg-rebaixo px-2.5 py-1 text-15 text-texto',
         'pointer-coarse:min-h-11 max-md:min-h-11',
         'placeholder:text-fraco disabled:cursor-not-allowed disabled:opacity-50',
-        'aria-invalid:border-alarme-texto aria-invalid:outline-alarme-texto',
+        // inválido: borda tracejada e forte, sem cor de estado (vermelho é só alarme da máquina)
+        'aria-invalid:border-dashed aria-invalid:border-texto',
         className,
       )}
       {...props}

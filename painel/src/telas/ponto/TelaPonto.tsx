@@ -22,6 +22,7 @@ import { Leitura } from '@/componentes/instrumento/Leitura'
 import { MarcadorPonto } from '@/componentes/instrumento/MarcadorPonto'
 import { Modulo, Painel } from '@/componentes/instrumento/Modulo'
 import { SeloAvaliacao } from '@/componentes/instrumento/Selos'
+import { FieldError } from '@/componentes/ui/field'
 import { Button } from '@/componentes/ui/button'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
@@ -47,6 +48,7 @@ import {
   type ErroDePeriodo,
   type FonteDaTendencia,
 } from '@/dominio/periodos'
+import { limiteDeLacunaS, PASSO_NORMAL_S, quebrarNasLacunas } from '@/dominio/lacunas'
 import { rotuloDoPapel } from '@/dominio/pontos'
 import {
   faixasDasJanelas,
@@ -307,9 +309,9 @@ export function TelaPonto({ maquinaId, codigo, busca }: Props) {
           }
         >
           {modoRapido.erro ? (
-            <p role="alert" className="border-b border-linha px-3 py-1 text-13 text-alarme-texto">
+            <FieldError className="border-b border-linha px-3 py-1">
               {mensagemDoErro(modoRapido.erro)}
-            </p>
+            </FieldError>
           ) : null}
 
           {/* no AO VIVO o quadro é fixo (últimos 60 s): período, segundo quadro e exportação
@@ -667,9 +669,9 @@ function PeriodoPersonalizado({
       </div>
       <Button type="submit">Aplicar</Button>
       {mostrado ? (
-        <p id="erro-periodo" role="alert" className="basis-full text-13 text-alarme-texto">
+        <FieldError id="erro-periodo" className="basis-full">
           {MENSAGEM_PERIODO[mostrado]}
-        </p>
+        </FieldError>
       ) : null}
     </form>
   )
@@ -827,8 +829,15 @@ function QuadroAoVivo({ recentes, codigo }: { recentes: Janela[]; codigo: string
     const janelas = recentes.filter((j) => Date.parse(j.medido_em) >= corte)
     const serieDe = (chave: 'rms_g' | 'pico_g') =>
       janelas.map((j) => j.pontos[codigo]?.[chave] ?? null)
+    // vão maior que o de uma janela normal quebra a linha, como na tendência (lacuna)
+    const quebrado = quebrarNasLacunas(
+      janelas.map((j) => Date.parse(j.medido_em) / 1000),
+      [serieDe('rms_g'), serieDe('pico_g')],
+      limiteDeLacunaS(PASSO_NORMAL_S),
+    )
+    const [rms = [], pico = []] = quebrado.series
     return {
-      temposS: janelas.map((j) => Date.parse(j.medido_em) / 1000),
+      temposS: quebrado.temposS,
       rapidas: janelas.filter((j) => j.modo === 'rapido').length,
       instantesRapidos: janelas
         .filter((j) => j.modo === 'rapido')
@@ -836,13 +845,13 @@ function QuadroAoVivo({ recentes, codigo }: { recentes: Janela[]; codigo: string
       series: [
         {
           rotulo: 'RMS',
-          valores: serieDe('rms_g'),
+          valores: rms,
           // o traço vivo é contínuo, na cor de sinal: tracejado leria como dado faltando
           aoVivo: true,
           tom: 0,
           espessura: 1.75,
         },
-        { rotulo: 'PICO', valores: serieDe('pico_g'), tom: 2, espessura: 1 },
+        { rotulo: 'PICO', valores: pico, tom: 2, espessura: 1 },
       ] satisfies SerieDoGrafico[],
     }
   }, [recentes, codigo])

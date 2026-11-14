@@ -84,7 +84,14 @@ export function Leitura({
           CLASSE_DO_VALOR[tamanho],
         )}
       >
-        <span className={cn('truncate font-medium text-texto', !texto && 'valor')} title={valor}>
+        <span
+          className={cn(
+            'truncate font-medium',
+            !texto && 'valor',
+            velho ? 'text-fraco' : 'text-texto',
+          )}
+          title={valor}
+        >
           {texto
             ? valor.split(/(\d[\d.,]*)/).map((parte, i) =>
                 i % 2 === 1 ? (

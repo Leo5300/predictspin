@@ -134,9 +134,7 @@ export function TelaLogin({ voltar }: { voltar: string | undefined }) {
               </Field>
 
               {falha?.tipo === 'credenciais' || falha?.tipo === 'outro' ? (
-                <p role="alert" className="text-13 text-alarme-texto">
-                  {falha.mensagem}
-                </p>
+                <FieldError>{falha.mensagem}</FieldError>
               ) : null}
               {bloqueado ? (
                 <p role="alert" className="text-13 text-texto">
