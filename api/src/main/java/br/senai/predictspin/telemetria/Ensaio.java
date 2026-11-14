@@ -14,6 +14,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import br.senai.predictspin.catalogo.Ferramenta;
+import br.senai.predictspin.catalogo.Material;
 import br.senai.predictspin.maquina.Maquina;
 
 /** Período de coleta rotulada: as janelas recebidas enquanto está aberto herdam seus rótulos. */
@@ -37,6 +39,21 @@ public class Ensaio {
     private Condicao condicao;
 
     private String material;
+
+    /** Material do catálogo; a coluna de texto "material" guarda o nome dele. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "material_id")
+    private Material materialItem;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ferramenta_id")
+    private Ferramenta ferramenta;
+
+    private BigDecimal profundidadeCorteMm;
+
+    private BigDecimal diametroPecaMm;
+
+    private FluidoCorte fluidoCorte;
 
     private Integer rotacaoAlvoRpm;
 
@@ -86,6 +103,56 @@ public class Ensaio {
         if (isAberto()) {
             this.encerradoEm = instante;
         }
+    }
+
+    /** Material do catálogo (ou nenhum): o texto passa a ser o nome do item. */
+    public void definirMaterial(Material item) {
+        this.materialItem = item;
+        this.material = item == null ? null : item.getNome();
+    }
+
+    public void definirFerramenta(Ferramenta item) {
+        this.ferramenta = item;
+    }
+
+    public void definirAvancoAlvo(BigDecimal valor) {
+        this.avancoAlvo = valor;
+    }
+
+    public void definirProfundidadeCorteMm(BigDecimal valor) {
+        this.profundidadeCorteMm = valor;
+    }
+
+    public void definirDiametroPecaMm(BigDecimal valor) {
+        this.diametroPecaMm = valor;
+    }
+
+    public void definirFluidoCorte(FluidoCorte valor) {
+        this.fluidoCorte = valor;
+    }
+
+    public void definirObservacao(String valor) {
+        this.observacao = valor;
+    }
+
+    public Material getMaterialItem() {
+        return materialItem;
+    }
+
+    public Ferramenta getFerramenta() {
+        return ferramenta;
+    }
+
+    public BigDecimal getProfundidadeCorteMm() {
+        return profundidadeCorteMm;
+    }
+
+    public BigDecimal getDiametroPecaMm() {
+        return diametroPecaMm;
+    }
+
+    public FluidoCorte getFluidoCorte() {
+        return fluidoCorte;
     }
 
     public Long getId() {

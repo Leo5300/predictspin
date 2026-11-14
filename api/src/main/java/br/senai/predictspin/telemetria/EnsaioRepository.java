@@ -25,6 +25,8 @@ public interface EnsaioRepository extends JpaRepository<Ensaio, Long> {
 
     @Query(value = """
             select e from Ensaio e
+            left join fetch e.materialItem
+            left join fetch e.ferramenta
             where e.maquina.id = :maquinaId
               and (:etapa is null or e.etapa = :etapa)
               and (:condicao is null or e.condicao = :condicao)
@@ -32,6 +34,8 @@ public interface EnsaioRepository extends JpaRepository<Ensaio, Long> {
               and (:descartado is null or e.descartado = :descartado)
               and (:aberto is null or (:aberto = true and e.encerradoEm is null)
                                    or (:aberto = false and e.encerradoEm is not null))
+              and (:materialId is null or e.materialItem.id = :materialId)
+              and (:ferramentaId is null or e.ferramenta.id = :ferramentaId)
             order by e.iniciadoEm desc, e.id desc
             """,
             countQuery = """
@@ -43,10 +47,13 @@ public interface EnsaioRepository extends JpaRepository<Ensaio, Long> {
               and (:descartado is null or e.descartado = :descartado)
               and (:aberto is null or (:aberto = true and e.encerradoEm is null)
                                    or (:aberto = false and e.encerradoEm is not null))
+              and (:materialId is null or e.materialItem.id = :materialId)
+              and (:ferramentaId is null or e.ferramenta.id = :ferramentaId)
             """)
     Page<Ensaio> filtrar(@Param("maquinaId") Long maquinaId, @Param("etapa") Etapa etapa,
                          @Param("condicao") Condicao condicao, @Param("simulado") Boolean simulado,
                          @Param("descartado") Boolean descartado, @Param("aberto") Boolean aberto,
+                         @Param("materialId") Long materialId, @Param("ferramentaId") Long ferramentaId,
                          Pageable pageable);
 
     /** Ensaios válidos (encerrados, não descartados, com janela) agrupados por etapa, condição e rotação. */

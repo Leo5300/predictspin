@@ -62,6 +62,13 @@ class ExportacaoServiceTest {
         when(rs.getInt("amostras")).thenReturn(amostras == null ? 0 : amostras);
         when(rs.getInt("amostras_esperadas")).thenReturn(esperadas == null ? 0 : esperadas);
         when(rs.getString("material")).thenReturn(material);
+        if (material != null) {
+            when(rs.getString("ferramenta")).thenReturn("Bit de metal duro");
+            when(rs.getBigDecimal("profundidade_corte_mm")).thenReturn(new BigDecimal("1.500"));
+            when(rs.getBigDecimal("diametro_peca_mm")).thenReturn(new BigDecimal("38.00"));
+            when(rs.getString("fluido_corte")).thenReturn("emulsao");
+            when(rs.getBoolean("evento_marcado")).thenReturn(true);
+        }
         when(rs.getString("rotacao_alvo_rpm")).thenReturn("1200");
         when(rs.getBigDecimal("avanco_alvo")).thenReturn(avanco);
         when(rs.getString("repeticao")).thenReturn("1");
@@ -99,14 +106,15 @@ class ExportacaoServiceTest {
         assertThat(linhas).isEqualTo(2);
         String[] csv = saida.toString().split("\n");
         assertThat(csv).hasSize(3);
-        assertThat(csv[0]).isEqualTo(String.join(",", ExportacaoService.COLUNAS_FIXAS) + ",corrente_a");
+        // as colunas da V5 vêm no fim, depois das de canal
+        assertThat(csv[0]).isEqualTo(String.join(",", ExportacaoService.COLUNAS_FIXAS) + ",corrente_a" + "," + String.join(",", ExportacaoService.COLUNAS_DO_FIM));
         assertThat(csv[1]).isEqualTo("TORNO-01-T1-00001,T1,normal,\"aço SAE 1045, barra\",1200,0.150,1,true,"
                 + "TORNO-01,ps-sim-01,77,2026-11-10T12:00:05Z,1198.5,false,A,acionamento,"
-                + "0.12,0.4,3.1,0.08,0.03,0.01,normal,8000,8000,treino,,4.5");
+                + "0.12,0.4,3.1,0.08,0.03,0.01,normal,8000,8000,treino,,4.5,Bit de metal duro,1.5,38,emulsao,true");
         // material, avanço e canal ausentes viram campo vazio
         assertThat(csv[2]).isEqualTo("TORNO-01-T1-00001,T1,normal,,1200,,1,true,"
                 + "TORNO-01,ps-sim-01,77,2026-11-10T12:00:05Z,1198.5,false,A,acionamento,"
-                + "0.12,0.4,3.1,0.08,0.03,0.01,normal,8000,8000,treino,,");
+                + "0.12,0.4,3.1,0.08,0.03,0.01,normal,8000,8000,treino,,,,,,,false");
     }
 
     @Test
@@ -123,14 +131,14 @@ class ExportacaoServiceTest {
         servico.exportar(true, 1L, saida);
 
         String[] csv = saida.toString().split("\n");
-        assertThat(csv[1]).endsWith(",normal,8000,8000,validacao,");
-        assertThat(csv[2]).endsWith(",rapido,1600,1600,treino,rapida");
+        assertThat(csv[1]).endsWith(",normal,8000,8000,validacao,,,,,,false");
+        assertThat(csv[2]).endsWith(",rapido,1600,1600,treino,rapida,,,,,false");
         // 7839 < 98% de 8000 (7840): incompleta; 7840 já serve
-        assertThat(csv[3]).endsWith(",normal,7839,8000,treino,amostras_incompletas");
-        assertThat(csv[4]).endsWith(",rapido,1500,1600,treino,rapida|amostras_incompletas");
-        assertThat(csv[5]).endsWith(",normal,7840,8000,treino,");
+        assertThat(csv[3]).endsWith(",normal,7839,8000,treino,amostras_incompletas,,,,,false");
+        assertThat(csv[4]).endsWith(",rapido,1500,1600,treino,rapida|amostras_incompletas,,,,,false");
+        assertThat(csv[5]).endsWith(",normal,7840,8000,treino,,,,,,false");
         // envio antigo, sem contagem: sem marca
-        assertThat(csv[6]).endsWith(",normal,,,treino,");
+        assertThat(csv[6]).endsWith(",normal,,,treino,,,,,,false");
     }
 
     @Test
@@ -150,7 +158,7 @@ class ExportacaoServiceTest {
         long linhas = servico.exportar(null, null, saida);
 
         assertThat(linhas).isZero();
-        assertThat(saida.toString()).isEqualTo(String.join(",", ExportacaoService.COLUNAS_FIXAS) + "\n");
+        assertThat(saida.toString()).isEqualTo(String.join(",", ExportacaoService.COLUNAS_FIXAS) + "," + String.join(",", ExportacaoService.COLUNAS_DO_FIM) + "\n");
         org.mockito.Mockito.verify(repositorio).percorrer(eq(List.of()), eq(null), eq(null), any());
     }
 

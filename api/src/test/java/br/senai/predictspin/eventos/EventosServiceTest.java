@@ -207,6 +207,26 @@ class EventosServiceTest {
     }
 
     @Test
+    void eventoMarcadoSoChegaParaQuemPodeVerEnsaiosDaMesmaFonte() {
+        EmissorDeTeste tecnico = assinar(10, true, null);
+        EmissorDeTeste soReal = assinar(11, true, false);
+        EmissorDeTeste operador = assinar(12, false, null);
+
+        servico.publicarEventoMarcado(MAQUINA, true, new br.senai.predictspin.telemetria.dto.EventoMarcadoResposta(
+                3L, 5L, "TORNO-01-T1-00005", Instant.parse("2026-11-12T12:00:07Z"),
+                br.senai.predictspin.telemetria.MotivoEvento.MAQUINA_VIZINHA, null, 10L,
+                Instant.parse("2026-11-12T12:00:09Z")));
+        servico.publicarModoRapido(new ModoRapidoResposta(MAQUINA, false, null));
+
+        esperar(() -> recebeu(tecnico, "event:evento_marcado") && recebeu(operador, "\"ativo\":false"));
+        assertThat(tecnico.enviados.stream().filter(e -> e.contains("event:evento_marcado")).findFirst()
+                .orElseThrow()).contains("\"motivo\":\"maquina_vizinha\"").contains("\"ensaio_id\":5");
+        assertThat(recebeu(operador, "event:evento_marcado")).isFalse();
+        esperar(() -> recebeu(soReal, "\"ativo\":false"));
+        assertThat(recebeu(soReal, "event:evento_marcado")).isFalse();
+    }
+
+    @Test
     void limitePorUsuarioResponde429ELimiteTotal503() {
         assinar(10, false, null);
         assinar(10, false, null);

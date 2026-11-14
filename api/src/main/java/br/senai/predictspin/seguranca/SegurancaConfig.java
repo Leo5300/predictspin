@@ -80,6 +80,13 @@ public class SegurancaConfig {
                         .requestMatchers("/swagger-ui", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/v1/usuarios", "/api/v1/usuarios/**").hasRole("ADMIN")
+                        // catálogos: renomear e desativar só ADMIN; listar e criar, ADMIN e TECNICO
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/materiais/*", "/api/v1/ferramentas/*")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/materiais/*/desativar",
+                                "/api/v1/ferramentas/*/desativar").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/materiais", "/api/v1/materiais/**", "/api/v1/ferramentas",
+                                "/api/v1/ferramentas/**").hasAnyRole("ADMIN", "TECNICO")
                         .requestMatchers("/api/v1/ensaios/**", "/api/v1/maquinas/*/ensaios",
                                 "/api/v1/maquinas/*/coleta/**").hasAnyRole("ADMIN", "TECNICO")
                         .requestMatchers("/api/v1/**").authenticated()

@@ -37,11 +37,29 @@ public class ExportacaoRepository {
                        e.repeticao, e.simulado, m.codigo AS maquina, d.identificador AS dispositivo,
                        j.id AS janela_id, j.medido_em, j.rotacao_rpm, j.saturou,
                        j.modo, j.amostras, j.amostras_esperadas,
-                       p.codigo AS ponto, p.papel, t.rms_g, t.pico_g, t.curtose, t.ordem_1x, t.ordem_2x, t.ordem_3x
+                       p.codigo AS ponto, p.papel, t.rms_g, t.pico_g, t.curtose, t.ordem_1x, t.ordem_2x, t.ordem_3x,
+                       f.nome AS ferramenta, e.profundidade_corte_mm, e.diametro_peca_mm, e.fluido_corte,
+                       EXISTS (SELECT 1 FROM ensaio_evento ev
+                               WHERE ev.ensaio_id = e.id
+                                 AND ev.ocorrido_em >= jm.inicio_anterior
+                                 AND ev.ocorrido_em < jm.fim) AS evento_marcado
                        %s
                 FROM ensaio e
                 JOIN maquina m ON m.id = e.maquina_id
+                LEFT JOIN ferramenta f ON f.id = e.ferramenta_id
                 JOIN janela j ON j.ensaio_id = e.id
+                -- intervalo da janela: medido_em é o INÍCIO; dura 1 s (rápida) ou 5 s. Um evento marca a
+                -- janela que o contém e a seguinte: a janela j fica marcada se houve evento entre o início
+                -- da janela anterior do mesmo ensaio e o fim de j (inclui o vão entre as duas)
+                JOIN (
+                    SELECT jj.id,
+                           jj.medido_em + CASE WHEN jj.modo = 'rapido' THEN interval '1 second'
+                                               ELSE interval '5 seconds' END AS fim,
+                           coalesce(lag(jj.medido_em) OVER (PARTITION BY jj.ensaio_id ORDER BY jj.medido_em),
+                                    jj.medido_em) AS inicio_anterior
+                    FROM janela jj
+                    WHERE jj.ensaio_id IS NOT NULL
+                ) jm ON jm.id = j.id
                 JOIN dispositivo d ON d.id = j.dispositivo_id
                 JOIN telemetria t ON t.janela_id = j.id
                 JOIN ponto_medicao p ON p.id = t.ponto_medicao_id

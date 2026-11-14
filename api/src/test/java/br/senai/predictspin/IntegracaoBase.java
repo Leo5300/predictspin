@@ -60,7 +60,11 @@ public abstract class IntegracaoBase {
         jdbc.update("DELETE FROM leitura");
         jdbc.update("DELETE FROM telemetria");
         jdbc.update("DELETE FROM janela");
+        jdbc.update("DELETE FROM ensaio_evento");
+        jdbc.update("DELETE FROM ensaio_alteracao");
         jdbc.update("DELETE FROM ensaio");
+        jdbc.update("DELETE FROM material");
+        jdbc.update("DELETE FROM ferramenta");
         jdbc.update("DELETE FROM usuario WHERE email <> ?", ADMIN_EMAIL);
         jdbc.update("UPDATE usuario SET ativo = true");
         jdbc.update("UPDATE dispositivo SET ultimo_contato = NULL, ativo = true");

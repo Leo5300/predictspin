@@ -31,6 +31,9 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 
+import br.senai.predictspin.catalogo.ItemDuplicadoException;
+import br.senai.predictspin.catalogo.dto.ConflitoCatalogoResposta;
+
 /**
  * Converte toda exceção em {@link ErroResposta}. Mensagens são escritas para o cliente; detalhes
  * internos (stack trace, SQL, nomes de classe) vão só para o log.
@@ -148,6 +151,14 @@ public class TratadorGlobalErros {
     @ExceptionHandler(ConflitoException.class)
     ResponseEntity<ErroResposta> conflito(ConflitoException e, HttpServletRequest req) {
         return resposta(HttpStatus.CONFLICT, e.getMessage(), req, List.of());
+    }
+
+    @ExceptionHandler(ItemDuplicadoException.class)
+    ResponseEntity<ConflitoCatalogoResposta> itemDuplicado(ItemDuplicadoException e, HttpServletRequest req) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON)
+                .body(new ConflitoCatalogoResposta(Instant.now(), status.value(), status.getReasonPhrase(),
+                        e.getMessage(), req.getRequestURI(), e.getExistente()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

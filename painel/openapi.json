@@ -1,6 +1,72 @@
 {
   "components": {
     "schemas": {
+      "AlteracaoEnsaioResposta": {
+        "properties": {
+          "alterado_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "alterado_por": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "alterado_por_nome": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "campo": {
+            "description": "material, ferramenta, avanco_alvo, profundidade_corte_mm, diametro_peca_mm, fluido_corte ou observacao",
+            "example": "material",
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "valor_antigo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "valor_novo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "alterado_em",
+          "alterado_por",
+          "alterado_por_nome",
+          "campo",
+          "id",
+          "valor_antigo",
+          "valor_novo"
+        ]
+      },
+      "AlteracaoItemCatalogoRequisicao": {
+        "properties": {
+          "descricao": {
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string"
+          },
+          "nome": {
+            "example": "Aço SAE 1045",
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          }
+        }
+      },
       "CampoInvalido": {
         "properties": {
           "campo": {
@@ -138,6 +204,38 @@
           "simulado"
         ]
       },
+      "ConflitoCatalogoResposta": {
+        "properties": {
+          "caminho": {
+            "type": "string"
+          },
+          "erro": {
+            "type": "string"
+          },
+          "existente": {
+            "$ref": "#/components/schemas/ItemCatalogoResposta"
+          },
+          "mensagem": {
+            "type": "string"
+          },
+          "status": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "caminho",
+          "erro",
+          "existente",
+          "mensagem",
+          "status",
+          "timestamp"
+        ]
+      },
       "DispositivoResposta": {
         "properties": {
           "ativo": {
@@ -224,6 +322,12 @@
           "descartado": {
             "type": "boolean"
           },
+          "diametro_peca_mm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
           "encerrado_em": {
             "format": "date-time",
             "type": [
@@ -239,6 +343,28 @@
               "T3"
             ],
             "type": "string"
+          },
+          "ferramenta_item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RefCatalogo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fluido_corte": {
+            "enum": [
+              "seco",
+              "emulsao",
+              "oleo_integral",
+              "outro"
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "id": {
             "format": "int64",
@@ -258,9 +384,25 @@
               "null"
             ]
           },
+          "material_item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RefCatalogo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "observacao": {
             "type": [
               "string",
+              "null"
+            ]
+          },
+          "profundidade_corte_mm": {
+            "type": [
+              "number",
               "null"
             ]
           },
@@ -282,13 +424,18 @@
           "codigo",
           "condicao",
           "descartado",
+          "diametro_peca_mm",
           "encerrado_em",
           "etapa",
+          "ferramenta_item",
+          "fluido_corte",
           "id",
           "iniciado_em",
           "maquina_id",
           "material",
+          "material_item",
           "observacao",
+          "profundidade_corte_mm",
           "repeticao",
           "rotacao_alvo_rpm",
           "simulado"
@@ -328,6 +475,61 @@
           "timestamp"
         ]
       },
+      "EventoMarcadoResposta": {
+        "properties": {
+          "criado_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "criado_por": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "ensaio_codigo": {
+            "type": "string"
+          },
+          "ensaio_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "motivo": {
+            "enum": [
+              "pancada",
+              "cavaco",
+              "maquina_vizinha",
+              "outro"
+            ],
+            "type": "string"
+          },
+          "nota": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ocorrido_em": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "criado_em",
+          "criado_por",
+          "ensaio_codigo",
+          "ensaio_id",
+          "id",
+          "motivo",
+          "nota",
+          "ocorrido_em"
+        ]
+      },
       "IngestaoResposta": {
         "properties": {
           "duplicada": {
@@ -362,6 +564,49 @@
           "ensaio_id",
           "janela_id",
           "medido_em"
+        ]
+      },
+      "ItemCatalogoResposta": {
+        "properties": {
+          "ativo": {
+            "type": "boolean"
+          },
+          "criado_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "criado_por": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "descricao": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "nome_normalizado": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ativo",
+          "criado_em",
+          "criado_por",
+          "descricao",
+          "id",
+          "nome",
+          "nome_normalizado"
         ]
       },
       "JanelaCanal": {
@@ -767,6 +1012,13 @@
             "example": "normal",
             "type": "string"
           },
+          "diametro_peca_mm": {
+            "description": "Diâmetro da peça em mm (1 a 500)",
+            "example": 38,
+            "maximum": 500,
+            "minimum": 1,
+            "type": "number"
+          },
           "etapa": {
             "enum": [
               "T0",
@@ -777,16 +1029,44 @@
             "example": "T1",
             "type": "string"
           },
+          "ferramenta_id": {
+            "description": "Ferramenta do catálogo",
+            "format": "int64",
+            "type": "integer"
+          },
+          "fluido_corte": {
+            "enum": [
+              "seco",
+              "emulsao",
+              "oleo_integral",
+              "outro"
+            ],
+            "example": "emulsao",
+            "type": "string"
+          },
           "material": {
+            "description": "Texto livre; vira item do catálogo de materiais",
             "example": "aço SAE 1045",
             "maxLength": 80,
             "minLength": 0,
             "type": "string"
           },
+          "material_id": {
+            "description": "Material do catálogo (vence o texto de material)",
+            "format": "int64",
+            "type": "integer"
+          },
           "observacao": {
             "maxLength": 2000,
             "minLength": 0,
             "type": "string"
+          },
+          "profundidade_corte_mm": {
+            "description": "Profundidade de corte em mm (0,05 a 10)",
+            "example": 1.5,
+            "maximum": 10,
+            "minimum": 0.05,
+            "type": "number"
           },
           "repeticao": {
             "description": "Padrão 1",
@@ -812,6 +1092,53 @@
           "condicao",
           "etapa",
           "rotacao_alvo_rpm"
+        ]
+      },
+      "NovoEventoMarcadoRequisicao": {
+        "properties": {
+          "motivo": {
+            "enum": [
+              "pancada",
+              "cavaco",
+              "maquina_vizinha",
+              "outro"
+            ],
+            "example": "pancada",
+            "type": "string"
+          },
+          "nota": {
+            "example": "martelo na bancada ao lado",
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string"
+          },
+          "ocorrido_em": {
+            "description": "Instante do toque em \"Marcar evento\" (UTC). Sem ele, o instante do pedido.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "motivo"
+        ]
+      },
+      "NovoItemCatalogoRequisicao": {
+        "properties": {
+          "descricao": {
+            "example": "bit de metal duro, ângulo 60°",
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string"
+          },
+          "nome": {
+            "example": "Aço SAE 1045",
+            "maxLength": 80,
+            "minLength": 0,
+            "type": "string"
+          }
+        },
+        "required": [
+          "nome"
         ]
       },
       "NovoUsuarioRequisicao": {
@@ -846,6 +1173,39 @@
           "nome",
           "papel",
           "senha"
+        ]
+      },
+      "PaginaAlteracaoEnsaioResposta": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/AlteracaoEnsaioResposta"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
         ]
       },
       "PaginaDispositivoResposta": {
@@ -886,6 +1246,72 @@
           "conteudo": {
             "items": {
               "$ref": "#/components/schemas/EnsaioResposta"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
+        ]
+      },
+      "PaginaEventoMarcadoResposta": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/EventoMarcadoResposta"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
+        ]
+      },
+      "PaginaItemCatalogoResposta": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/ItemCatalogoResposta"
             },
             "type": "array"
           },
@@ -1141,6 +1567,72 @@
           "fixacao",
           "id",
           "papel"
+        ]
+      },
+      "ReceitaRequisicao": {
+        "description": "Campos da receita do corte e a observação. Só os presentes no corpo mudam; null apaga.",
+        "properties": {
+          "avanco_alvo": {
+            "description": "Avanço em mm/volta",
+            "example": 0.15,
+            "minimum": 0,
+            "type": "number"
+          },
+          "diametro_peca_mm": {
+            "description": "Diâmetro da peça em mm (1 a 500)",
+            "example": 38,
+            "maximum": 500,
+            "minimum": 1,
+            "type": "number"
+          },
+          "ferramenta_id": {
+            "description": "Ferramenta do catálogo",
+            "format": "int64",
+            "type": "integer"
+          },
+          "fluido_corte": {
+            "enum": [
+              "seco",
+              "emulsao",
+              "oleo_integral",
+              "outro"
+            ],
+            "example": "emulsao",
+            "type": "string"
+          },
+          "material_id": {
+            "description": "Material do catálogo",
+            "format": "int64",
+            "type": "integer"
+          },
+          "observacao": {
+            "maxLength": 2000,
+            "minLength": 0,
+            "type": "string"
+          },
+          "profundidade_corte_mm": {
+            "description": "Profundidade de corte em mm (0,05 a 10)",
+            "example": 1.5,
+            "maximum": 10,
+            "minimum": 0.05,
+            "type": "number"
+          }
+        }
+      },
+      "RefCatalogo": {
+        "description": "Item do catálogo (material ou ferramenta): id e nome",
+        "properties": {
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
         ]
       },
       "ResumoEnsaioResposta": {
@@ -1809,7 +2301,7 @@
     },
     "/api/v1/ensaios/exportar.csv": {
       "get": {
-        "description": "Uma linha por janela e ponto, só de ensaios encerrados e não descartados, com os rótulos do ensaio e uma coluna por canal. Use simulado=false para só dado real.",
+        "description": "Uma linha por janela e ponto, só de ensaios encerrados e não descartados, com os rótulos do ensaio e uma coluna por canal; no fim, a receita (ferramenta, profundidade_corte_mm, diametro_peca_mm, fluido_corte) e evento_marcado (janelas que devem ficar fora do treino). Use simulado=false para só dado real.",
         "operationId": "exportar",
         "parameters": [
           {
@@ -1946,6 +2438,101 @@
           }
         },
         "summary": "Detalha um ensaio",
+        "tags": [
+          "Ensaios"
+        ]
+      }
+    },
+    "/api/v1/ensaios/{id}/alteracoes": {
+      "get": {
+        "operationId": "alteracoes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaAlteracaoEnsaioResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Histórico das correções da receita, da mais antiga para a mais nova",
         "tags": [
           "Ensaios"
         ]
@@ -2116,6 +2703,192 @@
         ]
       }
     },
+    "/api/v1/ensaios/{id}/eventos": {
+      "get": {
+        "operationId": "listarEventosMarcados",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaEventoMarcadoResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Eventos marcados no ensaio, em ordem de ocorrência",
+        "tags": [
+          "Ensaios"
+        ]
+      },
+      "post": {
+        "description": "Só com o ensaio aberto. As janelas que contêm o instante (e a seguinte) saem marcadas na exportação (evento_marcado), fora do treino. Vai também ao fluxo ao vivo como evento_marcado.",
+        "operationId": "marcarEvento",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoEventoMarcadoRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventoMarcadoResposta"
+                }
+              }
+            },
+            "description": "Evento marcado"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Ensaio encerrado"
+          }
+        },
+        "summary": "Marca um evento fora do plano durante a gravação (pancada, cavaco, máquina vizinha)",
+        "tags": [
+          "Ensaios"
+        ]
+      }
+    },
     "/api/v1/ensaios/{id}/janelas": {
       "get": {
         "description": "Somente ADMIN e TECNICO, como as demais rotas de ensaio.",
@@ -2212,6 +2985,89 @@
         ]
       }
     },
+    "/api/v1/ensaios/{id}/receita": {
+      "patch": {
+        "description": "Só os campos presentes no corpo mudam; null apaga. Etapa, condição, rotação alvo, simulado e período NÃO mudam (definem a célula da cobertura e a classe): qualquer outro campo responde 400. Cada campo alterado vira uma linha em GET .../alteracoes.",
+        "operationId": "corrigirReceita",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceitaRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsaioResposta"
+                }
+              }
+            },
+            "description": "Receita corrigida"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Campo que não é da receita, ou valor fora da faixa"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Corrige a receita do corte e a observação, com histórico",
+        "tags": [
+          "Ensaios"
+        ]
+      }
+    },
     "/api/v1/ensaios/{id}/resumo": {
       "get": {
         "operationId": "resumo",
@@ -2281,6 +3137,333 @@
         "summary": "Duração, número de janelas, janelas saturadas e rotação média do ensaio",
         "tags": [
           "Ensaios"
+        ]
+      }
+    },
+    "/api/v1/ferramentas": {
+      "get": {
+        "operationId": "listarFerramentas",
+        "parameters": [
+          {
+            "description": "Parte do nome; ignora maiúsculas, acentos, pontuação e espaços extras",
+            "in": "query",
+            "name": "busca",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "true: só ativos; false: só desativados; sem o parâmetro, todos",
+            "in": "query",
+            "name": "ativos",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaItemCatalogoResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          }
+        },
+        "summary": "Lista ferramentas, em ordem de nome, com busca",
+        "tags": [
+          "Catálogos"
+        ]
+      },
+      "post": {
+        "operationId": "criarFerramenta",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoItemCatalogoRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemCatalogoResposta"
+                }
+              }
+            },
+            "description": "Ferramenta criada"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Já existe ferramenta com o mesmo nome normalizado; o corpo traz a existente"
+          }
+        },
+        "summary": "Cria uma ferramenta",
+        "tags": [
+          "Catálogos"
+        ]
+      }
+    },
+    "/api/v1/ferramentas/{id}": {
+      "patch": {
+        "operationId": "alterarFerramenta",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlteracaoItemCatalogoRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemCatalogoResposta"
+                }
+              }
+            },
+            "description": "Ferramenta alterada"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "O novo nome já existe em outra ferramenta"
+          }
+        },
+        "summary": "Renomeia a ferramenta ou troca a descrição (ADMIN)",
+        "tags": [
+          "Catálogos"
+        ]
+      }
+    },
+    "/api/v1/ferramentas/{id}/desativar": {
+      "post": {
+        "operationId": "desativarFerramenta",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemCatalogoResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Desativa a ferramenta (ADMIN): some da escolha, os ensaios continuam apontando para ela",
+        "tags": [
+          "Catálogos"
         ]
       }
     },
@@ -2795,6 +3978,26 @@
             "required": false,
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "description": "Só os ensaios com este material do catálogo",
+            "in": "query",
+            "name": "material_id",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Só os ensaios com esta ferramenta do catálogo",
+            "in": "query",
+            "name": "ferramenta_id",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
             }
           },
           {
@@ -3728,6 +4931,333 @@
         ]
       }
     },
+    "/api/v1/materiais": {
+      "get": {
+        "operationId": "listarMateriais",
+        "parameters": [
+          {
+            "description": "Parte do nome; ignora maiúsculas, acentos, pontuação e espaços extras",
+            "in": "query",
+            "name": "busca",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "true: só ativos; false: só desativados; sem o parâmetro, todos",
+            "in": "query",
+            "name": "ativos",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaItemCatalogoResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          }
+        },
+        "summary": "Lista materiais, em ordem de nome, com busca",
+        "tags": [
+          "Catálogos"
+        ]
+      },
+      "post": {
+        "operationId": "criarMaterial",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoItemCatalogoRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemCatalogoResposta"
+                }
+              }
+            },
+            "description": "Material criado"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Já existe material com o mesmo nome normalizado; o corpo traz o existente"
+          }
+        },
+        "summary": "Cria um material",
+        "tags": [
+          "Catálogos"
+        ]
+      }
+    },
+    "/api/v1/materiais/{id}": {
+      "patch": {
+        "operationId": "alterarMaterial",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlteracaoItemCatalogoRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemCatalogoResposta"
+                }
+              }
+            },
+            "description": "Material alterado"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "O novo nome já existe em outro material"
+          }
+        },
+        "summary": "Renomeia o material ou troca a descrição (ADMIN)",
+        "tags": [
+          "Catálogos"
+        ]
+      }
+    },
+    "/api/v1/materiais/{id}/desativar": {
+      "post": {
+        "operationId": "desativarMaterial",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemCatalogoResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Desativa o material (ADMIN): some da escolha, os ensaios continuam apontando para ele",
+        "tags": [
+          "Catálogos"
+        ]
+      }
+    },
     "/api/v1/pontos/{id}/telemetria": {
       "get": {
         "description": "Sem 'de', usa as últimas 24 h até 'ate' (ou agora).",
@@ -4162,6 +5692,10 @@
     {
       "description": "Ingestão pelo dispositivo e consultas pelos usuários",
       "name": "Telemetria"
+    },
+    {
+      "description": "Materiais e ferramentas da receita do corte. Listar e criar: ADMIN e TECNICO. Renomear e desativar: ADMIN.",
+      "name": "Catálogos"
     },
     {
       "description": "Cadastro de usuários. Somente ADMIN.",

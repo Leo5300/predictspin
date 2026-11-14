@@ -44,6 +44,7 @@ public class EventosService implements SmartLifecycle {
     public static final String EVENTO_JANELA = "janela";
     public static final String EVENTO_ENSAIO = "ensaio";
     public static final String EVENTO_MODO_RAPIDO = "modo_rapido";
+    public static final String EVENTO_MARCADO = "evento_marcado";
 
     private static final Logger log = LoggerFactory.getLogger(EventosService.class);
     private static final int FILA_DA_DIFUSAO = 256;
@@ -153,6 +154,16 @@ public class EventosService implements SmartLifecycle {
         }
         difundir(EVENTO_ENSAIO, () -> distribuir(maquinaId, mensagem(EVENTO_ENSAIO, evento),
                 a -> a.veEnsaios && a.aceita(evento.ensaio().simulado())));
+    }
+
+    /** Evento marcado num ensaio aberto: só para quem pode ver ensaios. */
+    public void publicarEventoMarcado(Long maquinaId, boolean simulado,
+                                      br.senai.predictspin.telemetria.dto.EventoMarcadoResposta evento) {
+        if (!temAssinantes(maquinaId)) {
+            return;
+        }
+        difundir(EVENTO_MARCADO, () -> distribuir(maquinaId, mensagem(EVENTO_MARCADO, evento),
+                a -> a.veEnsaios && a.aceita(simulado)));
     }
 
     /** Modo rápido ligado ou desligado, com o prazo. */

@@ -53,7 +53,7 @@ export interface paths {
         };
         /**
          * Exporta o conjunto de treino em CSV, em fluxo
-         * @description Uma linha por janela e ponto, só de ensaios encerrados e não descartados, com os rótulos do ensaio e uma coluna por canal. Use simulado=false para só dado real.
+         * @description Uma linha por janela e ponto, só de ensaios encerrados e não descartados, com os rótulos do ensaio e uma coluna por canal; no fim, a receita (ferramenta, profundidade_corte_mm, diametro_peca_mm, fluido_corte) e evento_marcado (janelas que devem ficar fora do treino). Use simulado=false para só dado real.
          */
         get: operations["exportar"];
         put?: never;
@@ -73,6 +73,23 @@ export interface paths {
         };
         /** Detalha um ensaio */
         get: operations["buscar_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ensaios/{id}/alteracoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Histórico das correções da receita, da mais antiga para a mais nova */
+        get: operations["alteracoes"];
         put?: never;
         post?: never;
         delete?: never;
@@ -118,6 +135,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ensaios/{id}/eventos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eventos marcados no ensaio, em ordem de ocorrência */
+        get: operations["listarEventosMarcados"];
+        put?: never;
+        /**
+         * Marca um evento fora do plano durante a gravação (pancada, cavaco, máquina vizinha)
+         * @description Só com o ensaio aberto. As janelas que contêm o instante (e a seguinte) saem marcadas na exportação (evento_marcado), fora do treino. Vai também ao fluxo ao vivo como evento_marcado.
+         */
+        post: operations["marcarEvento"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ensaios/{id}/janelas": {
         parameters: {
             query?: never;
@@ -138,6 +176,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ensaios/{id}/receita": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Corrige a receita do corte e a observação, com histórico
+         * @description Só os campos presentes no corpo mudam; null apaga. Etapa, condição, rotação alvo, simulado e período NÃO mudam (definem a célula da cobertura e a classe): qualquer outro campo responde 400. Cada campo alterado vira uma linha em GET .../alteracoes.
+         */
+        patch: operations["corrigirReceita"];
+        trace?: never;
+    };
     "/api/v1/ensaios/{id}/resumo": {
         parameters: {
             query?: never;
@@ -149,6 +207,58 @@ export interface paths {
         get: operations["resumo"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ferramentas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista ferramentas, em ordem de nome, com busca */
+        get: operations["listarFerramentas"];
+        put?: never;
+        /** Cria uma ferramenta */
+        post: operations["criarFerramenta"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ferramentas/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Renomeia a ferramenta ou troca a descrição (ADMIN) */
+        patch: operations["alterarFerramenta"];
+        trace?: never;
+    };
+    "/api/v1/ferramentas/{id}/desativar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Desativa a ferramenta (ADMIN): some da escolha, os ensaios continuam apontando para ela */
+        post: operations["desativarFerramenta"];
         delete?: never;
         options?: never;
         head?: never;
@@ -389,6 +499,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/materiais": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista materiais, em ordem de nome, com busca */
+        get: operations["listarMateriais"];
+        put?: never;
+        /** Cria um material */
+        post: operations["criarMaterial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/materiais/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Renomeia o material ou troca a descrição (ADMIN) */
+        patch: operations["alterarMaterial"];
+        trace?: never;
+    };
+    "/api/v1/materiais/{id}/desativar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Desativa o material (ADMIN): some da escolha, os ensaios continuam apontando para ele */
+        post: operations["desativarMaterial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/pontos/{id}/telemetria": {
         parameters: {
             query?: never;
@@ -468,6 +630,27 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AlteracaoEnsaioResposta: {
+            /** Format: date-time */
+            alterado_em: string;
+            /** Format: int64 */
+            alterado_por: number | null;
+            alterado_por_nome: string | null;
+            /**
+             * @description material, ferramenta, avanco_alvo, profundidade_corte_mm, diametro_peca_mm, fluido_corte ou observacao
+             * @example material
+             */
+            campo: string;
+            /** Format: int64 */
+            id: number;
+            valor_antigo: string | null;
+            valor_novo: string | null;
+        };
+        AlteracaoItemCatalogoRequisicao: {
+            descricao?: string;
+            /** @example Aço SAE 1045 */
+            nome?: string;
+        };
         CampoInvalido: {
             campo: string;
             mensagem: string;
@@ -515,6 +698,16 @@ export interface components {
             rotacoes_rpm: number[];
             simulado: boolean | null;
         };
+        ConflitoCatalogoResposta: {
+            caminho: string;
+            erro: string;
+            existente: components["schemas"]["ItemCatalogoResposta"];
+            mensagem: string;
+            /** Format: int32 */
+            status: number;
+            /** Format: date-time */
+            timestamp: string;
+        };
         DispositivoResposta: {
             ativo: boolean;
             firmware_versao: string | null;
@@ -540,10 +733,14 @@ export interface components {
             /** @enum {string} */
             condicao: "normal" | "ferramenta_desgastada" | "avanco_excessivo" | "rotacao_inadequada" | "desbalanceamento" | "sensor_solto";
             descartado: boolean;
+            diametro_peca_mm: number | null;
             /** Format: date-time */
             encerrado_em: string | null;
             /** @enum {string} */
             etapa: "T0" | "T1" | "T2" | "T3";
+            ferramenta_item: components["schemas"]["RefCatalogo"] | null;
+            /** @enum {string|null} */
+            fluido_corte: "seco" | "emulsao" | "oleo_integral" | "outro" | null;
             /** Format: int64 */
             id: number;
             /** Format: date-time */
@@ -551,7 +748,9 @@ export interface components {
             /** Format: int64 */
             maquina_id: number;
             material: string | null;
+            material_item: components["schemas"]["RefCatalogo"] | null;
             observacao: string | null;
+            profundidade_corte_mm: number | null;
             /** Format: int32 */
             repeticao: number;
             /** Format: int32 */
@@ -567,6 +766,22 @@ export interface components {
             status: number;
             /** Format: date-time */
             timestamp: string;
+        };
+        EventoMarcadoResposta: {
+            /** Format: date-time */
+            criado_em: string;
+            /** Format: int64 */
+            criado_por: number | null;
+            ensaio_codigo: string;
+            /** Format: int64 */
+            ensaio_id: number;
+            /** Format: int64 */
+            id: number;
+            /** @enum {string} */
+            motivo: "pancada" | "cavaco" | "maquina_vizinha" | "outro";
+            nota: string | null;
+            /** Format: date-time */
+            ocorrido_em: string;
         };
         IngestaoResposta: {
             /** @description true quando a janela já tinha sido recebida: nada foi gravado de novo */
@@ -586,6 +801,18 @@ export interface components {
              * @example 2026-11-11T12:02:00Z
              */
             modo_rapido_ate?: string;
+        };
+        ItemCatalogoResposta: {
+            ativo: boolean;
+            /** Format: date-time */
+            criado_em: string;
+            /** Format: int64 */
+            criado_por: number | null;
+            descricao: string | null;
+            /** Format: int64 */
+            id: number;
+            nome: string;
+            nome_normalizado: string;
         };
         /** @description Leitura de um canal auxiliar na janela */
         JanelaCanal: {
@@ -742,13 +969,41 @@ export interface components {
              */
             condicao: "normal" | "ferramenta_desgastada" | "avanco_excessivo" | "rotacao_inadequada" | "desbalanceamento" | "sensor_solto";
             /**
+             * @description Diâmetro da peça em mm (1 a 500)
+             * @example 38
+             */
+            diametro_peca_mm?: number;
+            /**
              * @example T1
              * @enum {string}
              */
             etapa: "T0" | "T1" | "T2" | "T3";
-            /** @example aço SAE 1045 */
+            /**
+             * Format: int64
+             * @description Ferramenta do catálogo
+             */
+            ferramenta_id?: number;
+            /**
+             * @example emulsao
+             * @enum {string}
+             */
+            fluido_corte?: "seco" | "emulsao" | "oleo_integral" | "outro";
+            /**
+             * @description Texto livre; vira item do catálogo de materiais
+             * @example aço SAE 1045
+             */
             material?: string;
+            /**
+             * Format: int64
+             * @description Material do catálogo (vence o texto de material)
+             */
+            material_id?: number;
             observacao?: string;
+            /**
+             * @description Profundidade de corte em mm (0,05 a 10)
+             * @example 1.5
+             */
+            profundidade_corte_mm?: number;
             /**
              * Format: int32
              * @description Padrão 1
@@ -763,6 +1018,26 @@ export interface components {
             /** @description Marca o ensaio como simulado. Também vira simulado quando a máquina só tem dispositivo simulado ativo. */
             simulado?: boolean;
         };
+        NovoEventoMarcadoRequisicao: {
+            /**
+             * @example pancada
+             * @enum {string}
+             */
+            motivo: "pancada" | "cavaco" | "maquina_vizinha" | "outro";
+            /** @example martelo na bancada ao lado */
+            nota?: string;
+            /**
+             * Format: date-time
+             * @description Instante do toque em "Marcar evento" (UTC). Sem ele, o instante do pedido.
+             */
+            ocorrido_em?: string;
+        };
+        NovoItemCatalogoRequisicao: {
+            /** @example bit de metal duro, ângulo 60° */
+            descricao?: string;
+            /** @example Aço SAE 1045 */
+            nome: string;
+        };
         NovoUsuarioRequisicao: {
             /** Format: email */
             email: string;
@@ -770,6 +1045,17 @@ export interface components {
             /** @enum {string} */
             papel: "ADMIN" | "TECNICO" | "OPERADOR";
             senha: string;
+        };
+        PaginaAlteracaoEnsaioResposta: {
+            conteudo: components["schemas"]["AlteracaoEnsaioResposta"][];
+            /** Format: int32 */
+            pagina: number;
+            /** Format: int32 */
+            tamanho: number;
+            /** Format: int64 */
+            total_elementos: number;
+            /** Format: int32 */
+            total_paginas: number;
         };
         PaginaDispositivoResposta: {
             conteudo: components["schemas"]["DispositivoResposta"][];
@@ -784,6 +1070,28 @@ export interface components {
         };
         PaginaEnsaioResposta: {
             conteudo: components["schemas"]["EnsaioResposta"][];
+            /** Format: int32 */
+            pagina: number;
+            /** Format: int32 */
+            tamanho: number;
+            /** Format: int64 */
+            total_elementos: number;
+            /** Format: int32 */
+            total_paginas: number;
+        };
+        PaginaEventoMarcadoResposta: {
+            conteudo: components["schemas"]["EventoMarcadoResposta"][];
+            /** Format: int32 */
+            pagina: number;
+            /** Format: int32 */
+            tamanho: number;
+            /** Format: int64 */
+            total_elementos: number;
+            /** Format: int32 */
+            total_paginas: number;
+        };
+        PaginaItemCatalogoResposta: {
+            conteudo: components["schemas"]["ItemCatalogoResposta"][];
             /** Format: int32 */
             pagina: number;
             /** Format: int32 */
@@ -868,6 +1176,46 @@ export interface components {
             id: number;
             /** @enum {string} */
             papel: "acionamento" | "ferramenta" | "estrutura";
+        };
+        /** @description Campos da receita do corte e a observação. Só os presentes no corpo mudam; null apaga. */
+        ReceitaRequisicao: {
+            /**
+             * @description Avanço em mm/volta
+             * @example 0.15
+             */
+            avanco_alvo?: number;
+            /**
+             * @description Diâmetro da peça em mm (1 a 500)
+             * @example 38
+             */
+            diametro_peca_mm?: number;
+            /**
+             * Format: int64
+             * @description Ferramenta do catálogo
+             */
+            ferramenta_id?: number;
+            /**
+             * @example emulsao
+             * @enum {string}
+             */
+            fluido_corte?: "seco" | "emulsao" | "oleo_integral" | "outro";
+            /**
+             * Format: int64
+             * @description Material do catálogo
+             */
+            material_id?: number;
+            observacao?: string;
+            /**
+             * @description Profundidade de corte em mm (0,05 a 10)
+             * @example 1.5
+             */
+            profundidade_corte_mm?: number;
+        };
+        /** @description Item do catálogo (material ou ferramenta): id e nome */
+        RefCatalogo: {
+            /** Format: int64 */
+            id: number;
+            nome: string;
         };
         ResumoEnsaioResposta: {
             aberto: boolean;
@@ -1302,6 +1650,67 @@ export interface operations {
             };
         };
     };
+    alteracoes: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaAlteracaoEnsaioResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
     descartar: {
         parameters: {
             query?: never;
@@ -1436,6 +1845,138 @@ export interface operations {
             };
         };
     };
+    listarEventosMarcados: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaEventoMarcadoResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    marcarEvento: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NovoEventoMarcadoRequisicao"];
+            };
+        };
+        responses: {
+            /** @description Evento marcado */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventoMarcadoResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Ensaio encerrado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
     janelasDoEnsaio: {
         parameters: {
             query?: {
@@ -1497,6 +2038,68 @@ export interface operations {
             };
         };
     };
+    corrigirReceita: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReceitaRequisicao"];
+            };
+        };
+        responses: {
+            /** @description Receita corrigida */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnsaioResposta"];
+                };
+            };
+            /** @description Campo que não é da receita, ou valor fora da faixa */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
     resumo: {
         parameters: {
             query?: never;
@@ -1515,6 +2118,249 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResumoEnsaioResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    listarFerramentas: {
+        parameters: {
+            query?: {
+                /** @description Parte do nome; ignora maiúsculas, acentos, pontuação e espaços extras */
+                busca?: string;
+                /** @description true: só ativos; false: só desativados; sem o parâmetro, todos */
+                ativos?: boolean;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaItemCatalogoResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    criarFerramenta: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NovoItemCatalogoRequisicao"];
+            };
+        };
+        responses: {
+            /** @description Ferramenta criada */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ItemCatalogoResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Já existe ferramenta com o mesmo nome normalizado; o corpo traz a existente */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    alterarFerramenta: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlteracaoItemCatalogoRequisicao"];
+            };
+        };
+        responses: {
+            /** @description Ferramenta alterada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ItemCatalogoResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description O novo nome já existe em outra ferramenta */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    desativarFerramenta: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ItemCatalogoResposta"];
                 };
             };
             /** @description Requisição inválida */
@@ -1862,6 +2708,10 @@ export interface operations {
                 descartado?: boolean;
                 /** @description true: só abertos; false: só encerrados */
                 aberto?: boolean;
+                /** @description Só os ensaios com este material do catálogo */
+                material_id?: number;
+                /** @description Só os ensaios com esta ferramenta do catálogo */
+                ferramenta_id?: number;
                 page?: number;
                 size?: number;
             };
@@ -2494,6 +3344,249 @@ export interface operations {
                 };
             };
             /** @description Máquina inexistente ou sem janela recebida */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    listarMateriais: {
+        parameters: {
+            query?: {
+                /** @description Parte do nome; ignora maiúsculas, acentos, pontuação e espaços extras */
+                busca?: string;
+                /** @description true: só ativos; false: só desativados; sem o parâmetro, todos */
+                ativos?: boolean;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaItemCatalogoResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    criarMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NovoItemCatalogoRequisicao"];
+            };
+        };
+        responses: {
+            /** @description Material criado */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ItemCatalogoResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Já existe material com o mesmo nome normalizado; o corpo traz o existente */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    alterarMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlteracaoItemCatalogoRequisicao"];
+            };
+        };
+        responses: {
+            /** @description Material alterado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ItemCatalogoResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description O novo nome já existe em outro material */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    desativarMaterial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ItemCatalogoResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
             404: {
                 headers: {
                     [name: string]: unknown;

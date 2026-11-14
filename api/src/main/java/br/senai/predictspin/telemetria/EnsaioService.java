@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.senai.predictspin.catalogo.CatalogoService;
 import br.senai.predictspin.comum.ConflitoException;
 import br.senai.predictspin.comum.Pagina;
 import br.senai.predictspin.comum.RecursoNaoEncontradoException;
@@ -44,19 +45,30 @@ public class EnsaioService {
     private final DispositivoRepository dispositivos;
     private final ApplicationEventPublisher anuncios;
     private final Clock relogio;
+    private final CatalogoService catalogo;
 
     public EnsaioService(EnsaioRepository ensaios, JanelaRepository janelas, MaquinaRepository maquinas,
-                         DispositivoRepository dispositivos, ApplicationEventPublisher anuncios, Clock relogio) {
+                         DispositivoRepository dispositivos, ApplicationEventPublisher anuncios, Clock relogio,
+                         CatalogoService catalogo) {
         this.ensaios = ensaios;
         this.janelas = janelas;
         this.maquinas = maquinas;
         this.dispositivos = dispositivos;
         this.anuncios = anuncios;
         this.relogio = relogio;
+        this.catalogo = catalogo;
     }
 
-    @Transactional
     public EnsaioResposta abrir(Long maquinaId, NovoEnsaioRequisicao req) {
+        return abrir(maquinaId, req, null);
+    }
+
+    /**
+     * Abre o ensaio com a receita. Material: o item do catálogo (material_id) ou, só com o texto, o
+     * item de mesmo nome normalizado, criado se ainda não existir (registrado com quem abriu).
+     */
+    @Transactional
+    public EnsaioResposta abrir(Long maquinaId, NovoEnsaioRequisicao req, Long usuarioId) {
         Maquina maquina = maquinas.findById(maquinaId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Máquina " + maquinaId + " não encontrada"));
         ensaios.aberto(maquinaId).ifPresent(aberto -> {
@@ -68,6 +80,17 @@ public class EnsaioService {
         Ensaio ensaio = new Ensaio(maquina, codigo, req.etapa(), req.condicao(), vazioParaNulo(req.material()),
                 req.rotacaoAlvoRpm(), req.avancoAlvo(), Objects.requireNonNullElse(req.repeticao(), 1),
                 vazioParaNulo(req.observacao()), simulado, relogio.instant());
+        if (req.materialId() != null) {
+            ensaio.definirMaterial(catalogo.material(req.materialId()));
+        } else if (ensaio.getMaterial() != null) {
+            ensaio.definirMaterial(catalogo.materialPorNome(ensaio.getMaterial(), usuarioId));
+        }
+        if (req.ferramentaId() != null) {
+            ensaio.definirFerramenta(catalogo.ferramenta(req.ferramentaId()));
+        }
+        ensaio.definirProfundidadeCorteMm(req.profundidadeCorteMm());
+        ensaio.definirDiametroPecaMm(req.diametroPecaMm());
+        ensaio.definirFluidoCorte(req.fluidoCorte());
         // flush imediato: se outra requisição abriu ensaio ao mesmo tempo, o índice único responde 409 aqui
         return anunciar(EnsaioAlterado.Acao.ABERTO, EnsaioResposta.de(ensaios.saveAndFlush(ensaio)));
     }
@@ -103,7 +126,8 @@ public class EnsaioService {
             throw new RecursoNaoEncontradoException("Máquina " + maquinaId + " não encontrada");
         }
         return Pagina.de(ensaios.filtrar(maquinaId, filtro.etapa(), filtro.condicao(), filtro.simulado(),
-                filtro.descartado(), filtro.aberto(), pageable), EnsaioResposta::de);
+                filtro.descartado(), filtro.aberto(), filtro.materialId(), filtro.ferramentaId(), pageable),
+                EnsaioResposta::de);
     }
 
     @Transactional(readOnly = true)
@@ -194,6 +218,11 @@ public class EnsaioService {
     }
 
     /** Filtros opcionais da listagem; nulo significa "qualquer". */
-    public record Filtro(Etapa etapa, Condicao condicao, Boolean simulado, Boolean descartado, Boolean aberto) {
+    public record Filtro(Etapa etapa, Condicao condicao, Boolean simulado, Boolean descartado, Boolean aberto,
+                         Long materialId, Long ferramentaId) {
+
+        public Filtro(Etapa etapa, Condicao condicao, Boolean simulado, Boolean descartado, Boolean aberto) {
+            this(etapa, condicao, simulado, descartado, aberto, null, null);
+        }
     }
 }

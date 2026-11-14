@@ -70,6 +70,25 @@ As janelas com `modo` = `rapido` e as que chegaram com menos de 98% das amostras
 marcadas na exportação (`GET /api/v1/ensaios/exportar.csv`, coluna `marca`) para não entrarem no
 treino.
 
+### Exportação dos ensaios (CSV)
+
+Uma linha por janela e ponto, só de ensaios encerrados e não descartados. Ordem das colunas:
+
+1. fixas (desde a V3): `ensaio, etapa, condicao, material, rotacao_alvo_rpm, avanco_alvo, repeticao,
+   simulado, maquina, dispositivo, janela_id, medido_em, rotacao_rpm, saturou, ponto, papel, rms_g,
+   pico_g, curtose, ordem_1x, ordem_2x, ordem_3x, modo, amostras, amostras_esperadas, uso, marca`;
+2. uma por canal da máquina (código do canal, em ordem alfabética);
+3. **acrescentadas no fim pela V5**, sem mexer nas anteriores: `ferramenta, profundidade_corte_mm,
+   diametro_peca_mm, fluido_corte, evento_marcado`. O material e o avanço da receita já estavam nas
+   colunas fixas (`material` passa a ser o nome do item do catálogo).
+
+`evento_marcado` é `true` na janela cujo intervalo contém um evento marcado durante a gravação
+(pancada na bancada, cavaco enroscado, máquina vizinha ligada...) e na janela seguinte; `medido_em` é o
+início da janela, que dura 5 s (1 s no modo rápido). Essas janelas **devem ficar fora do treino**,
+como as que têm `marca` preenchida.
+
+**Conjunto de treino** = `uso = treino`, `marca` vazia e `evento_marcado = false`.
+
 Canais cadastrados no torno `TORNO-01`:
 
 | Código | Grandeza | Unidade |

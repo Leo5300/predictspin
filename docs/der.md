@@ -1,6 +1,6 @@
 # Modelo de dados — DER v3
 
-Data: 10/11/2026, com as migrações V3 (11/11/2026) e V4 (12/11/2026) · PostgreSQL 16 · Implementado em
+Data: 10/11/2026, com as migrações V3 (11/11/2026), V4 (12/11/2026) e V5 (14/11/2026) · PostgreSQL 16 · Implementado em
 [`api/src/main/resources/db/migration`](../api/src/main/resources/db/migration) (Flyway)
 
 ## O que mudou da v2 para a v3
@@ -62,6 +62,28 @@ As duas listas aparecem em `MaquinaResposta`. A cobertura (`GET .../coleta/cober
 consulta não informa `rotacoes`, usa o plano; se o plano estiver vazio, usa as rotações alvo dos
 ensaios já feitos. O campo `origem_rotacoes` da resposta diz qual das três foi usada.
 
+## O que mudou com a migração V5 (14/11/2026)
+
+A migração `V5__catalogos_receita_eventos.sql` traz a receita do corte, os catálogos e os eventos
+marcados durante a gravação:
+
+- **`MATERIAL`** e **`FERRAMENTA`**: catálogos com `nome` (como exibido), `nome_normalizado`
+  (minúsculas, sem acento, sem pontuação, espaços colapsados) **único**, `descricao` opcional (na
+  ferramenta, por exemplo "bit de metal duro, ângulo 60°"), `ativo`, `criado_por` e `criado_em`.
+  Começam vazios: a carga inicial não cria itens.
+- **`ENSAIO`** ganhou a receita, toda opcional: `material_id`, `ferramenta_id`,
+  `profundidade_corte_mm` (`numeric(6,3)`), `diametro_peca_mm` (`numeric(7,2)`) e `fluido_corte`
+  (`seco`, `emulsao`, `oleo_integral` ou `outro`). `avanco_alvo` e `repeticao` já existiam. A coluna de
+  texto `material` continua: quando o ensaio aponta um item do catálogo, ela guarda o nome dele; o
+  texto que chega sem `material_id` (simulador, scripts) é procurado no catálogo pelo nome
+  normalizado e, se não existir, vira item novo.
+- **`ENSAIO_ALTERACAO`**: histórico das correções da receita (`campo`, `valor_antigo`, `valor_novo`,
+  `alterado_por`, `alterado_em`). Etapa, condição, rotação alvo, simulado e período nunca são
+  corrigidos: definem a célula da cobertura e a classe.
+- **`ENSAIO_EVENTO`**: instante (`ocorrido_em`) em que algo fora do plano aconteceu num ensaio aberto,
+  com `motivo` (`pancada`, `cavaco`, `maquina_vizinha` ou `outro`), `nota` opcional e `criado_por`.
+  Na exportação, as janelas que contêm o instante e a seguinte saem com `evento_marcado = true`.
+
 ## Diagrama
 
 ```mermaid
@@ -72,6 +94,10 @@ erDiagram
     MAQUINA ||--o{ CANAL : mede
     MAQUINA ||--o{ DISPOSITIVO : monitorada_por
     MAQUINA ||--o{ ENSAIO : submetida_a
+    MATERIAL ||--o{ ENSAIO : usado_em
+    FERRAMENTA ||--o{ ENSAIO : usada_em
+    ENSAIO ||--o{ ENSAIO_ALTERACAO : corrigido_em
+    ENSAIO ||--o{ ENSAIO_EVENTO : marcado_com
     MAQUINA ||--o{ ALERTA : dispara
     MAQUINA ||--o{ SEVERIDADE_ACUMULADA : acumula
     PONTO_MEDICAO ||--o{ CANAL : agrupa
@@ -151,14 +177,55 @@ erDiagram
         varchar etapa
         varchar condicao
         varchar material
+        bigint material_id FK
+        bigint ferramenta_id FK
         integer rotacao_alvo_rpm
         numeric avanco_alvo
+        numeric profundidade_corte_mm
+        numeric diametro_peca_mm
+        varchar fluido_corte
         integer repeticao
         text observacao
         boolean descartado
         boolean simulado
         timestamptz iniciado_em
         timestamptz encerrado_em
+    }
+    MATERIAL {
+        bigint id PK
+        varchar nome
+        varchar nome_normalizado UK
+        varchar descricao
+        boolean ativo
+        bigint criado_por FK
+        timestamptz criado_em
+    }
+    FERRAMENTA {
+        bigint id PK
+        varchar nome
+        varchar nome_normalizado UK
+        varchar descricao
+        boolean ativo
+        bigint criado_por FK
+        timestamptz criado_em
+    }
+    ENSAIO_ALTERACAO {
+        bigint id PK
+        bigint ensaio_id FK
+        varchar campo
+        text valor_antigo
+        text valor_novo
+        bigint alterado_por FK
+        timestamptz alterado_em
+    }
+    ENSAIO_EVENTO {
+        bigint id PK
+        bigint ensaio_id FK
+        timestamptz ocorrido_em
+        varchar motivo
+        varchar nota
+        bigint criado_por FK
+        timestamptz criado_em
     }
     JANELA {
         bigint id PK
@@ -262,6 +329,8 @@ erDiagram
 | `canal.grandeza` | `temperatura`, `umidade`, `corrente`, `tensao`, `potencia` |
 | `ensaio.etapa` | `T0`, `T1`, `T2`, `T3` |
 | `ensaio.condicao` | treino: `normal`, `ferramenta_desgastada`, `avanco_excessivo`, `rotacao_inadequada`, `desbalanceamento`; validação: `sensor_solto` |
+| `ensaio.fluido_corte` | `seco`, `emulsao`, `oleo_integral`, `outro` (ou nulo) |
+| `ensaio_evento.motivo` | `pancada`, `cavaco`, `maquina_vizinha`, `outro` |
 | `janela.modo` | `normal`, `rapido` |
 | `baseline.metrica` | `rms_g`, `pico_g`, `curtose`, `ordem_1x`, `ordem_2x`, `ordem_3x` |
 | `alerta.severidade` | `baixa`, `media`, `alta`, `critica` |
@@ -320,6 +389,10 @@ enlace; baseline versionado; severidade acumulada como tabela, não campo calcul
 | `ensaio (maquina_id) WHERE encerrado_em IS NULL` — único | no máximo um ensaio aberto por máquina |
 | `ensaio (maquina_id, iniciado_em DESC)` | listagem de ensaios da máquina |
 | `ensaio (maquina_id, etapa, condicao, rotacao_alvo_rpm)` | cobertura da coleta |
+| `material (nome_normalizado)`, `ferramenta (nome_normalizado)` — únicos | um nome por item, ignorando maiúsculas, acentos e pontuação |
+| `ensaio (material_id)`, `ensaio (ferramenta_id)` parciais | filtro da lista de ensaios por material e ferramenta |
+| `ensaio_alteracao (ensaio_id, alterado_em)` | histórico de correções de um ensaio |
+| `ensaio_evento (ensaio_id, ocorrido_em)` | eventos de um ensaio; marca das janelas na exportação |
 | `alerta (maquina_id, criado_em DESC)` | histórico de alertas por máquina |
 | `alerta (severidade, reconhecido_em)` | fila do CCO, não reconhecidos primeiro |
 | `ordem_servico (status, aberta_em DESC)` | painel de ordens abertas |

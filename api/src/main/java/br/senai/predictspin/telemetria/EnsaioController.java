@@ -14,7 +14,10 @@ import jakarta.validation.constraints.Min;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,9 +26,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import br.senai.predictspin.comum.Pagina;
+import br.senai.predictspin.telemetria.dto.AlteracaoEnsaioResposta;
 import br.senai.predictspin.telemetria.dto.CoberturaResposta;
 import br.senai.predictspin.telemetria.dto.EnsaioResposta;
+import br.senai.predictspin.telemetria.dto.EventoMarcadoResposta;
+import br.senai.predictspin.telemetria.dto.NovoEventoMarcadoRequisicao;
+import br.senai.predictspin.telemetria.dto.ReceitaRequisicao;
 import br.senai.predictspin.telemetria.dto.NovoEnsaioRequisicao;
 import br.senai.predictspin.telemetria.dto.ResumoEnsaioResposta;
 import io.swagger.v3.oas.annotations.Operation;
@@ -44,10 +53,12 @@ public class EnsaioController {
 
     private final EnsaioService ensaios;
     private final ExportacaoService exportacao;
+    private final ReceitaService receitas;
 
-    public EnsaioController(EnsaioService ensaios, ExportacaoService exportacao) {
+    public EnsaioController(EnsaioService ensaios, ExportacaoService exportacao, ReceitaService receitas) {
         this.ensaios = ensaios;
         this.exportacao = exportacao;
+        this.receitas = receitas;
     }
 
     @PostMapping("/maquinas/{id}/ensaios")
@@ -57,8 +68,9 @@ public class EnsaioController {
                     + "gravadas com ele. Só um ensaio aberto por máquina.")
     @ApiResponse(responseCode = "201", description = "Ensaio aberto")
     @ApiResponse(responseCode = "409", description = "Já existe ensaio aberto na máquina")
-    public EnsaioResposta abrir(@PathVariable Long id, @Valid @RequestBody NovoEnsaioRequisicao requisicao) {
-        return ensaios.abrir(id, requisicao);
+    public EnsaioResposta abrir(@PathVariable Long id, @Valid @RequestBody NovoEnsaioRequisicao requisicao,
+                                @AuthenticationPrincipal Jwt jwt) {
+        return ensaios.abrir(id, requisicao, usuario(jwt));
     }
 
     @GetMapping("/maquinas/{id}/ensaios")
@@ -72,10 +84,14 @@ public class EnsaioController {
             @RequestParam(required = false) Boolean descartado,
             @Parameter(description = "true: só abertos; false: só encerrados")
             @RequestParam(required = false) Boolean aberto,
+            @Parameter(description = "Só os ensaios com este material do catálogo")
+            @RequestParam(name = "material_id", required = false) Long materialId,
+            @Parameter(description = "Só os ensaios com esta ferramenta do catálogo")
+            @RequestParam(name = "ferramenta_id", required = false) Long ferramentaId,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size) {
-        return ensaios.listar(id, new EnsaioService.Filtro(etapa, condicao, simulado, descartado, aberto),
-                PageRequest.of(page, size));
+        return ensaios.listar(id, new EnsaioService.Filtro(etapa, condicao, simulado, descartado, aberto,
+                materialId, ferramentaId), PageRequest.of(page, size));
     }
 
     @GetMapping("/ensaios/{id}")
@@ -99,6 +115,52 @@ public class EnsaioController {
     @ApiResponse(responseCode = "409", description = "Ensaio já descartado")
     public EnsaioResposta descartar(@PathVariable Long id) {
         return ensaios.descartar(id);
+    }
+
+    @PatchMapping("/ensaios/{id}/receita")
+    @Operation(summary = "Corrige a receita do corte e a observação, com histórico",
+            description = "Só os campos presentes no corpo mudam; null apaga. Etapa, condição, rotação alvo, "
+                    + "simulado e período NÃO mudam (definem a célula da cobertura e a classe): qualquer outro "
+                    + "campo responde 400. Cada campo alterado vira uma linha em GET .../alteracoes.")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+            content = @Content(schema = @Schema(implementation = ReceitaRequisicao.class)))
+    @ApiResponse(responseCode = "200", description = "Receita corrigida")
+    @ApiResponse(responseCode = "400", description = "Campo que não é da receita, ou valor fora da faixa")
+    public EnsaioResposta corrigirReceita(@PathVariable Long id, @RequestBody JsonNode corpo,
+                                          @AuthenticationPrincipal Jwt jwt) {
+        return receitas.corrigir(id, corpo, usuario(jwt));
+    }
+
+    @GetMapping("/ensaios/{id}/alteracoes")
+    @Operation(summary = "Histórico das correções da receita, da mais antiga para a mais nova")
+    public Pagina<AlteracaoEnsaioResposta> alteracoes(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "200") @Min(1) @Max(200) int size) {
+        return receitas.alteracoes(id, PageRequest.of(page, size));
+    }
+
+    @PostMapping("/ensaios/{id}/eventos")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Marca um evento fora do plano durante a gravação (pancada, cavaco, máquina vizinha)",
+            description = "Só com o ensaio aberto. As janelas que contêm o instante (e a seguinte) saem marcadas "
+                    + "na exportação (evento_marcado), fora do treino. Vai também ao fluxo ao vivo como "
+                    + "evento_marcado.")
+    @ApiResponse(responseCode = "201", description = "Evento marcado")
+    @ApiResponse(responseCode = "409", description = "Ensaio encerrado")
+    public EventoMarcadoResposta marcarEvento(@PathVariable Long id,
+                                              @Valid @RequestBody NovoEventoMarcadoRequisicao requisicao,
+                                              @AuthenticationPrincipal Jwt jwt) {
+        return receitas.marcar(id, requisicao, usuario(jwt));
+    }
+
+    @GetMapping("/ensaios/{id}/eventos")
+    @Operation(summary = "Eventos marcados no ensaio, em ordem de ocorrência")
+    public Pagina<EventoMarcadoResposta> listarEventosMarcados(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "200") @Min(1) @Max(200) int size) {
+        return receitas.eventos(id, PageRequest.of(page, size));
     }
 
     @GetMapping("/ensaios/{id}/resumo")
@@ -125,7 +187,9 @@ public class EnsaioController {
     @GetMapping(value = "/ensaios/exportar.csv", produces = "text/csv")
     @Operation(summary = "Exporta o conjunto de treino em CSV, em fluxo",
             description = "Uma linha por janela e ponto, só de ensaios encerrados e não descartados, com os rótulos "
-                    + "do ensaio e uma coluna por canal. Use simulado=false para só dado real.")
+                    + "do ensaio e uma coluna por canal; no fim, a receita (ferramenta, profundidade_corte_mm, "
+                    + "diametro_peca_mm, fluido_corte) e evento_marcado (janelas que devem ficar fora do treino). "
+                    + "Use simulado=false para só dado real.")
     @ApiResponse(responseCode = "200", description = "Arquivo CSV (UTF-8), uma linha por janela e ponto",
             content = @Content(mediaType = "text/csv", schema = @Schema(type = "string")))
     public void exportar(
@@ -139,5 +203,9 @@ public class EnsaioController {
         resposta.setCharacterEncoding("UTF-8");
         resposta.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nome + "\"");
         exportacao.exportar(simulado, maquinaId, resposta.getWriter());
+    }
+
+    private static Long usuario(Jwt jwt) {
+        return jwt == null ? null : Long.valueOf(jwt.getSubject());
     }
 }

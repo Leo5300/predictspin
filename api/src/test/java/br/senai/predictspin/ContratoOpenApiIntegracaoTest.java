@@ -315,6 +315,15 @@ class ContratoOpenApiIntegracaoTest extends IntegracaoBase {
             }
             return;
         }
+        if (esquema.has("anyOf")) {
+            // "objeto ou null": o valor (não nulo) é conferido contra o ramo que não é null
+            for (JsonNode ramo : esquema.get("anyOf")) {
+                if (!permiteNulo(ramo)) {
+                    comparar(valor, ramo, onde, nomeEsquema, diferencas);
+                }
+            }
+            return;
+        }
         if (esquema.has("$ref")) {
             String nome = esquema.get("$ref").asText().replace("#/components/schemas/", "");
             JsonNode alvo = documento.at("/components/schemas").get(nome);
@@ -390,6 +399,16 @@ class ContratoOpenApiIntegracaoTest extends IntegracaoBase {
                     return true;
                 }
             }
+        }
+        if (esquema.has("anyOf")) {
+            for (JsonNode ramo : esquema.get("anyOf")) {
+                if (permiteNulo(ramo)) {
+                    return true;
+                }
+            }
+        }
+        if (tipo != null && "null".equals(tipo.asText())) {
+            return true;
         }
         return esquema.path("nullable").asBoolean(false);
     }

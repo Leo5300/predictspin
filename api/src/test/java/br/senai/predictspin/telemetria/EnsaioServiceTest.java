@@ -27,6 +27,8 @@ import br.senai.predictspin.maquina.DispositivoRepository;
 import br.senai.predictspin.maquina.Maquina;
 import br.senai.predictspin.maquina.MaquinaRepository;
 import br.senai.predictspin.telemetria.dto.CoberturaResposta;
+import br.senai.predictspin.catalogo.CatalogoService;
+import br.senai.predictspin.catalogo.Material;
 import br.senai.predictspin.telemetria.dto.NovoEnsaioRequisicao;
 
 class EnsaioServiceTest {
@@ -42,6 +44,7 @@ class EnsaioServiceTest {
     private ApplicationEventPublisher anuncios;
     private Maquina torno;
     private EnsaioService servico;
+    private CatalogoService catalogo;
 
     @BeforeEach
     void criar() {
@@ -61,7 +64,10 @@ class EnsaioServiceTest {
         when(ensaios.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
         when(dispositivos.contarAtivos(MAQUINA)).thenReturn(2L);
         when(dispositivos.contarReaisAtivos(MAQUINA)).thenReturn(1L);
-        servico = new EnsaioService(ensaios, janelas, maquinas, dispositivos, anuncios, relogio);
+        catalogo = mock(CatalogoService.class);
+        when(catalogo.materialPorNome(any(), any()))
+                .thenAnswer(i -> new Material(i.getArgument(0), null, null, INICIO));
+        servico = new EnsaioService(ensaios, janelas, maquinas, dispositivos, anuncios, relogio, catalogo);
     }
 
     private static NovoEnsaioRequisicao pedido(Boolean simulado) {
@@ -176,7 +182,7 @@ class EnsaioServiceTest {
     void listarRepassaOsFiltrosEPagina() {
         var pagina = PageRequest.of(1, 2);
         var filtro = new EnsaioService.Filtro(Etapa.T1, Condicao.NORMAL, true, false, null);
-        when(ensaios.filtrar(MAQUINA, Etapa.T1, Condicao.NORMAL, true, false, null, pagina))
+        when(ensaios.filtrar(MAQUINA, Etapa.T1, Condicao.NORMAL, true, false, null, null, null, pagina))
                 .thenReturn(new PageImpl<>(List.of(ensaio(true)), pagina, 3));
 
         var resposta = servico.listar(MAQUINA, filtro, pagina);

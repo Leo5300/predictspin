@@ -126,6 +126,10 @@ public class OpenApiConfig {
         };
     }
 
+    /** Propriedades que são outro esquema ($ref) e podem vir nulas, por esquema. */
+    private static final Map<String, Set<String>> OBJETOS_NULAVEIS = Map.of(
+            "EnsaioResposta", Set.of("material_item", "ferramenta_item"));
+
     /** No documento 3.1, "pode ser nulo" é o tipo "null" ao lado do tipo do valor. */
     private static void permitirNulo(Schema<?> propriedade) {
         Set<String> tipos = new LinkedHashSet<>();
@@ -153,6 +157,13 @@ public class OpenApiConfig {
             boolean opcional = extensoes != null && extensoes.remove(EXTENSAO_OPCIONAL) != null;
             if (extensoes != null && extensoes.remove(EXTENSAO_NULO) != null) {
                 permitirNulo(definicao);
+            }
+            if (definicao.get$ref() != null
+                    && OBJETOS_NULAVEIS.getOrDefault(nome, Set.of()).contains(propriedade)) {
+                // objeto que pode ser nulo: no 3.1, "o esquema OU null" (o $ref não aceita irmãos, e a
+                // anotação @Nullable num campo que é $ref vai parar no componente, não na propriedade)
+                esquema.getProperties().put(propriedade, new Schema<>().anyOf(List.of(
+                        new Schema<>().$ref(definicao.get$ref()), new Schema<>().types(Set.of("null")))));
             }
             if (extensoes != null && extensoes.isEmpty()) {
                 definicao.setExtensions(null);

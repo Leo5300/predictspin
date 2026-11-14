@@ -7,6 +7,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import br.senai.predictspin.eventos.dto.EnsaioEvento;
 import br.senai.predictspin.maquina.ModoRapidoAlterado;
 import br.senai.predictspin.telemetria.EnsaioAlterado;
+import br.senai.predictspin.telemetria.EventoMarcadoGravado;
 import br.senai.predictspin.telemetria.JanelaGravada;
 
 /**
@@ -31,6 +32,11 @@ class OuvinteDeEventos {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     void aoAlterarEnsaio(EnsaioAlterado evento) {
         eventos.publicarEnsaio(evento.ensaio().maquinaId(), new EnsaioEvento(evento.acao(), evento.ensaio()));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    void aoMarcarEvento(EventoMarcadoGravado evento) {
+        eventos.publicarEventoMarcado(evento.maquinaId(), evento.simulado(), evento.evento());
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)

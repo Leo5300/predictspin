@@ -228,17 +228,25 @@ A descrição completa, com exemplos, está no Swagger (`/swagger-ui`). O docume
 | `GET /maquinas/{id}/ultima-janela` | autenticado | última janela recebida da máquina |
 | `GET /maquinas/{id}/janelas` | autenticado | janelas completas (envio, pontos e canais), paginadas; filtros `de`, `ate`, `simulado`, `modo` e `ordem` |
 | `GET /maquinas/{id}/serie` | autenticado | série agregada: o período dividido em `baldes` intervalos iguais (até 600), com média e máximo por ponto; janelas rápidas ficam fora e intervalo sem janela volta vazio |
-| `GET /maquinas/{id}/eventos` | autenticado | eventos ao vivo (SSE): `janela`, `ensaio` (só ADMIN e TECNICO) e `modo_rapido`; token no cabeçalho `Authorization` |
-| `POST /maquinas/{id}/ensaios` | ADMIN, TECNICO | abre um ensaio rotulado (etapa, condição, rotação) |
-| `GET /maquinas/{id}/ensaios` | ADMIN, TECNICO | lista os ensaios da máquina |
+| `GET /maquinas/{id}/eventos` | autenticado | eventos ao vivo (SSE): `janela`, `ensaio` e `evento_marcado` (só ADMIN e TECNICO) e `modo_rapido`; token no cabeçalho `Authorization` |
+| `POST /maquinas/{id}/ensaios` | ADMIN, TECNICO | abre um ensaio rotulado (etapa, condição, rotação) com a receita do corte opcional (material, ferramenta, avanço, profundidade, diâmetro, fluido) |
+| `GET /maquinas/{id}/ensaios` | ADMIN, TECNICO | lista os ensaios da máquina; filtros etapa, condição, simulado, aberto, descartado, `material_id` e `ferramenta_id` |
 | `GET /ensaios/{id}` | ADMIN, TECNICO | detalhe de um ensaio |
 | `POST /ensaios/{id}/encerrar` | ADMIN, TECNICO | encerra o ensaio |
 | `POST /ensaios/{id}/descartar` | ADMIN, TECNICO | marca o ensaio como descartado |
+| `PATCH /ensaios/{id}/receita` | ADMIN, TECNICO | corrige a receita e a observação; etapa, condição, rotação, simulado e período não mudam (400); cada mudança vai para o histórico |
+| `GET /ensaios/{id}/alteracoes` | ADMIN, TECNICO | histórico das correções da receita (campo, valor antigo e novo, quem, quando) |
+| `POST /ensaios/{id}/eventos` | ADMIN, TECNICO | marca um evento fora do plano (pancada, cavaco, máquina vizinha, outro) no ensaio aberto; encerrado responde 409 |
+| `GET /ensaios/{id}/eventos` | ADMIN, TECNICO | eventos marcados no ensaio |
 | `GET /ensaios/{id}/resumo` | ADMIN, TECNICO | estatísticas das janelas do ensaio |
 | `GET /ensaios/{id}/janelas` | ADMIN, TECNICO | janelas completas do ensaio em ordem crescente de `medido_em` (replay), paginadas |
 | `PUT /maquinas/{id}/coleta/plano` | ADMIN, TECNICO | grava as rotações escolhidas para a grade de cobertura (plano de coleta) |
 | `GET /maquinas/{id}/coleta/cobertura` | ADMIN, TECNICO | quantos ensaios válidos há por combinação e quanto falta para a meta; sem `rotacoes`, usa o plano de coleta e, se ele estiver vazio, as rotações já usadas |
-| `GET /ensaios/exportar.csv` | ADMIN, TECNICO | exporta as janelas dos ensaios válidos em CSV; colunas `uso` (treino ou validação) e `marca` (janela rápida ou com amostras incompletas) |
+| `GET /ensaios/exportar.csv` | ADMIN, TECNICO | exporta as janelas dos ensaios válidos em CSV; colunas `uso` (treino ou validação), `marca` (janela rápida ou com amostras incompletas) e, no fim, a receita e `evento_marcado` |
+| `GET /materiais`, `GET /ferramentas` | ADMIN, TECNICO | catálogos da receita, com busca (`busca`) e filtro `ativos` |
+| `POST /materiais`, `POST /ferramentas` | ADMIN, TECNICO | cria um item; nome repetido pelo nome normalizado responde 409 com o item existente |
+| `PATCH /materiais/{id}`, `PATCH /ferramentas/{id}` | ADMIN | renomeia ou troca a descrição |
+| `POST /materiais/{id}/desativar`, `POST /ferramentas/{id}/desativar` | ADMIN | desativa o item (some da escolha; os ensaios continuam apontando para ele) |
 | `GET /actuator/health` | público | situação da API |
 | `GET /swagger-ui`, `GET /v3/api-docs` | público | documentação |
 

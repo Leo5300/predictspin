@@ -27,7 +27,12 @@ import br.senai.predictspin.maquina.CanalRepository;
  *       {@code amostras_incompletas} quando chegaram menos de 98% das amostras esperadas. Com as duas,
  *       {@code rapida|amostras_incompletas}.</li>
  * </ul>
- * Conjunto de treino = {@code uso = treino} e {@code marca} vazia.
+ * Conjunto de treino = {@code uso = treino}, {@code marca} vazia e {@code evento_marcado = false}.
+ * <p>
+ * Colunas acrescentadas no FIM (V5), depois das colunas de canal: a receita do corte
+ * ({@code ferramenta}, {@code profundidade_corte_mm}, {@code diametro_peca_mm}, {@code fluido_corte}; o
+ * material e o avanço já existiam) e {@code evento_marcado}: {@code true} na janela cujo intervalo
+ * contém um evento marcado e na janela seguinte.
  */
 @Service
 public class ExportacaoService {
@@ -36,6 +41,10 @@ public class ExportacaoService {
             "rotacao_alvo_rpm", "avanco_alvo", "repeticao", "simulado", "maquina", "dispositivo", "janela_id",
             "medido_em", "rotacao_rpm", "saturou", "ponto", "papel", "rms_g", "pico_g", "curtose", "ordem_1x",
             "ordem_2x", "ordem_3x", "modo", "amostras", "amostras_esperadas", "uso", "marca");
+
+    /** Colunas do fim do arquivo, depois das de canal (acrescentadas sem mudar as anteriores). */
+    static final List<String> COLUNAS_DO_FIM = List.of("ferramenta", "profundidade_corte_mm", "diametro_peca_mm",
+            "fluido_corte", "evento_marcado");
 
     /** Abaixo desta fração das amostras esperadas, a janela é marcada e fica fora do treino. */
     static final double FRACAO_MINIMA_AMOSTRAS = 0.98;
@@ -57,6 +66,7 @@ public class ExportacaoService {
         List<String> codigosCanais = canais.codigos(maquinaId);
         List<String> cabecalho = new ArrayList<>(COLUNAS_FIXAS);
         cabecalho.addAll(codigosCanais);
+        cabecalho.addAll(COLUNAS_DO_FIM);
         escrever(saida, String.join(",", cabecalho));
 
         long[] linhas = {0};
@@ -71,7 +81,7 @@ public class ExportacaoService {
     }
 
     private static String linha(ResultSet rs, int quantidadeCanais) throws SQLException {
-        List<String> v = new ArrayList<>(COLUNAS_FIXAS.size() + quantidadeCanais);
+        List<String> v = new ArrayList<>(COLUNAS_FIXAS.size() + quantidadeCanais + COLUNAS_DO_FIM.size());
         v.add(texto(rs.getString("ensaio")));
         v.add(rs.getString("etapa"));
         v.add(rs.getString("condicao"));
@@ -105,6 +115,11 @@ public class ExportacaoService {
         for (int i = 0; i < quantidadeCanais; i++) {
             v.add(numero(rs, "canal_" + i));
         }
+        v.add(texto(rs.getString("ferramenta")));
+        v.add(decimal(rs.getBigDecimal("profundidade_corte_mm")));
+        v.add(decimal(rs.getBigDecimal("diametro_peca_mm")));
+        v.add(nulo(rs.getString("fluido_corte")));
+        v.add(String.valueOf(rs.getBoolean("evento_marcado")));
         return String.join(",", v);
     }
 
@@ -128,6 +143,10 @@ public class ExportacaoService {
     private static String numero(ResultSet rs, String coluna) throws SQLException {
         double valor = rs.getDouble(coluna);
         return rs.wasNull() ? "" : Double.toString(valor);
+    }
+
+    private static String decimal(java.math.BigDecimal valor) {
+        return valor == null ? "" : valor.stripTrailingZeros().toPlainString();
     }
 
     private static String nulo(Object valor) {
