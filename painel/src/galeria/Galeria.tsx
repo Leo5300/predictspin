@@ -201,7 +201,8 @@ export function Galeria() {
             <PlacaEstado estado="sem_dados" />
             <SeloAvaliacao avaliacao="atencao" />
           </Caso>
-          <Caso titulo="alarme">
+          <Caso titulo="operando · alarme">
+            <PlacaEstado estado="operando" />
             <SeloAvaliacao avaliacao="alarme" />
           </Caso>
         </Secao>

@@ -233,7 +233,9 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
           <span className="valor text-18 font-medium text-texto">
             {formatarRpm(janela?.rotacao_rpm)}
           </span>
-          <span className="text-12 text-apoio">rpm</span>
+          {formatarRpm(janela?.rotacao_rpm) === TRACO ? null : (
+            <span className="text-12 text-apoio">rpm</span>
+          )}
         </span>
       </Celula>
 

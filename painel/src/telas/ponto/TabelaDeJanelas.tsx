@@ -1,7 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
-import { LINHAS_POR_PAGINA, consultaPaginaDeJanelas } from '@/api/consultas'
+import {
+  INTERVALO_DE_CONSULTA_MS,
+  LINHAS_POR_PAGINA,
+  consultaPaginaDeJanelas,
+} from '@/api/consultas'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '@/componentes/instrumento/Estados'
 import { Button } from '@/componentes/ui/button'
 import {
@@ -31,6 +35,8 @@ type Props = {
   deMs: number
   ateMs: number
   pagina: number
+  /** Período que termina agora e primeira página: a tabela se atualiza junto com as janelas. */
+  acompanhar: boolean
   aoMudarPagina: (pagina: number) => void
 }
 
@@ -42,9 +48,15 @@ export function TabelaDeJanelas({
   deMs,
   ateMs,
   pagina,
+  acompanhar,
   aoMudarPagina,
 }: Props) {
-  const consulta = useQuery(consultaPaginaDeJanelas(maquinaId, simulado, deMs, ateMs, pagina))
+  const consulta = useQuery({
+    ...consultaPaginaDeJanelas(maquinaId, simulado, deMs, ateMs, pagina),
+    // sem isto a tabela ficava parada enquanto a leitura e o gráfico andavam (dado velho com cara
+    // de vivo); com a aba em segundo plano, o TanStack Query não consulta
+    refetchInterval: acompanhar ? INTERVALO_DE_CONSULTA_MS : false,
+  })
 
   if (consulta.isPending) return <EstadoCarregando rotulo="Carregando janelas…" />
   if (consulta.isError)
@@ -61,10 +73,16 @@ export function TabelaDeJanelas({
 
   return (
     <div className="flex flex-col">
+      {/* estreito: a hora fica fixa à esquerda e as outras colunas deslizam */}
+      <p className="border-b border-linha px-3 py-1 text-12 text-apoio @min-[60rem]:hidden">
+        Deslize a tabela para o lado para ver 2X, 3X, rotação, amostras, marcas e ensaio.
+      </p>
       <Table aria-label={`Janelas do período, ponto ${codigo}`}>
         <TableHeader>
           <TableRow>
-            <TableHead>Medida em</TableHead>
+            <TableHead className="sticky left-0 z-[1] bg-modulo @max-[60rem]:border-r @max-[60rem]:border-linha">
+              Medida em
+            </TableHead>
             <TableHead className="text-right">
               RMS <Unidade>g</Unidade>
             </TableHead>
@@ -102,7 +120,9 @@ export function TabelaDeJanelas({
             ].filter(Boolean)
             return (
               <TableRow key={janela.id}>
-                <TableCell className="valor">{formatarDataHora(janela.medido_em)}</TableCell>
+                <TableCell className="valor sticky left-0 z-[1] bg-modulo @max-[60rem]:border-r @max-[60rem]:border-linha">
+                  {formatarDataHora(janela.medido_em)}
+                </TableCell>
                 <TableCell className="valor text-right font-medium">
                   {formatarG(medida?.rms_g)}
                 </TableCell>

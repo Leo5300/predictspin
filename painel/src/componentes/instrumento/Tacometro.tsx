@@ -27,7 +27,7 @@ const RAIO = 118
 const INICIO_GRAUS = 210
 const ABERTURA_GRAUS = 240
 /** Rótulos mais próximos que isto do anterior vão para a segunda fileira, por fora. */
-const AFASTAMENTO_MINIMO_GRAUS = 9
+const AFASTAMENTO_MINIMO_GRAUS = 12
 
 function angulo(fracao: number): number {
   return ((INICIO_GRAUS - fracao * ABERTURA_GRAUS) * Math.PI) / 180
@@ -137,8 +137,10 @@ export function Tacometro({ rpm, nominais, velho = false, className }: Props) {
             </>
           ) : null}
         </svg>
-        {/* número entre as pontas do arco, abaixo do eixo do ponteiro */}
+        {/* número entre as pontas do arco, abaixo do eixo do ponteiro; sem rotação, nenhum número
+            (o texto embaixo diz "sem rotação") */}
         <span
+          hidden={!temRotacao}
           className={cn(
             'matriz absolute left-1/2 -translate-x-1/2',
             // 5 dígitos (leitura com defeito, até 30000 rpm) não cabem entre as pontas do arco

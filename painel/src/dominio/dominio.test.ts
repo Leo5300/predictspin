@@ -139,6 +139,8 @@ describe('escala do mapa de ordens', () => {
     expect(limitesDoEixo([1180])).toEqual([0, 2000])
     expect(limitesDoEixo([null, undefined])).toEqual([0, 1])
     expect(limitesDoEixo([0.19])).toEqual([0, 0.2])
+    // 0,26 vai a 0,3 (marcas de 0,075), não a 0,5 com metade do gráfico vazia
+    expect(limitesDoEixo([0.26])).toEqual([0, 0.3])
   })
 })
 

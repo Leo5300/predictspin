@@ -173,7 +173,8 @@ export function EsquemaTorno({ marcadores, velho = false, className }: Props) {
             {marcador.leitura ? (
               <span
                 className={cn(
-                  'valor absolute left-full ml-1 bg-modulo px-0.5 text-12 whitespace-nowrap',
+                  // desenho estreito: a leitura cairia sobre as peças (a rotação está no tacômetro)
+                  'valor absolute left-full ml-1 bg-modulo px-0.5 text-12 whitespace-nowrap @max-[28rem]:hidden',
                   velho ? 'text-fraco' : 'text-texto',
                 )}
                 data-velho={velho || undefined}

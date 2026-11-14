@@ -68,7 +68,7 @@ type Extras = Pick<
 }
 
 const FONTE = '12px "IBM Plex Mono", monospace'
-const MARGEM_DIREITA = 60
+const MARGEM_DIREITA = 66
 
 /**
  * Gráfico de tendência (uPlot) com retícula de osciloscópio 10 × 8 ao fundo. As linhas usam tons
@@ -597,7 +597,7 @@ function desenharRotulosNoFim(u: uPlot, series: readonly SerieDoGrafico[], cores
   ctx.font = `600 ${12 * escala}px "IBM Plex Mono", monospace`
   ctx.textBaseline = 'middle'
   ctx.fillStyle = cores.texto
-  for (const d of desejados) ctx.fillText(d.rotulo, left + width + 6 * escala, d.y)
+  for (const d of desejados) ctx.fillText(d.rotulo, left + width + 12 * escala, d.y)
   ctx.restore()
 }
 

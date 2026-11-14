@@ -269,7 +269,10 @@ export function TelaPonto({ maquinaId, codigo, busca }: Props) {
         >
           {maquina.data.codigo}
         </Link>{' '}
-        /
+        /{' '}
+        <span aria-current="page" className="text-texto">
+          Ponto <span className="valor">{codigo}</span>
+        </span>
       </nav>
 
       <Painel>
@@ -309,87 +312,89 @@ export function TelaPonto({ maquinaId, codigo, busca }: Props) {
             </p>
           ) : null}
 
-          <div className="flex flex-wrap items-end gap-x-4 gap-y-2 border-b border-linha px-3 py-2">
-            <div>
-              <span className="rotulo mb-1 block">Período</span>
-              <ToggleGroup
-                aria-label="Período da tendência"
-                value={[periodo.chave]}
-                disabled={modoRapido.ativo}
-                onValueChange={(valores) => {
-                  const chave = valores[0] as ChavePeriodoTendencia | undefined
-                  if (!chave) return
-                  void navegar({
-                    search: (anterior) => ({ ...anterior, periodo: chave, pagina: 0 }),
-                    replace: true,
-                    resetScroll: false,
-                  })
-                }}
-              >
-                {PERIODOS_TENDENCIA.map((p) => (
-                  <ToggleGroupItem key={p.chave} value={p.chave} size="sm">
-                    {p.rotulo}
-                  </ToggleGroupItem>
-                ))}
-                <ToggleGroupItem value="personalizado" size="sm">
-                  Personalizado
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-            {periodo.chave === 'personalizado' ? (
-              <PeriodoPersonalizado
-                de={busca.de}
-                ate={busca.ate}
-                erro={periodo.erro}
-                aoAplicar={(de, ate) =>
-                  void navegar({
-                    search: (anterior) => ({
-                      ...anterior,
-                      periodo: 'personalizado',
-                      de,
-                      ate,
-                      pagina: 0,
-                    }),
-                    replace: true,
-                    resetScroll: false,
-                  })
-                }
-              />
-            ) : null}
-            <div>
-              <span className="rotulo mb-1 block">Segundo quadro</span>
-              <ToggleGroup
-                aria-label="Grandeza do segundo quadro"
-                value={[busca.quadro]}
-                disabled={modoRapido.ativo}
-                onValueChange={(valores) => {
-                  const quadro = valores[0]
-                  if (quadro === 'ordens' || quadro === 'curtose') {
+          {/* no AO VIVO o quadro é fixo (últimos 60 s): período, segundo quadro e exportação
+              não se aplicam e saem da tela */}
+          {modoRapido.ativo ? null : (
+            <div className="flex flex-wrap items-end gap-x-4 gap-y-2 border-b border-linha px-3 py-2">
+              <div>
+                <span className="rotulo mb-1 block">Período</span>
+                <ToggleGroup
+                  aria-label="Período da tendência"
+                  value={[periodo.chave]}
+                  onValueChange={(valores) => {
+                    const chave = valores[0] as ChavePeriodoTendencia | undefined
+                    if (!chave) return
                     void navegar({
-                      search: (anterior) => ({ ...anterior, quadro }),
+                      search: (anterior) => ({ ...anterior, periodo: chave, pagina: 0 }),
+                      replace: true,
+                      resetScroll: false,
+                    })
+                  }}
+                >
+                  {PERIODOS_TENDENCIA.map((p) => (
+                    <ToggleGroupItem key={p.chave} value={p.chave} size="sm">
+                      {p.rotulo}
+                    </ToggleGroupItem>
+                  ))}
+                  <ToggleGroupItem value="personalizado" size="sm">
+                    Personalizado
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              {periodo.chave === 'personalizado' ? (
+                <PeriodoPersonalizado
+                  de={busca.de}
+                  ate={busca.ate}
+                  erro={periodo.erro}
+                  aoAplicar={(de, ate) =>
+                    void navegar({
+                      search: (anterior) => ({
+                        ...anterior,
+                        periodo: 'personalizado',
+                        de,
+                        ate,
+                        pagina: 0,
+                      }),
                       replace: true,
                       resetScroll: false,
                     })
                   }
-                }}
+                />
+              ) : null}
+              <div>
+                <span className="rotulo mb-1 block">Segundo quadro</span>
+                <ToggleGroup
+                  aria-label="Grandeza do segundo quadro"
+                  value={[busca.quadro]}
+                  onValueChange={(valores) => {
+                    const quadro = valores[0]
+                    if (quadro === 'ordens' || quadro === 'curtose') {
+                      void navegar({
+                        search: (anterior) => ({ ...anterior, quadro }),
+                        replace: true,
+                        resetScroll: false,
+                      })
+                    }
+                  }}
+                >
+                  <ToggleGroupItem value="ordens" size="sm">
+                    Ordens 1X–3X
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="curtose" size="sm">
+                    Curtose
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              <Button
+                className="ml-auto"
+                onClick={exportar}
+                disabled={!dados || dados.temposS.length === 0}
               >
-                <ToggleGroupItem value="ordens" size="sm">
-                  Ordens 1X–3X
-                </ToggleGroupItem>
-                <ToggleGroupItem value="curtose" size="sm">
-                  Curtose
-                </ToggleGroupItem>
-              </ToggleGroup>
+                <Download aria-hidden="true" strokeWidth={1.5} />
+                Exportar CSV
+              </Button>
             </div>
-            <Button
-              className="ml-auto"
-              onClick={exportar}
-              disabled={!dados || dados.temposS.length === 0 || modoRapido.ativo}
-            >
-              <Download aria-hidden="true" strokeWidth={1.5} />
-              Exportar CSV
-            </Button>
-          </div>
+          )}
 
           <div ref={graficoRef} className="min-w-0" data-testid="area-do-grafico">
             {modoRapido.ativo ? (
@@ -432,6 +437,7 @@ export function TelaPonto({ maquinaId, codigo, busca }: Props) {
               deMs={periodo.deMs}
               ateMs={periodo.ateMs}
               pagina={busca.pagina}
+              acompanhar={periodo.movel && busca.pagina === 0}
               aoMudarPagina={(pagina) =>
                 void navegar({
                   search: (anterior) => ({ ...anterior, pagina }),
@@ -494,12 +500,14 @@ function CabecalhoDoPonto({ ponto, janela, simulado, frescor, idadeS, velho }: P
         </div>
         {/* estreito: as leituras descem para baixo do título, em duas ou três colunas, sem cortar valor */}
         <div className="grid flex-1 basis-full grid-cols-2 gap-x-6 gap-y-2 @min-[30rem]:grid-cols-3 @min-[44rem]:basis-0 @min-[60rem]:grid-cols-6">
+          {/* RMS é a decisão: destaque, como na tela da máquina (linha própria no estreito) */}
           <Leitura
             rotulo="RMS"
             valor={formatarG(medida?.rms_g)}
             unidade="g"
-            tamanho="grande"
+            tamanho="destaque"
             velho={velho}
+            className="col-span-2 @min-[30rem]:col-span-1"
           />
           <Leitura
             rotulo="Pico"

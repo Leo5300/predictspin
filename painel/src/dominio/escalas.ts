@@ -72,8 +72,12 @@ export function limitesDoEixo(valores: readonly (number | null | undefined)[]): 
   }
   if (maximo <= 0) return [0, 1]
   const ordem = 10 ** Math.floor(Math.log10(maximo))
-  const passos = [1, 2, 2.5, 5, 10]
-  const teto = passos.map((p) => p * ordem).find((p) => p >= maximo * 1.05) ?? maximo * 1.1
+  // degraus divisíveis pelas 4 faixas da retícula (0,3 → marcas de 0,075), sem pular de 0,26 para 0,5
+  const passos = [1, 2, 3, 4, 5, 6, 8, 10]
+  // toPrecision tira o resíduo do ponto flutuante (3 × 0,1 = 0,30000000000000004)
+  const teto =
+    passos.map((p) => Number((p * ordem).toPrecision(12))).find((p) => p >= maximo * 1.05) ??
+    maximo * 1.1
   return [0, teto]
 }
 

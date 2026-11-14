@@ -34,7 +34,9 @@ export function FaixaSimulado({ className }: { className?: string }) {
         Dados simulados
       </span>
       <span className="min-w-0 truncate bg-modulo px-1 text-apoio">
-        vêm do dispositivo simulado · não são medição do torno
+        {/* no celular só cabe o que importa */}
+        <span className="max-sm:hidden">vêm do dispositivo simulado · </span>não são medição do
+        torno
       </span>
     </div>
   )

@@ -97,6 +97,8 @@ test('teclado: login, pular para o conteúdo, abrir a máquina e o ponto, com fo
 }) => {
   await usarFonte(page, 'simulado')
   await page.goto('/login')
+  // o formulário aparece depois de a sessão guardada ser conferida
+  await expect(page.getByLabel('E-mail')).toBeVisible()
   await page.keyboard.press('Tab')
   await expect(page.getByLabel('E-mail')).toBeFocused()
   await focoVisivel(page)

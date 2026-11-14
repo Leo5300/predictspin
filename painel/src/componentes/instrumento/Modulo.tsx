@@ -49,9 +49,8 @@ export function Modulo({
       className={cn('@container flex min-w-0 flex-col bg-modulo', className)}
     >
       <header className="flex min-h-8 flex-wrap items-center gap-x-3 gap-y-1 border-b border-linha px-3 py-1">
-        <h2 className="rotulo min-w-0 truncate" title={rotulo}>
-          {rotulo}
-        </h2>
+        {/* o rótulo quebra a linha em vez de ser cortado (é o que identifica o módulo) */}
+        <h2 className="rotulo min-w-0 [overflow-wrap:anywhere]">{rotulo}</h2>
         {simulado ? <SeloSim /> : null}
         {detalhe ? (
           // módulo estreito: o detalhe desce para uma linha própria em vez de virar "f…"

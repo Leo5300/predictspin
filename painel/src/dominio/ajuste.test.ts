@@ -43,10 +43,12 @@ describe('tacômetro', () => {
 
   it('rótulos que se encostariam vão para a segunda fileira, por fora', () => {
     const [minimo, maximo] = limitesDaEscala(NOMINAIS_TORNO)
-    const marcas = marcasDoTacometro(NOMINAIS_TORNO, minimo, maximo, 240, 9)
+    const marcas = marcasDoTacometro(NOMINAIS_TORNO, minimo, maximo, 240, 12)
     expect(marcas).toHaveLength(18)
-    expect(marcas.find((m) => m.nominal === 265)?.segundaFileira).toBe(false)
-    expect(marcas.find((m) => m.nominal === 280)?.segundaFileira).toBe(true)
+    // 265 fica a menos de 12° de 224 e vai para fora; 280 já está a mais de 12° de 224
+    expect(marcas.find((m) => m.nominal === 265)?.segundaFileira).toBe(true)
+    expect(marcas.find((m) => m.nominal === 280)?.segundaFileira).toBe(false)
+    expect(marcas.filter((m) => m.segundaFileira).map((m) => m.nominal)).toEqual([265])
     expect(marcas[0]?.segundaFileira).toBe(false)
     expect(marcas.every((m, i, todas) => i === 0 || m.fracao > (todas[i - 1]?.fracao ?? 0))).toBe(
       true,

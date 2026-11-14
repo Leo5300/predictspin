@@ -50,53 +50,52 @@ const ROTULO_TRANSPORTE: Record<Transporte, string | null> = {
 export function BarraSuperior({ usuario }: { usuario: Usuario }) {
   return (
     <header className="z-40 border-b border-linha-forte bg-modulo">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1.5">
+      {/* desktop: uma linha. Celular: grade com lugares fixos (marca, navegação e sair; conexão e
+          última janela; fonte e tema), para nada pular de linha quando o texto muda */}
+      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1 px-4 py-1.5 sm:flex sm:flex-wrap sm:gap-x-4">
         <Link
           to="/"
-          className="text-15 font-semibold tracking-tight text-texto"
+          className="col-start-1 row-start-1 text-15 font-semibold tracking-tight text-texto"
           translate="no"
           aria-label="PredictSpin: visão geral"
         >
           PredictSpin
         </Link>
 
-        <nav aria-label="Principal" className="flex items-center gap-1">
+        <nav aria-label="Principal" className="col-start-2 row-start-1 flex items-center gap-1">
           <LinkDeNavegacao para="/">Visão geral</LinkDeNavegacao>
           {podeAbrir(usuario.papel, 'coleta') ? (
             <LinkDeNavegacao para="/coleta">Coleta</LinkDeNavegacao>
           ) : null}
         </nav>
 
-        <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1">
+        <div className="col-span-3 row-start-2 flex items-center gap-x-4 sm:ml-auto">
           <Conexao />
           <UltimaJanela />
           <Relogio />
-          <SeletorDeFonte />
-          <SeletorDeTema />
-          <div className="flex items-center gap-2">
-            {/* no celular o nome sai da barra (fica no rótulo do botão de sair) */}
-            <span className="flex min-w-0 flex-col leading-tight max-sm:hidden">
-              <span
-                className="max-w-40 truncate text-13 font-medium text-texto"
-                title={usuario.nome}
-              >
-                {usuario.nome}
-              </span>
-              {/* o papel só aparece quando diz algo que o nome ainda não disse */}
-              {mesmoTexto(usuario.nome, ROTULO_PAPEL_USUARIO[usuario.papel]) ? null : (
-                <span className="rotulo">{ROTULO_PAPEL_USUARIO[usuario.papel]}</span>
-              )}
+        </div>
+        <SeletorDeFonte className="col-span-2 col-start-1 row-start-3 justify-self-start" />
+        <SeletorDeTema className="col-start-3 row-start-3 justify-self-end" />
+        <div className="col-start-3 row-start-1 flex items-center gap-2 justify-self-end">
+          {/* no celular o nome sai da barra (fica na dica do botão de sair) */}
+          <span className="flex min-w-0 flex-col leading-tight max-sm:hidden">
+            <span className="max-w-40 truncate text-13 font-medium text-texto" title={usuario.nome}>
+              {usuario.nome}
             </span>
-            <Button
-              variant="outline"
-              onClick={sair}
-              aria-label="Sair do painel"
-              title={`${usuario.nome} · sair do painel`}
-            >
-              <LogOut aria-hidden="true" strokeWidth={1.5} />
-              <span className="max-sm:sr-only">Sair</span>
-            </Button>
-          </div>
+            {/* o papel só aparece quando diz algo que o nome ainda não disse */}
+            {mesmoTexto(usuario.nome, ROTULO_PAPEL_USUARIO[usuario.papel]) ? null : (
+              <span className="rotulo">{ROTULO_PAPEL_USUARIO[usuario.papel]}</span>
+            )}
+          </span>
+          <Button
+            variant="outline"
+            onClick={sair}
+            aria-label="Sair do painel"
+            title={`${usuario.nome} · sair do painel`}
+          >
+            <LogOut aria-hidden="true" strokeWidth={1.5} />
+            <span className="max-sm:sr-only">Sair</span>
+          </Button>
         </div>
       </div>
       <FaixaAoVivo />
@@ -218,10 +217,11 @@ function FaixaAoVivo() {
   )
 }
 
-function SeletorDeFonte() {
+function SeletorDeFonte({ className }: { className?: string }) {
   const fonte = useFonte()
   return (
     <ToggleGroup
+      className={className}
       aria-label="Fonte dos dados"
       value={[fonte]}
       onValueChange={(valores) => {
@@ -239,7 +239,7 @@ function SeletorDeFonte() {
   )
 }
 
-function SeletorDeTema() {
+function SeletorDeTema({ className }: { className?: string }) {
   const tema = useTema()
   const proximo = tema === 'claro' ? 'grafite' : 'claro'
   const rotulo = tema === 'claro' ? 'Mudar para o tema grafite' : 'Mudar para o tema claro'
@@ -250,6 +250,7 @@ function SeletorDeTema() {
           <Button
             variant="outline"
             size="icon"
+            className={className}
             aria-label={rotulo}
             onClick={() => definirTema(proximo)}
           >

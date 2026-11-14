@@ -47,6 +47,7 @@ import { ordenarCodigos, rotuloDoPapel } from '@/dominio/pontos'
 import { rpmSemMilhar } from '@/dominio/tacometro'
 import { definirFonte } from '@/estado/preferencias'
 import { useFrescorDaMaquina } from '@/hooks/useFrescorDaMaquina'
+import { useTelaEstreita } from '@/hooks/useTelaEstreita'
 import { useMaquinaAoVivo } from '@/hooks/useMaquinaAoVivo'
 
 type Props = {
@@ -88,7 +89,10 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
             <Link to="/" className="underline underline-offset-2">
               Visão geral
             </Link>{' '}
-            /
+            /{' '}
+            <span aria-current="page" className="valor text-texto">
+              {maquina.data.codigo}
+            </span>
           </nav>
           <h1 className="valor text-24 font-semibold [overflow-wrap:anywhere]">
             {maquina.data.codigo}
@@ -141,6 +145,7 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
       <Painel className="xl:grid-cols-12">
         <Modulo
           rotulo="Sensores na máquina"
+          simulado={aoVivo.simulado && !semNenhumDado}
           className="xl:col-span-4 [&>div:last-child]:flex [&>div:last-child]:flex-col [&>div:last-child]:justify-center"
           acoes={
             frescor === 'vivo' ? undefined : <MarcaDeIdade frescor={frescor} idadeS={idadeS} />
@@ -392,11 +397,11 @@ function Canais({ janela, velho }: { janela: Janela; velho: boolean }) {
       >
         {Object.entries(janela.canais).map(([codigo, canal]) => (
           <div key={codigo} className="contents">
-            <dt
-              className="valor truncate text-12 text-apoio"
-              title={`${codigo} (${canal.grandeza})`}
-            >
-              {codigo}
+            {/* a API dá a grandeza e o código do canal (não há nome por extenso): a grandeza é o
+                rótulo e o código, que distingue dois canais da mesma grandeza, vem ao lado */}
+            <dt className="flex min-w-0 items-baseline gap-2 text-13" title={codigo}>
+              <span className="shrink-0 text-texto first-letter:uppercase">{canal.grandeza}</span>
+              <span className="valor truncate text-12 text-fraco">{codigo}</span>
             </dt>
             <dd className="text-right">
               <span className="valor text-13 font-medium text-texto">
@@ -517,18 +522,21 @@ function ModuloDoPonto({
             <span className="rotulo">Desvio do RMS</span>
             <ReguaDesvio valor={medida?.rms_g} referencia={null} velho={velho} className="mt-1" />
           </div>
-          <div>
-            <span className="rotulo">RMS · 15 min</span>
-            <div className="mt-1">
-              <Sparkline
-                valores={tendencia}
-                velho={velho}
-                largura={120}
-                altura={28}
-                descricao={`RMS do ponto ${ponto.codigo} nos últimos 15 minutos`}
-              />
+          {/* sem nenhum valor nos últimos 15 min, nem o rótulo do minigráfico aparece */}
+          {tendencia.some((v) => v !== null) ? (
+            <div>
+              <span className="rotulo">RMS · 15 min</span>
+              <div className="mt-1">
+                <Sparkline
+                  valores={tendencia}
+                  velho={velho}
+                  largura={120}
+                  altura={28}
+                  descricao={`RMS do ponto ${ponto.codigo} nos últimos 15 minutos`}
+                />
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </div>
     </Modulo>
@@ -545,9 +553,12 @@ type PropsDoMapa = {
 function SecaoDoMapa({ maquinaId, simulado, periodo, codigos }: PropsDoMapa) {
   const navegar = useNavigate({ from: '/maquinas/$maquinaId/' })
   const escolhido = PERIODOS_MAPA.find((p) => p.chave === periodo) ?? PERIODO_MAPA_PADRAO
+  // no celular, um quarto dos intervalos: cada célula fica larga o bastante para ser lida
+  const estreita = useTelaEstreita()
+  const baldes = estreita ? Math.round(escolhido.baldes / 4) : escolhido.baldes
   const serie = useQuery({
-    ...consultaSerieRecente(maquinaId, simulado, escolhido.segundos, escolhido.baldes),
-    refetchInterval: Math.max(15_000, (escolhido.segundos / escolhido.baldes) * 1000),
+    ...consultaSerieRecente(maquinaId, simulado, escolhido.segundos, baldes),
+    refetchInterval: Math.max(15_000, (escolhido.segundos / baldes) * 1000),
     placeholderData: (anterior) => anterior,
   })
 
