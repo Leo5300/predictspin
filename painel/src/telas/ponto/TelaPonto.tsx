@@ -875,7 +875,8 @@ function QuadroAoVivo({ recentes, codigo }: { recentes: Janela[]; codigo: string
           </span>{' '}
           janelas rápidas (1 s) na tela
         </span>
-        <span>| na base = janela rápida</span>
+        <span>| na base = janela rápida (sem marca: janela normal, de 5 s)</span>
+        <span>linha interrompida = lacuna (sem janela)</span>
         <span>o modo rápido termina sozinho no prazo ou ao sair desta tela</span>
       </p>
     </div>

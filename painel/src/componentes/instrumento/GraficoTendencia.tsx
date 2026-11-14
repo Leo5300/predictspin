@@ -342,7 +342,7 @@ function montarOpcoes({
         // uns 96 px); a retícula 10×8 continua ao fundo
         splits: (u, _eixo, min, max) => {
           const larguraCss = u.over.clientWidth || largura
-          const maxMarcas = Math.max(2, Math.min(7, Math.floor(larguraCss / 96)))
+          const maxMarcas = Math.max(3, Math.min(7, Math.floor(larguraCss / 96)))
           const fusoS = -new Date(min * 1000).getTimezoneOffset() * 60
           return marcasDeTempo(min, max, maxMarcas, fusoS).marcas
         },
@@ -498,6 +498,7 @@ function desenharFaixas(u: uPlot, faixas: readonly FaixaDoGrafico[], cores: Core
     ctx.stroke()
     ctx.setLineDash([])
     ctx.fillStyle = cores.texto
+    ctx.textAlign = 'left'
     const espaco = x1 - x0 - 8 * escala
     if (espaco > 24 * escala) {
       let texto = faixa.rotulo
@@ -596,6 +597,9 @@ function desenharRotulosNoFim(u: uPlot, series: readonly SerieDoGrafico[], cores
   ctx.save()
   ctx.font = `600 ${12 * escala}px "IBM Plex Mono", monospace`
   ctx.textBaseline = 'middle'
+  // o uPlot deixa o alinhamento do eixo Y (à direita) no contexto: sem isto o rótulo terminava no
+  // ponto em vez de começar nele, e caía dentro do gráfico
+  ctx.textAlign = 'left'
   ctx.fillStyle = cores.texto
   for (const d of desejados) ctx.fillText(d.rotulo, left + width + 12 * escala, d.y)
   ctx.restore()

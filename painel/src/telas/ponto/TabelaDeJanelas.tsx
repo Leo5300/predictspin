@@ -105,8 +105,9 @@ export function TabelaDeJanelas({
             </TableHead>
             <TableHead className="text-right">RPM</TableHead>
             <TableHead className="text-right">Amostras</TableHead>
-            <TableHead>Marcas</TableHead>
-            <TableHead>Ensaio</TableHead>
+            <TableHead className="pl-6">Marcas</TableHead>
+            {/* a última coluna fica com a sobra da largura: as outras ficam juntas, sem vão */}
+            <TableHead className="w-full">Ensaio</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -139,7 +140,7 @@ export function TabelaDeJanelas({
                 <TableCell className="valor text-right">
                   {completude === null ? TRACO : formatarPercentual(completude, 1)}
                 </TableCell>
-                <TableCell className="text-12">
+                <TableCell className="pl-6 text-12">
                   {marcas.length > 0 ? marcas.join(' · ') : TRACO}
                 </TableCell>
                 <TableCell

@@ -110,8 +110,7 @@ export function TelaVisaoGeral() {
               titulo="Nenhuma medição real recebida."
               acao={<Button onClick={() => definirFonte('simulado')}>Ver dados simulados</Button>}
             >
-              O dispositivo do torno ainda não enviou janelas. Os dados simulados servem para
-              conhecer o painel e nunca substituem medição.
+              Os dados simulados servem para conhecer o painel e nunca substituem medição.
             </EstadoVazio>
           </Modulo>
         </Painel>
@@ -128,30 +127,36 @@ export function TelaVisaoGeral() {
               As máquinas são cadastradas na API. Quando houver uma, ela aparece aqui.
             </EstadoVazio>
           ) : (
-            <div role="table" aria-label="Máquinas">
-              <div
-                role="row"
-                className={cn(
-                  'hidden gap-x-4 border-b border-linha px-3 py-1 @min-[84rem]:grid',
-                  COLUNAS,
-                )}
-              >
-                {CABECALHOS.map((titulo, i) => (
-                  <span key={i} role="columnheader" className="rotulo">
-                    {titulo}
-                  </span>
+            <>
+              <div role="table" aria-label="Máquinas">
+                <div
+                  role="row"
+                  className={cn(
+                    'hidden gap-x-4 border-b border-linha px-3 py-1 @min-[84rem]:grid',
+                    COLUNAS,
+                  )}
+                >
+                  {CABECALHOS.map((titulo, i) => (
+                    <span key={i} role="columnheader" className="rotulo">
+                      {titulo}
+                    </span>
+                  ))}
+                </div>
+                {lista.map((maquina, i) => (
+                  <LinhaDaMaquina
+                    key={maquina.id}
+                    maquina={maquina}
+                    simulado={simulado}
+                    ultima={ultimas[i]?.data}
+                    carregando={ultimas[i]?.isPending ?? true}
+                  />
                 ))}
               </div>
-              {lista.map((maquina, i) => (
-                <LinhaDaMaquina
-                  key={maquina.id}
-                  maquina={maquina}
-                  simulado={simulado}
-                  ultima={ultimas[i]?.data}
-                  carregando={ultimas[i]?.isPending ?? true}
-                />
-              ))}
-            </div>
+              <p className="border-t border-linha px-3 py-1.5 text-12 text-apoio">
+                RMS · 15 min: média de cada intervalo de 15 s; linha interrompida = intervalo sem
+                janela; o ponto no fim é o valor mais recente.
+              </p>
+            </>
           )}
         </Modulo>
       </Painel>

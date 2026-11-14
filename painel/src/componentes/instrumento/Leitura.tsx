@@ -14,6 +14,11 @@ const CLASSE_DO_VALOR: Record<Tamanho, string> = {
 }
 
 type Props = {
+  /**
+   * Valor em palavras ("não", "normal 5 s"): texto em Plex Sans e só os números em fonte de valor
+   * (direção, item 9).
+   */
+  texto?: boolean
   /** Rótulo curto em caixa-alta (RMS, PICO, CURT, 1X...). */
   rotulo: string
   /** O rótulo por extenso, mostrado ao passar o cursor ou com foco (ex.: "curtose" para CURT). */
@@ -40,6 +45,7 @@ export function Leitura({
   unidade,
   tamanho = 'medio',
   velho = false,
+  texto = false,
   className,
 }: Props) {
   // Conta as trocas de valor para reiniciar o traço de mudança (estado derivado durante o render)
@@ -78,8 +84,18 @@ export function Leitura({
           CLASSE_DO_VALOR[tamanho],
         )}
       >
-        <span className="valor truncate font-medium text-texto" title={valor}>
-          {valor}
+        <span className={cn('truncate font-medium text-texto', !texto && 'valor')} title={valor}>
+          {texto
+            ? valor.split(/(\d[\d.,]*)/).map((parte, i) =>
+                i % 2 === 1 ? (
+                  <span key={i} className="valor">
+                    {parte}
+                  </span>
+                ) : (
+                  parte
+                ),
+              )
+            : valor}
         </span>
         {/* sem valor, só o traço: unidade ao lado de nada parece um valor */}
         {unidade && valor !== TRACO ? (

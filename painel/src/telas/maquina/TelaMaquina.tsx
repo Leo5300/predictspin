@@ -127,7 +127,7 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
                 titulo="Nenhuma medição real recebida."
                 acao={<Button onClick={() => definirFonte('simulado')}>Ver dados simulados</Button>}
               >
-                O dispositivo desta máquina ainda não enviou janelas.
+                Quando o dispositivo do torno enviar a primeira janela, ela aparece aqui.
               </EstadoVazio>
             )}
           </Modulo>
@@ -163,8 +163,8 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
                 )}
                 velho={velho}
               />
-              {/* o que as marcas do desenho querem dizer */}
-              <p className="mt-6 text-12 text-apoio">
+              {/* o que as marcas do desenho querem dizer (sem dado, não há barra nem anel) */}
+              <p className="mt-6 text-12 text-apoio" hidden={semNenhumDado}>
                 Barra ao lado do ponto: RMS atual em relação ao maior RMS dos últimos 15 min. Anel:
                 janela que acabou de chegar. Clique no ponto para abrir a tendência.
               </p>
@@ -368,12 +368,14 @@ function QualidadeDaJanela({
       <Leitura
         rotulo="Saturação"
         valor={janela.saturou ? 'saturou' : 'não'}
+        texto
         tamanho="pequeno"
         velho={velho}
       />
       <Leitura
         rotulo="Modo"
         valor={janela.modo === 'rapido' ? 'rápido 1 s' : 'normal 5 s'}
+        texto
         tamanho="pequeno"
         velho={velho}
       />

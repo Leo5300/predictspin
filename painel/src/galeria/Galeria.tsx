@@ -158,6 +158,7 @@ export function Galeria() {
           </Caso>
           <Caso titulo="velho">
             <Tacometro className="self-stretch" rpm={560} nominais={NOMINAIS_EXEMPLO} velho />
+            <MarcaDeIdade frescor="velho" idadeS={42} />
           </Caso>
           <Caso titulo="parado · sem rotação">
             <Tacometro className="self-stretch" rpm={0} nominais={NOMINAIS_EXEMPLO} />
