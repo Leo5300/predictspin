@@ -9,7 +9,7 @@ import { extendTailwindMerge } from 'tailwind-merge'
 const juntar = extendTailwindMerge({
   extend: {
     classGroups: {
-      'font-size': [{ text: ['12', '13', '15', '18', '24', '32'] }],
+      'font-size': [{ text: ['12', '13', '15', '18', '24', '32', '40', '72'] }],
       rounded: [{ rounded: ['0', '2'] }],
     },
   },

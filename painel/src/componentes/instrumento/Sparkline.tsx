@@ -5,27 +5,28 @@ import { cn } from '@/lib/utils'
 type Props = {
   /** Valores em ordem de tempo; nulo é lacuna (a linha é interrompida, não ligada por cima). */
   valores: readonly (number | null | undefined)[]
-  /** Tracejado da linha (o estilo do ponto: A contínua, B tracejada, C pontilhada). */
-  tracejado?: readonly number[]
-  /** Variável CSS da cor da linha (um dos tons neutros de ponto). */
-  cor?: string
   largura?: number
   altura?: number
-  /** Dado velho: a linha fica no tom fraco. */
+  /** Dado velho: a linha toda fica no tom fraco e o trecho atual perde a cor de sinal. */
   velho?: boolean
-  /** Descrição para leitor de tela (o desenho em si é decorativo ao lado do valor). */
+  /** Descrição para leitor de tela (o desenho em si acompanha um valor escrito ao lado). */
   descricao: string
   className?: string
 }
 
+/** Quantos últimos intervalos formam o "trecho atual", desenhado na cor de sinal. */
+const TRECHO_ATUAL = 4
+
+type Ponto = { x: number; y: number } | null
+
 /**
- * Sparkline: tendência curta ao lado de uma leitura, sem eixos. Só é desenhada com dado real: com
- * menos de dois valores aparece um traço, nunca uma linha inventada.
+ * Sparkline: tendência curta ao lado de uma leitura, sem eixos. Linha contínua em cinza neutro (a
+ * letra do ponto já está no módulo; estilos de traço por ponto ficam para os gráficos que dividem o
+ * eixo), último trecho e último ponto na cor de sinal. Só é desenhada com dado real: com menos de
+ * dois valores aparece um traço.
  */
 export function Sparkline({
   valores,
-  tracejado = [],
-  cor = '--ponto-a',
   largura = 96,
   altura = 24,
   velho = false,
@@ -52,23 +53,38 @@ export function Sparkline({
   const minimo = Math.min(...validos)
   const maximo = Math.max(...validos)
   const faixa = maximo - minimo || Math.abs(maximo) || 1
-  const margem = 2
+  const margem = 3
   const passo = valores.length > 1 ? (largura - 2 * margem) / (valores.length - 1) : 0
 
-  // um subcaminho por trecho contínuo: a lacuna quebra a linha
-  const trechos: string[] = []
-  let atual: string[] = []
-  valores.forEach((v, i) => {
-    if (v === null || v === undefined || !Number.isFinite(v)) {
-      if (atual.length > 0) trechos.push(atual.join(' '))
-      atual = []
-      return
+  const pontos: Ponto[] = valores.map((v, i) =>
+    v === null || v === undefined || !Number.isFinite(v)
+      ? null
+      : {
+          x: margem + i * passo,
+          y: altura - margem - ((v - minimo) / faixa) * (altura - 2 * margem),
+        },
+  )
+
+  /** Caminho com um subcaminho por trecho contínuo: a lacuna quebra a linha. */
+  const caminho = (de: number, ate: number) => {
+    let d = ''
+    let aberto = false
+    for (let i = de; i <= ate; i++) {
+      const p = pontos[i]
+      if (!p) {
+        aberto = false
+        continue
+      }
+      d += `${aberto ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)} `
+      aberto = true
     }
-    const x = margem + i * passo
-    const y = altura - margem - ((v - minimo) / faixa) * (altura - 2 * margem)
-    atual.push(`${atual.length === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`)
-  })
-  if (atual.length > 0) trechos.push(atual.join(' '))
+    return d.trim()
+  }
+
+  const ultimoIndice = pontos.findLastIndex((p) => p !== null)
+  const ultimo = pontos[ultimoIndice]
+  const inicioDoTrecho = Math.max(0, ultimoIndice - TRECHO_ATUAL)
+  const corDoTrecho = velho ? 'var(--texto-fraco)' : 'var(--sinal)'
 
   return (
     <svg
@@ -77,20 +93,36 @@ export function Sparkline({
       width={largura}
       height={altura}
       viewBox={`0 0 ${largura} ${altura}`}
-      className={cn('shrink-0 overflow-visible', className)}
+      className={cn('shrink-0 overflow-hidden', className)}
       data-velho={velho || undefined}
     >
       <title id={id}>{descricao}</title>
-      <path
-        d={trechos.join(' ')}
-        fill="none"
-        stroke={velho ? 'var(--texto-fraco)' : `var(${cor})`}
-        strokeWidth={1.25}
-        strokeDasharray={tracejado.length > 0 ? tracejado.join(' ') : undefined}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
-      />
+      {/* a cada valor novo o desenho entra pela direita (um passo) */}
+      <g
+        key={`${valores.length}-${String(validos.at(-1))}`}
+        className="motion-safe:animate-[entrar-pela-direita_200ms_linear_both]"
+        style={{ ['--deslocamento' as string]: `${passo.toFixed(1)}px` }}
+      >
+        <path
+          d={caminho(0, inicioDoTrecho)}
+          fill="none"
+          stroke={velho ? 'var(--texto-fraco)' : 'var(--texto-apoio)'}
+          strokeWidth={1.25}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+        <path
+          d={caminho(inicioDoTrecho, ultimoIndice)}
+          fill="none"
+          stroke={corDoTrecho}
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+        {ultimo ? <circle cx={ultimo.x} cy={ultimo.y} r={2.25} fill={corDoTrecho} /> : null}
+      </g>
     </svg>
   )
 }

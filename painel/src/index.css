@@ -66,7 +66,12 @@
   --cinza-215: oklch(0.215 0 0);
   --cinza-200: oklch(0.2 0 0);
   --cinza-185: oklch(0.185 0 0);
+  --cinza-175: oklch(0.175 0 0);
   --cinza-150: oklch(0.15 0 0);
+  --cinza-200b: oklch(0.2 0 0);
+  --cinza-245: oklch(0.245 0 0);
+  --cinza-360: oklch(0.36 0 0);
+  --cinza-880: oklch(0.88 0 0);
 
   /* âmbar e vermelho: só para desvio e alarme */
   --ambar-820: oklch(0.82 0.14 80);
@@ -76,6 +81,11 @@
   --vermelho-620: oklch(0.62 0.21 27);
   --vermelho-530: oklch(0.53 0.2 27);
   --vermelho-450: oklch(0.45 0.18 27);
+
+  /* ciano de osciloscópio: a única cor de SINAL (função), nunca de estado. Matiz perto de 200,
+     longe do verde, do âmbar e do vermelho. Ver os usos permitidos em --sinal, mais abaixo. */
+  --ciano-820: oklch(0.82 0.12 200);
+  --ciano-420: oklch(0.42 0.07 205);
 
   /* ardósia: informação, bem dessaturada */
   --ardosia-750: oklch(0.75 0.05 250);
@@ -99,6 +109,11 @@
   --text-24--line-height: 1.75rem;
   --text-32: 2rem;
   --text-32--line-height: 2.25rem;
+  /* exceções da escala, só onde a decisão acontece: RMS do ponto (40) e rotação no tacômetro (72) */
+  --text-40: 2.5rem;
+  --text-40--line-height: 2.75rem;
+  --text-72: 4.5rem;
+  --text-72--line-height: 1;
 
   /* cantos retos ou raio de 2 px */
   --radius-0: 0;
@@ -110,13 +125,14 @@
 }
 
 /* ------------------------------------------------------------------ camada 2: semânticos por tema */
-:root,
+/* :root[data-theme] pesa mais que o :root do grafite (o padrão), que vem depois no arquivo */
+:root[data-theme='claro'],
 [data-theme='claro'] {
   color-scheme: light;
 
   --superficie-fundo: var(--cinza-860);
   --superficie-modulo: var(--cinza-905);
-  --superficie-rebaixo: var(--cinza-945);
+  --superficie-rebaixo: var(--cinza-880);
   --superficie-realce: var(--cinza-820);
 
   --linha: var(--cinza-720);
@@ -143,10 +159,16 @@
   --ponto-b: var(--cinza-420);
   --ponto-c: var(--cinza-560);
 
+  /* SINAL (ciano escuro, 4,7:1 ou mais sobre todas as superfícies do tema claro). Usos permitidos, e
+     só estes: traço do dado ao vivo (último trecho das sparklines, traço do período atual), foco e
+     seleção, item sob o cursor, botão e faixa AO VIVO, pulso de chegada de janela. Nunca estado. */
+  --sinal: var(--ciano-420);
+  --sinal-suave: oklch(0.42 0.07 205 / 0.16);
+
   --simulado: oklch(0.42 0 0 / 0.38);
   --reticula: var(--cinza-890);
   --reticula-fina: var(--cinza-925);
-  --foco: var(--cinza-240);
+  --foco: var(--sinal);
 
   /* 1 px de luz em cima e 1 px de sombra embaixo dos botões */
   --relevo-luz: oklch(1 0 0 / 0.55);
@@ -155,15 +177,17 @@
   --relevo-sombra-acao: oklch(0 0 0 / 0.45);
 }
 
+:root,
 [data-theme='grafite'] {
   color-scheme: dark;
 
-  --superficie-fundo: var(--cinza-215);
-  --superficie-modulo: var(--cinza-255);
-  --superficie-rebaixo: var(--cinza-185);
-  --superficie-realce: var(--cinza-310);
+  /* grafite neutro, nunca preto puro: fundo e três degraus de superfície */
+  --superficie-fundo: var(--cinza-200b);
+  --superficie-modulo: var(--cinza-245);
+  --superficie-rebaixo: var(--cinza-175);
+  --superficie-realce: var(--cinza-300);
 
-  --linha: var(--cinza-370);
+  --linha: var(--cinza-360);
   --linha-forte: var(--cinza-580);
 
   --texto: var(--cinza-905);
@@ -187,10 +211,14 @@
   --ponto-b: var(--cinza-740);
   --ponto-c: var(--cinza-580);
 
+  /* SINAL (ciano claro, 8:1 ou mais sobre as superfícies do grafite). Mesmos usos do tema claro. */
+  --sinal: var(--ciano-820);
+  --sinal-suave: oklch(0.82 0.12 200 / 0.16);
+
   --simulado: oklch(0.8 0 0 / 0.3);
   --reticula: var(--cinza-250);
   --reticula-fina: var(--cinza-215);
-  --foco: var(--cinza-905);
+  --foco: var(--sinal);
 
   --relevo-luz: oklch(1 0 0 / 0.1);
   --relevo-sombra: oklch(0 0 0 / 0.5);
@@ -225,6 +253,8 @@
   --color-ponto-c: var(--ponto-c);
   --color-simulado: var(--simulado);
   --color-foco: var(--foco);
+  --color-sinal: var(--sinal);
+  --color-sinal-suave: var(--sinal-suave);
 
   /* nomes que os componentes do shadcn esperam, apontando para os mesmos papéis */
   --color-background: var(--superficie-fundo);
@@ -296,8 +326,8 @@
   }
 
   ::selection {
-    background-color: var(--acao);
-    color: var(--acao-texto);
+    background-color: var(--sinal);
+    color: var(--superficie-fundo);
   }
 }
 
@@ -402,6 +432,81 @@
 
 ::view-transition-old(root) {
   display: none;
+}
+
+/* Chegada de janela: anel na cor de sinal que cresce e some (uma vez por janela) */
+@keyframes anel-de-chegada {
+  from {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+/* Barra de frescor: esvazia até o limite de dado velho */
+@keyframes esvaziar {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* Traço de 1 px sob a leitura que mudou */
+@keyframes sumir {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Trecho novo entrando pela direita (sparkline e mapa) */
+@keyframes entrar-pela-direita {
+  from {
+    transform: translateX(var(--deslocamento, 4px));
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Pulso do AO VIVO, uma vez por segundo */
+@keyframes pulso-ao-vivo {
+  0% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.35;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Troca de tela L1 ↔ L2 ↔ L3 */
+::view-transition-old(.pagina) {
+  animation: 120ms var(--ease-out) both sumir;
+}
+
+::view-transition-new(.pagina) {
+  animation: 220ms var(--ease-out) both entrar-pagina;
+}
+
+@keyframes entrar-pagina {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes girar {

@@ -20,6 +20,7 @@ import {
   type LinhaDoMapa,
 } from '@/componentes/instrumento/MapaOrdens'
 import { MarcadorPonto } from '@/componentes/instrumento/MarcadorPonto'
+import { Tacometro } from '@/componentes/instrumento/Tacometro'
 import { Modulo, Painel } from '@/componentes/instrumento/Modulo'
 import { ReguaDesvio } from '@/componentes/instrumento/ReguaDesvio'
 import { PlacaEstado, SeloAvaliacao } from '@/componentes/instrumento/Selos'
@@ -35,17 +36,17 @@ import {
   formatarHora,
   formatarNumero,
   formatarPercentual,
-  formatarRpm,
   fracao,
   TRACO,
 } from '@/dominio/formato'
 import type { Frescor } from '@/dominio/idade'
 import { PERIODO_MAPA_PADRAO, PERIODOS_MAPA, type PeriodoMapa } from '@/dominio/periodos'
-import { ordenarCodigos, rotuloDoPapel, tracoDoPonto } from '@/dominio/pontos'
+import { descricaoDoModelo, ultimoContato } from '@/dominio/maquina'
+import { ordenarCodigos, rotuloDoPapel } from '@/dominio/pontos'
+import { rpmSemMilhar } from '@/dominio/tacometro'
 import { definirFonte } from '@/estado/preferencias'
 import { useFrescorDaMaquina } from '@/hooks/useFrescorDaMaquina'
 import { useMaquinaAoVivo } from '@/hooks/useMaquinaAoVivo'
-import { cn } from '@/lib/utils'
 
 type Props = {
   maquinaId: number
@@ -79,180 +80,190 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
   const semNenhumDado = aoVivo.ultima === null
 
   return (
-    <div className="flex flex-col gap-3">
-      <header className="flex flex-wrap items-end gap-x-4 gap-y-2">
-        <div className="min-w-0">
-          <nav aria-label="Caminho" className="text-12 text-apoio">
-            <Link to="/" className="underline underline-offset-2">
-              Visão geral
-            </Link>{' '}
-            /
-          </nav>
-          <h1 className="valor truncate text-24 font-semibold" title={maquina.data.codigo}>
-            {maquina.data.codigo}
-          </h1>
-          <p className="truncate text-13 text-apoio">
-            {maquina.data.modelo}
-            {maquina.data.fabricante ? ` · ${maquina.data.fabricante}` : ''} ·{' '}
-            {maquina.data.local.nome} ({maquina.data.local.uf})
-          </p>
-        </div>
-        <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">
-          {janela?.ensaio_codigo && !velho ? (
-            <span className="flex flex-col">
-              <span className="rotulo">Ensaio aberto</span>
-              <span className="valor text-13 font-medium">{janela.ensaio_codigo}</span>
-            </span>
-          ) : null}
-          <SeloAvaliacao avaliacao="sem_referencia" />
-          <PlacaEstado estado={estado} className="w-52" />
-        </div>
-      </header>
-
-      {semNenhumDado ? (
-        <Painel>
-          <Modulo rotulo={aoVivo.simulado ? 'Dados simulados' : 'Medição real'} semRecuo>
-            {aoVivo.simulado ? (
-              <EstadoVazio titulo="Nenhuma janela simulada recebida.">
-                Ligue o simulador (analise/simulador.py continuo) para ver o painel com dados
-                simulados.
-              </EstadoVazio>
-            ) : (
-              <EstadoVazio
-                titulo="Nenhuma medição real recebida."
-                acao={<Button onClick={() => definirFonte('simulado')}>Ver dados simulados</Button>}
-              >
-                O dispositivo desta máquina ainda não enviou janelas.
-              </EstadoVazio>
-            )}
-          </Modulo>
-        </Painel>
-      ) : null}
-
-      {aoVivo.erro ? (
-        <Painel>
-          <Modulo rotulo="Última janela" semRecuo>
-            <EstadoErro erro={aoVivo.erro} />
-          </Modulo>
-        </Painel>
-      ) : null}
-
-      <Painel className="xl:grid-cols-12">
-        <Modulo rotulo="Sensores na máquina" className="xl:col-span-6 xl:row-span-2">
-          {maquina.data.classe === 'torno' ? (
-            <EsquemaTorno marcadores={marcadoresDoTorno(maquinaId, pontosAtivos)} />
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {pontosAtivos.map((p) => (
-                <li key={p.id} className="flex items-center gap-2">
-                  <LinkDoPonto maquinaId={maquinaId} ponto={p} />
-                  <span className="text-13 text-apoio">
-                    {rotuloDoPapel(p.papel)} · {p.descricao}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Modulo>
-
-        <Modulo
-          rotulo="Rotação"
-          simulado={aoVivo.simulado && !semNenhumDado}
-          className="xl:col-span-2"
-          acoes={
-            frescor === 'vivo' ? undefined : <MarcaDeIdade frescor={frescor} idadeS={idadeS} />
-          }
-        >
-          <div
-            className="flex h-full flex-col justify-center gap-1"
-            data-velho={velho || undefined}
-          >
-            <span
-              className={cn('matriz text-32', velho ? 'text-fraco' : 'text-texto')}
-              data-testid="rotacao"
-            >
-              {formatarRpm(janela?.rotacao_rpm)}
-            </span>
-            <span className="rotulo">RPM</span>
+    <ViewTransition enter="pagina" exit="none" default="none">
+      <div className="flex flex-col gap-3">
+        <header className="flex flex-wrap items-end gap-x-4 gap-y-2">
+          <div className="min-w-0">
+            <nav aria-label="Caminho" className="text-12 text-apoio">
+              <Link to="/" className="underline underline-offset-2">
+                Visão geral
+              </Link>{' '}
+              /
+            </nav>
+            <h1 className="valor truncate text-24 font-semibold" title={maquina.data.codigo}>
+              {maquina.data.codigo}
+            </h1>
+            <p className="truncate text-13 text-apoio">
+              {descricaoDoModelo(maquina.data.modelo, maquina.data.fabricante)} ·{' '}
+              {maquina.data.local.nome} ({maquina.data.local.uf})
+            </p>
           </div>
-        </Modulo>
+          <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">
+            {janela?.ensaio_codigo && !velho ? (
+              <span className="flex flex-col">
+                <span className="rotulo">Ensaio aberto</span>
+                <span className="valor text-13 font-medium">{janela.ensaio_codigo}</span>
+              </span>
+            ) : null}
+            <SeloAvaliacao avaliacao="sem_referencia" />
+            <PlacaEstado estado={estado} className="w-52" />
+          </div>
+        </header>
 
-        <Modulo
-          rotulo="Última janela"
-          simulado={aoVivo.simulado && !semNenhumDado}
-          className="xl:col-span-4"
-        >
-          <QualidadeDaJanela janela={janela} velho={velho} frescor={frescor} idadeS={idadeS} />
-        </Modulo>
+        {semNenhumDado ? (
+          <Painel>
+            <Modulo rotulo={aoVivo.simulado ? 'Dados simulados' : 'Medição real'} semRecuo>
+              {aoVivo.simulado ? (
+                <EstadoVazio titulo="Nenhuma janela simulada recebida.">
+                  Ligue o simulador (analise/simulador.py continuo) para ver o painel com dados
+                  simulados.
+                </EstadoVazio>
+              ) : (
+                <EstadoVazio
+                  titulo="Nenhuma medição real recebida."
+                  acao={
+                    <Button onClick={() => definirFonte('simulado')}>Ver dados simulados</Button>
+                  }
+                >
+                  O dispositivo desta máquina ainda não enviou janelas.
+                </EstadoVazio>
+              )}
+            </Modulo>
+          </Painel>
+        ) : null}
 
-        <Modulo rotulo="Dispositivos e canais" className="xl:col-span-6">
-          <div className="grid grid-cols-1 gap-x-6 gap-y-3 @min-[34rem]:grid-cols-2">
-            {dispositivos.isPending ? (
-              <span className="text-13 text-apoio">Carregando…</span>
-            ) : dispositivos.data && dispositivos.data.length > 0 ? (
-              <ul className="flex flex-col gap-2">
-                {dispositivos.data.map((d) => (
-                  <li key={d.id} className="flex min-w-0 flex-col">
-                    <span className="flex items-center gap-1.5">
-                      <span className="valor truncate text-13 font-medium" title={d.identificador}>
-                        {d.identificador}
-                      </span>
-                      {d.simulado ? <SeloSim /> : null}
-                      {!d.ativo ? <span className="text-12 text-apoio">inativo</span> : null}
-                    </span>
-                    <span className="text-12 text-apoio">
-                      {d.ultimo_contato ? (
-                        <>
-                          último contato{' '}
-                          <span className="valor">{formatarDataHora(d.ultimo_contato)}</span>
-                        </>
-                      ) : (
-                        'nunca enviou'
-                      )}
-                      {d.firmware_versao ? ` · firmware ${d.firmware_versao}` : ''}
+        {aoVivo.erro ? (
+          <Painel>
+            <Modulo rotulo="Última janela" semRecuo>
+              <EstadoErro erro={aoVivo.erro} />
+            </Modulo>
+          </Painel>
+        ) : null}
+
+        <Painel className="xl:grid-cols-12">
+          <Modulo
+            rotulo="Sensores na máquina"
+            className="xl:col-span-4 [&>div:last-child]:flex [&>div:last-child]:flex-col [&>div:last-child]:justify-center"
+          >
+            {maquina.data.classe === 'torno' ? (
+              <EsquemaTorno
+                marcadores={marcadoresDoTorno(
+                  maquinaId,
+                  pontosAtivos,
+                  janela,
+                  aoVivo.recentes,
+                  aoVivo.porEventos && !velho ? (janela?.id ?? null) : null,
+                )}
+              />
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {pontosAtivos.map((p) => (
+                  <li key={p.id} className="flex items-center gap-2">
+                    <LinkDoPonto maquinaId={maquinaId} ponto={p} />
+                    <span className="text-13 text-apoio">
+                      {rotuloDoPapel(p.papel)} · {p.descricao}
                     </span>
                   </li>
                 ))}
               </ul>
-            ) : (
-              <span className="text-13 text-apoio">Nenhum dispositivo desta fonte.</span>
             )}
-            {janela && Object.keys(janela.canais).length > 0 ? (
-              <Canais janela={janela} velho={velho} />
-            ) : null}
-          </div>
-        </Modulo>
+          </Modulo>
 
-        {pontosAtivos.map((ponto, indice) => (
-          <ViewTransition
-            key={ponto.id}
-            name={`ponto-${ponto.codigo}`}
-            share="modulo-ponto"
-            default="none"
+          <Modulo
+            rotulo="Rotação"
+            simulado={aoVivo.simulado && !semNenhumDado}
+            className="xl:col-span-4"
+            acoes={
+              frescor === 'vivo' ? undefined : <MarcaDeIdade frescor={frescor} idadeS={idadeS} />
+            }
           >
-            <div className="flex min-w-0 bg-modulo xl:col-span-4">
-              <ModuloDoPonto
-                maquinaId={maquinaId}
-                ponto={ponto}
-                indice={indice}
-                janela={janela}
-                recentes={aoVivo.recentes}
-                simulado={aoVivo.simulado && !semNenhumDado}
-                frescor={frescor}
-                idadeS={idadeS}
-              />
-            </div>
-          </ViewTransition>
-        ))}
+            <Tacometro
+              rpm={janela?.rotacao_rpm}
+              nominais={maquina.data.rotacoes_nominais_rpm}
+              velho={velho}
+            />
+          </Modulo>
 
-        <SecaoDoMapa
-          maquinaId={maquinaId}
-          simulado={aoVivo.simulado}
-          periodo={periodoDoMapa}
-          codigos={pontosAtivos.map((p) => p.codigo)}
-        />
-      </Painel>
-    </div>
+          <div className="flex min-w-0 flex-col gap-px bg-linha xl:col-span-4">
+            <Modulo rotulo="Última janela" simulado={aoVivo.simulado && !semNenhumDado}>
+              <QualidadeDaJanela janela={janela} velho={velho} frescor={frescor} idadeS={idadeS} />
+            </Modulo>
+
+            <Modulo rotulo="Dispositivos e canais" className="flex-1">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-3 @min-[30rem]:grid-cols-2">
+                {dispositivos.isPending ? (
+                  <span className="text-13 text-apoio">Carregando…</span>
+                ) : dispositivos.data && dispositivos.data.length > 0 ? (
+                  <ul className="flex flex-col gap-2">
+                    {dispositivos.data.map((d) => {
+                      const contato = ultimoContato(d.ultimo_contato, janela, d.identificador)
+                      return (
+                        <li key={d.id} className="flex min-w-0 flex-col">
+                          <span className="flex items-center gap-1.5">
+                            <span
+                              className="valor truncate text-13 font-medium"
+                              title={d.identificador}
+                            >
+                              {d.identificador}
+                            </span>
+                            {d.simulado ? <SeloSim /> : null}
+                            {!d.ativo ? <span className="text-12 text-apoio">inativo</span> : null}
+                          </span>
+                          <span className="text-12 text-apoio">
+                            {contato ? (
+                              <>
+                                último contato{' '}
+                                <span className="valor">{formatarDataHora(contato)}</span>
+                              </>
+                            ) : (
+                              'nunca enviou'
+                            )}
+                            {d.firmware_versao ? ` · firmware ${d.firmware_versao}` : ''}
+                          </span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                ) : (
+                  <span className="text-13 text-apoio">Nenhum dispositivo desta fonte.</span>
+                )}
+                {janela && Object.keys(janela.canais).length > 0 ? (
+                  <Canais janela={janela} velho={velho} />
+                ) : null}
+              </div>
+            </Modulo>
+          </div>
+
+          {pontosAtivos.map((ponto) => (
+            <ViewTransition
+              key={ponto.id}
+              name={`ponto-${ponto.codigo}`}
+              share="modulo-ponto"
+              default="none"
+            >
+              <div className="flex min-w-0 bg-modulo xl:col-span-4">
+                <ModuloDoPonto
+                  maquinaId={maquinaId}
+                  ponto={ponto}
+                  janela={janela}
+                  recentes={aoVivo.recentes}
+                  simulado={aoVivo.simulado && !semNenhumDado}
+                  frescor={frescor}
+                  idadeS={idadeS}
+                />
+              </div>
+            </ViewTransition>
+          ))}
+
+          <SecaoDoMapa
+            maquinaId={maquinaId}
+            simulado={aoVivo.simulado}
+            periodo={periodoDoMapa}
+            codigos={pontosAtivos.map((p) => p.codigo)}
+          />
+        </Painel>
+      </div>
+    </ViewTransition>
   )
 }
 
@@ -262,20 +273,33 @@ function LinkDoPonto({ maquinaId, ponto }: { maquinaId: number; ponto: Ponto }) 
       to="/maquinas/$maquinaId/pontos/$codigo"
       params={{ maquinaId, codigo: ponto.codigo }}
       aria-label={`Abrir o ponto ${ponto.codigo}: ${rotuloDoPapel(ponto.papel)}`}
-      className="flex size-11 items-center justify-center rounded-full"
+      className="flex size-11 items-center justify-center rounded-full outline-sinal [@media(hover:hover)_and_(pointer:fine)]:hover:outline-2"
     >
       <MarcadorPonto codigo={ponto.codigo} />
     </Link>
   )
 }
 
-function marcadoresDoTorno(maquinaId: number, pontos: Ponto[]): MarcadorNoTorno[] {
+function marcadoresDoTorno(
+  maquinaId: number,
+  pontos: Ponto[],
+  janela: Janela | undefined,
+  recentes: Janela[],
+  chegada: number | null,
+): MarcadorNoTorno[] {
   return [
-    ...pontos.map((ponto) => ({
-      codigo: ponto.codigo,
-      papel: rotuloDoPapel(ponto.papel),
-      conteudo: <LinkDoPonto maquinaId={maquinaId} ponto={ponto} />,
-    })),
+    ...pontos.map((ponto) => {
+      // RMS atual em relação ao maior RMS do ponto nos últimos 15 minutos
+      const atual = janela?.pontos[ponto.codigo]?.rms_g
+      const maximo = Math.max(0, ...recentes.map((j) => j.pontos[ponto.codigo]?.rms_g ?? 0))
+      return {
+        codigo: ponto.codigo,
+        papel: rotuloDoPapel(ponto.papel),
+        conteudo: <LinkDoPonto maquinaId={maquinaId} ponto={ponto} />,
+        nivel: atual !== undefined && maximo > 0 ? atual / maximo : null,
+        chegada,
+      }
+    }),
     {
       codigo: 'R',
       papel: 'rotação',
@@ -284,6 +308,8 @@ function marcadoresDoTorno(maquinaId: number, pontos: Ponto[]): MarcadorNoTorno[
           <MarcadorPonto codigo="R" tamanho="pequeno" />
         </span>
       ),
+      leitura: janela ? `${rpmSemMilhar(janela.rotacao_rpm)} rpm` : undefined,
+      chegada,
     },
   ]
 }
@@ -372,7 +398,6 @@ function Canais({ janela, velho }: { janela: Janela; velho: boolean }) {
 type PropsDoModuloDoPonto = {
   maquinaId: number
   ponto: Ponto
-  indice: number
   janela: Janela | undefined
   recentes: Janela[]
   simulado: boolean
@@ -383,7 +408,6 @@ type PropsDoModuloDoPonto = {
 function ModuloDoPonto({
   maquinaId,
   ponto,
-  indice,
   janela,
   recentes,
   simulado,
@@ -392,7 +416,6 @@ function ModuloDoPonto({
 }: PropsDoModuloDoPonto) {
   const medida = janela?.pontos[ponto.codigo]
   const velho = frescor !== 'vivo'
-  const traco = tracoDoPonto(indice)
   const tendencia = useMemo(
     () =>
       recentes.filter((j) => j.modo === 'normal').map((j) => j.pontos[ponto.codigo]?.rms_g ?? null),
@@ -427,14 +450,45 @@ function ModuloDoPonto({
               rotulo="RMS"
               valor={formatarG(medida?.rms_g)}
               unidade="g"
+              tamanho="destaque"
+              velho={velho}
+              className="col-span-3"
+            />
+            <Leitura
+              rotulo="Pico"
+              valor={formatarG(medida?.pico_g)}
+              unidade="g"
               tamanho="grande"
               velho={velho}
             />
-            <Leitura rotulo="Pico" valor={formatarG(medida?.pico_g)} unidade="g" velho={velho} />
-            <Leitura rotulo="Curt" valor={formatarCurtose(medida?.curtose)} velho={velho} />
-            <Leitura rotulo="1X" valor={formatarG(medida?.o1x)} unidade="g" velho={velho} />
-            <Leitura rotulo="2X" valor={formatarG(medida?.o2x)} unidade="g" velho={velho} />
-            <Leitura rotulo="3X" valor={formatarG(medida?.o3x)} unidade="g" velho={velho} />
+            <Leitura
+              rotulo="Curt"
+              titulo="curtose"
+              valor={formatarCurtose(medida?.curtose)}
+              tamanho="grande"
+              velho={velho}
+            />
+            <Leitura
+              rotulo="1X"
+              valor={formatarG(medida?.o1x)}
+              unidade="g"
+              tamanho="grande"
+              velho={velho}
+            />
+            <Leitura
+              rotulo="2X"
+              valor={formatarG(medida?.o2x)}
+              unidade="g"
+              tamanho="grande"
+              velho={velho}
+            />
+            <Leitura
+              rotulo="3X"
+              valor={formatarG(medida?.o3x)}
+              unidade="g"
+              tamanho="grande"
+              velho={velho}
+            />
           </div>
         </div>
         {janela && !medida ? (
@@ -452,8 +506,6 @@ function ModuloDoPonto({
             <div className="mt-1">
               <Sparkline
                 valores={tendencia}
-                tracejado={traco.tracejado}
-                cor={traco.variavel}
                 velho={velho}
                 largura={120}
                 altura={28}

@@ -36,8 +36,13 @@ export function formatarG(valor: number | null | undefined): string {
   return formatarNumero(valor, 3)
 }
 
+/**
+ * Rotação inteira, sem separador de milhar (1180 rpm, não 1.180): é assim que a placa do torno e o
+ * operador escrevem a rotação, e evita confundir o ponto de milhar com vírgula decimal.
+ */
 export function formatarRpm(valor: number | null | undefined): string {
-  return formatarNumero(valor, 0)
+  if (valor === null || valor === undefined || !Number.isFinite(valor)) return TRACO
+  return String(Math.round(valor))
 }
 
 export function formatarCurtose(valor: number | null | undefined): string {

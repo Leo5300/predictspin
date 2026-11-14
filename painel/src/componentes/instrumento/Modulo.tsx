@@ -24,7 +24,7 @@ type PropsDoModulo = {
   detalhe?: ReactNode
   /** Controles do módulo, à direita do cabeçalho. */
   acoes?: ReactNode
-  /** Dado simulado: o cabeçalho ganha hachura e o selo SIM. */
+  /** Dado simulado: o cabeçalho ganha o selo SIM (a hachura fica na faixa do topo e no mapa). */
   simulado?: boolean
   /** Sem recuo interno (gráficos e tabelas que encostam nas bordas). */
   semRecuo?: boolean
@@ -48,18 +48,13 @@ export function Modulo({
       data-simulado={simulado || undefined}
       className={cn('@container flex min-w-0 flex-col bg-modulo', className)}
     >
-      <header
-        className={cn(
-          'flex min-h-8 flex-wrap items-center gap-x-3 gap-y-1 border-b border-linha px-3 py-1',
-          simulado && 'hachura',
-        )}
-      >
-        <h2 className={cn('rotulo shrink-0', simulado && '-mx-1 bg-modulo px-1')}>{rotulo}</h2>
+      <header className="flex min-h-8 flex-wrap items-center gap-x-3 gap-y-1 border-b border-linha px-3 py-1">
+        <h2 className="rotulo min-w-0 truncate" title={rotulo}>
+          {rotulo}
+        </h2>
         {simulado ? <SeloSim /> : null}
         {detalhe ? (
-          <div className="min-w-0 flex-1 truncate text-12 text-apoio">
-            <span className={cn(simulado && 'bg-modulo px-1')}>{detalhe}</span>
-          </div>
+          <div className="min-w-0 flex-1 truncate text-12 text-apoio">{detalhe}</div>
         ) : null}
         {acoes ? (
           <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">{acoes}</div>

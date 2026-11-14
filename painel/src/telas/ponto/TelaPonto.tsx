@@ -258,197 +258,200 @@ export function TelaPonto({ maquinaId, codigo, busca }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <nav aria-label="Caminho" className="text-12 text-apoio">
-        <Link to="/" className="underline underline-offset-2">
-          Visão geral
-        </Link>{' '}
-        /{' '}
-        <Link
-          to="/maquinas/$maquinaId"
-          params={{ maquinaId }}
-          className="valor underline underline-offset-2"
-        >
-          {maquina.data.codigo}
-        </Link>{' '}
-        /
-      </nav>
+    <ViewTransition enter="pagina" exit="none" default="none">
+      <div className="flex flex-col gap-3">
+        <nav aria-label="Caminho" className="text-12 text-apoio">
+          <Link to="/" className="underline underline-offset-2">
+            Visão geral
+          </Link>{' '}
+          /{' '}
+          <Link
+            to="/maquinas/$maquinaId"
+            params={{ maquinaId }}
+            className="valor underline underline-offset-2"
+          >
+            {maquina.data.codigo}
+          </Link>{' '}
+          /
+        </nav>
 
-      <Painel>
-        <ViewTransition name={`ponto-${codigo}`} share="modulo-ponto" default="none">
-          <div className="flex min-w-0 bg-modulo">
-            <CabecalhoDoPonto
-              ponto={ponto}
-              janela={aoVivo.ultima?.janela}
-              simulado={aoVivo.simulado && !semDados}
-              frescor={frescor}
-              idadeS={idadeS}
-              velho={velho}
-            />
-          </div>
-        </ViewTransition>
-
-        <Modulo
-          rotulo={modoRapido.ativo ? 'Ao vivo' : 'Tendência'}
-          simulado={aoVivo.simulado && !semDados}
-          semRecuo
-          detalhe={
-            modoRapido.ativo
-              ? 'janelas de 1 s; não entram na tendência histórica'
-              : descricaoDaFonte(dados, periodo, segundosDoPeriodo)
-          }
-          acoes={
-            <ControleAoVivo
-              ativo={modoRapido.ativo}
-              restantesS={modoRapido.restantesS}
-              ocupado={modoRapido.ocupado}
-              aoLigar={modoRapido.ligar}
-              aoParar={modoRapido.parar}
-            />
-          }
-        >
-          {modoRapido.erro ? (
-            <p role="alert" className="border-b border-linha px-3 py-1 text-13 text-alarme-texto">
-              {mensagemDoErro(modoRapido.erro)}
-            </p>
-          ) : null}
-
-          <div className="flex flex-wrap items-end gap-x-4 gap-y-2 border-b border-linha px-3 py-2">
-            <div>
-              <span className="rotulo mb-1 block">Período</span>
-              <ToggleGroup
-                aria-label="Período da tendência"
-                value={[periodo.chave]}
-                disabled={modoRapido.ativo}
-                onValueChange={(valores) => {
-                  const chave = valores[0] as ChavePeriodoTendencia | undefined
-                  if (!chave) return
-                  void navegar({
-                    search: (anterior) => ({ ...anterior, periodo: chave, pagina: 0 }),
-                    replace: true,
-                    resetScroll: false,
-                  })
-                }}
-              >
-                {PERIODOS_TENDENCIA.map((p) => (
-                  <ToggleGroupItem key={p.chave} value={p.chave} size="sm">
-                    {p.rotulo}
-                  </ToggleGroupItem>
-                ))}
-                <ToggleGroupItem value="personalizado" size="sm">
-                  Personalizado
-                </ToggleGroupItem>
-              </ToggleGroup>
+        <Painel>
+          <ViewTransition name={`ponto-${codigo}`} share="modulo-ponto" default="none">
+            <div className="flex min-w-0 bg-modulo">
+              <CabecalhoDoPonto
+                ponto={ponto}
+                janela={aoVivo.ultima?.janela}
+                simulado={aoVivo.simulado && !semDados}
+                frescor={frescor}
+                idadeS={idadeS}
+                velho={velho}
+              />
             </div>
-            {periodo.chave === 'personalizado' ? (
-              <PeriodoPersonalizado
-                de={busca.de}
-                ate={busca.ate}
-                erro={periodo.erro}
-                aoAplicar={(de, ate) =>
+          </ViewTransition>
+
+          <Modulo
+            rotulo={modoRapido.ativo ? 'Ao vivo' : 'Tendência'}
+            simulado={aoVivo.simulado && !semDados}
+            semRecuo
+            detalhe={
+              modoRapido.ativo
+                ? 'janelas de 1 s; não entram na tendência histórica'
+                : descricaoDaFonte(dados, periodo, segundosDoPeriodo)
+            }
+            acoes={
+              <ControleAoVivo
+                ativo={modoRapido.ativo}
+                restantesS={modoRapido.restantesS}
+                ocupado={modoRapido.ocupado}
+                aoLigar={modoRapido.ligar}
+                aoParar={modoRapido.parar}
+              />
+            }
+          >
+            {modoRapido.erro ? (
+              <p role="alert" className="border-b border-linha px-3 py-1 text-13 text-alarme-texto">
+                {mensagemDoErro(modoRapido.erro)}
+              </p>
+            ) : null}
+
+            <div className="flex flex-wrap items-end gap-x-4 gap-y-2 border-b border-linha px-3 py-2">
+              <div>
+                <span className="rotulo mb-1 block">Período</span>
+                <ToggleGroup
+                  aria-label="Período da tendência"
+                  value={[periodo.chave]}
+                  disabled={modoRapido.ativo}
+                  onValueChange={(valores) => {
+                    const chave = valores[0] as ChavePeriodoTendencia | undefined
+                    if (!chave) return
+                    void navegar({
+                      search: (anterior) => ({ ...anterior, periodo: chave, pagina: 0 }),
+                      replace: true,
+                      resetScroll: false,
+                    })
+                  }}
+                >
+                  {PERIODOS_TENDENCIA.map((p) => (
+                    <ToggleGroupItem key={p.chave} value={p.chave} size="sm">
+                      {p.rotulo}
+                    </ToggleGroupItem>
+                  ))}
+                  <ToggleGroupItem value="personalizado" size="sm">
+                    Personalizado
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              {periodo.chave === 'personalizado' ? (
+                <PeriodoPersonalizado
+                  de={busca.de}
+                  ate={busca.ate}
+                  erro={periodo.erro}
+                  aoAplicar={(de, ate) =>
+                    void navegar({
+                      search: (anterior) => ({
+                        ...anterior,
+                        periodo: 'personalizado',
+                        de,
+                        ate,
+                        pagina: 0,
+                      }),
+                      replace: true,
+                      resetScroll: false,
+                    })
+                  }
+                />
+              ) : null}
+              <div>
+                <span className="rotulo mb-1 block">Segundo quadro</span>
+                <ToggleGroup
+                  aria-label="Grandeza do segundo quadro"
+                  value={[busca.quadro]}
+                  disabled={modoRapido.ativo}
+                  onValueChange={(valores) => {
+                    const quadro = valores[0]
+                    if (quadro === 'ordens' || quadro === 'curtose') {
+                      void navegar({
+                        search: (anterior) => ({ ...anterior, quadro }),
+                        replace: true,
+                        resetScroll: false,
+                      })
+                    }
+                  }}
+                >
+                  <ToggleGroupItem value="ordens" size="sm">
+                    Ordens 1X–3X
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="curtose" size="sm">
+                    Curtose
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              <Button
+                className="ml-auto"
+                onClick={exportar}
+                disabled={!dados || dados.temposS.length === 0 || modoRapido.ativo}
+              >
+                <Download aria-hidden="true" strokeWidth={1.5} />
+                Exportar CSV
+              </Button>
+            </div>
+
+            <div ref={graficoRef} className="min-w-0" data-testid="area-do-grafico">
+              {modoRapido.ativo ? (
+                <QuadroAoVivo recentes={aoVivo.recentes} codigo={codigo} indice={indice} />
+              ) : periodo.erro ? (
+                <EstadoVazio titulo={MENSAGEM_PERIODO[periodo.erro]}>
+                  Escolha o início e o fim do período personalizado e aplique.
+                </EstadoVazio>
+              ) : carregandoGrafico ? (
+                <EstadoCarregando rotulo="Carregando a tendência…" />
+              ) : erroDoGrafico ? (
+                <EstadoErro erro={erroDoGrafico} />
+              ) : !dados || dados.janelas === 0 ? (
+                <EstadoVazio
+                  titulo={`Nenhuma janela ${aoVivo.simulado ? 'simulada' : 'real'} neste período.`}
+                >
+                  A tendência aparece assim que houver janelas do ponto {codigo} no período
+                  escolhido.
+                </EstadoVazio>
+              ) : (
+                <QuadroHistorico
+                  dados={dados}
+                  faixas={faixas}
+                  quadro={busca.quadro}
+                  indice={indice}
+                  inicioS={periodo.deMs / 1000}
+                  fimS={fimDoEixoS}
+                  codigo={codigo}
+                />
+              )}
+            </div>
+          </Modulo>
+
+          <Modulo rotulo="Janelas do período" simulado={aoVivo.simulado && !semDados} semRecuo>
+            {periodo.erro ? (
+              <EstadoVazio titulo={MENSAGEM_PERIODO[periodo.erro]} />
+            ) : (
+              <TabelaDeJanelas
+                maquinaId={maquinaId}
+                simulado={aoVivo.simulado}
+                codigo={codigo}
+                deMs={periodo.deMs}
+                ateMs={periodo.ateMs}
+                pagina={busca.pagina}
+                aoMudarPagina={(pagina) =>
                   void navegar({
-                    search: (anterior) => ({
-                      ...anterior,
-                      periodo: 'personalizado',
-                      de,
-                      ate,
-                      pagina: 0,
-                    }),
+                    search: (anterior) => ({ ...anterior, pagina }),
                     replace: true,
                     resetScroll: false,
                   })
                 }
               />
-            ) : null}
-            <div>
-              <span className="rotulo mb-1 block">Segundo quadro</span>
-              <ToggleGroup
-                aria-label="Grandeza do segundo quadro"
-                value={[busca.quadro]}
-                disabled={modoRapido.ativo}
-                onValueChange={(valores) => {
-                  const quadro = valores[0]
-                  if (quadro === 'ordens' || quadro === 'curtose') {
-                    void navegar({
-                      search: (anterior) => ({ ...anterior, quadro }),
-                      replace: true,
-                      resetScroll: false,
-                    })
-                  }
-                }}
-              >
-                <ToggleGroupItem value="ordens" size="sm">
-                  Ordens 1X–3X
-                </ToggleGroupItem>
-                <ToggleGroupItem value="curtose" size="sm">
-                  Curtose
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-            <Button
-              className="ml-auto"
-              onClick={exportar}
-              disabled={!dados || dados.temposS.length === 0 || modoRapido.ativo}
-            >
-              <Download aria-hidden="true" strokeWidth={1.5} />
-              Exportar CSV
-            </Button>
-          </div>
-
-          <div ref={graficoRef} className="min-w-0" data-testid="area-do-grafico">
-            {modoRapido.ativo ? (
-              <QuadroAoVivo recentes={aoVivo.recentes} codigo={codigo} indice={indice} />
-            ) : periodo.erro ? (
-              <EstadoVazio titulo={MENSAGEM_PERIODO[periodo.erro]}>
-                Escolha o início e o fim do período personalizado e aplique.
-              </EstadoVazio>
-            ) : carregandoGrafico ? (
-              <EstadoCarregando rotulo="Carregando a tendência…" />
-            ) : erroDoGrafico ? (
-              <EstadoErro erro={erroDoGrafico} />
-            ) : !dados || dados.janelas === 0 ? (
-              <EstadoVazio
-                titulo={`Nenhuma janela ${aoVivo.simulado ? 'simulada' : 'real'} neste período.`}
-              >
-                A tendência aparece assim que houver janelas do ponto {codigo} no período escolhido.
-              </EstadoVazio>
-            ) : (
-              <QuadroHistorico
-                dados={dados}
-                faixas={faixas}
-                quadro={busca.quadro}
-                indice={indice}
-                inicioS={periodo.deMs / 1000}
-                fimS={fimDoEixoS}
-                codigo={codigo}
-              />
             )}
-          </div>
-        </Modulo>
-
-        <Modulo rotulo="Janelas do período" simulado={aoVivo.simulado && !semDados} semRecuo>
-          {periodo.erro ? (
-            <EstadoVazio titulo={MENSAGEM_PERIODO[periodo.erro]} />
-          ) : (
-            <TabelaDeJanelas
-              maquinaId={maquinaId}
-              simulado={aoVivo.simulado}
-              codigo={codigo}
-              deMs={periodo.deMs}
-              ateMs={periodo.ateMs}
-              pagina={busca.pagina}
-              aoMudarPagina={(pagina) =>
-                void navegar({
-                  search: (anterior) => ({ ...anterior, pagina }),
-                  replace: true,
-                  resetScroll: false,
-                })
-              }
-            />
-          )}
-        </Modulo>
-      </Painel>
-    </div>
+          </Modulo>
+        </Painel>
+      </div>
+    </ViewTransition>
   )
 }
 
@@ -513,6 +516,7 @@ function CabecalhoDoPonto({ ponto, janela, simulado, frescor, idadeS, velho }: P
           />
           <Leitura
             rotulo="Curt"
+            titulo="curtose"
             valor={formatarCurtose(medida?.curtose)}
             tamanho="grande"
             velho={velho}
@@ -562,6 +566,7 @@ function ControleAoVivo({ ativo, restantesS, ocupado, aoLigar, aoParar }: PropsD
     return (
       <Button
         size="sm"
+        variant="sinal"
         onClick={aoLigar}
         disabled={ocupado}
         aria-label="Ligar o modo ao vivo: janelas de 1 s por 2 minutos"
@@ -575,13 +580,17 @@ function ControleAoVivo({ ativo, restantesS, ocupado, aoLigar, aoParar }: PropsD
     <>
       <span
         role="status"
-        className="flex items-center gap-1.5 text-12 font-medium whitespace-nowrap text-texto"
+        className="flex items-center gap-1.5 text-12 font-medium whitespace-nowrap text-sinal"
         data-testid="ao-vivo"
       >
-        <Radio aria-hidden="true" className="size-4" strokeWidth={1.5} />
+        <Radio
+          aria-hidden="true"
+          className="size-4 motion-safe:animate-[pulso-ao-vivo_1s_linear_infinite]"
+          strokeWidth={1.5}
+        />
         AO VIVO 1 s · termina em <span className="valor">{formatarPrazo(restantesS)}</span>
       </span>
-      <Button size="sm" onClick={aoParar} disabled={ocupado}>
+      <Button size="sm" variant="sinal" onClick={aoParar} disabled={ocupado}>
         <CircleStop aria-hidden="true" strokeWidth={1.5} />
         Parar
       </Button>
@@ -822,6 +831,7 @@ function QuadroAoVivo({
         {
           rotulo: 'RMS',
           valores: serieDe('rms_g'),
+          aoVivo: true,
           tom: 0,
           tracejado: traco.tracejado,
           espessura: 1.75,

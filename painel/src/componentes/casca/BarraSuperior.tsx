@@ -12,11 +12,16 @@ import { ToggleGroup, ToggleGroupItem } from '@/componentes/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/componentes/ui/tooltip'
 import { estadoDaConexao, type EstadoConexao } from '@/dominio/conexao'
 import { formatarHora } from '@/dominio/formato'
-import { LIMIAR_VELHO_NORMAL_S } from '@/dominio/idade'
 import { podeAbrir, ROTULO_PAPEL_USUARIO } from '@/dominio/papeis'
 import { definirFonte, definirTema, useFonte, useTema, type Fonte } from '@/estado/preferencias'
 import { useSegundo } from '@/estado/relogio'
-import { useTransporte, useUltimaObservacao, type Transporte } from '@/estado/transporte'
+import {
+  useAoVivo,
+  useLimiarVelhoS,
+  useTransporte,
+  useUltimaObservacao,
+  type Transporte,
+} from '@/estado/transporte'
 import { useFrescor } from '@/hooks/useFrescor'
 import { cn } from '@/lib/utils'
 
@@ -76,17 +81,31 @@ export function BarraSuperior({ usuario }: { usuario: Usuario }) {
               >
                 {usuario.nome}
               </span>
-              <span className="rotulo">{ROTULO_PAPEL_USUARIO[usuario.papel]}</span>
+              {/* o papel só aparece quando diz algo que o nome ainda não disse */}
+              {mesmoTexto(usuario.nome, ROTULO_PAPEL_USUARIO[usuario.papel]) ? null : (
+                <span className="rotulo">{ROTULO_PAPEL_USUARIO[usuario.papel]}</span>
+              )}
             </span>
-            <Button variant="ghost" onClick={sair} aria-label="Sair do painel">
+            <Button variant="outline" onClick={sair} aria-label="Sair do painel">
               <LogOut aria-hidden="true" strokeWidth={1.5} />
               <span className="max-sm:sr-only">Sair</span>
             </Button>
           </div>
         </div>
       </div>
+      <FaixaAoVivo />
     </header>
   )
+}
+
+function mesmoTexto(a: string, b: string): boolean {
+  const normal = (texto: string) =>
+    texto
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase()
+  return normal(a) === normal(b)
 }
 
 function LinkDeNavegacao({ para, children }: { para: '/' | '/coleta'; children: string }) {
@@ -150,16 +169,45 @@ function Conexao() {
 function UltimaJanela() {
   const observacao = useUltimaObservacao()
   const transporte = useTransporte()
-  const { frescor, idadeS } = useFrescor(observacao, LIMIAR_VELHO_NORMAL_S)
+  const limiarS = useLimiarVelhoS()
+  const { frescor, idadeS } = useFrescor(observacao, limiarS)
   if (transporte === 'inativo') return null
+  const restanteS = observacao ? Math.max(0, limiarS - observacao.idadeNaObservacaoS) : 0
   return (
     <span
       className="flex items-center gap-1.5 text-12 whitespace-nowrap text-apoio"
       data-testid="ultima-janela"
+      data-frescor={frescor}
     >
       <span>última janela</span>
       <MarcaDeIdade frescor={frescor} idadeS={idadeS} />
+      {/* esvazia até o limite de dado velho; reinicia a cada janela nova */}
+      <span
+        aria-hidden="true"
+        className="relative h-1 w-12 overflow-hidden border border-linha-forte bg-rebaixo"
+      >
+        {frescor === 'vivo' && observacao ? (
+          <span
+            key={observacao.observadoEmMs}
+            className="absolute inset-0 origin-left bg-sinal motion-safe:animate-[esvaziar_linear_both]"
+            style={{ animationDuration: `${restanteS}s` }}
+          />
+        ) : null}
+      </span>
     </span>
+  )
+}
+
+/** Faixa fina na cor de sinal sob a barra superior, pulsando a cada segundo, enquanto houver AO VIVO. */
+function FaixaAoVivo() {
+  const aoVivo = useAoVivo()
+  if (!aoVivo) return null
+  return (
+    <div
+      aria-hidden="true"
+      className="h-0.5 bg-sinal motion-safe:animate-[pulso-ao-vivo_1s_linear_infinite]"
+      data-testid="faixa-ao-vivo"
+    />
   )
 }
 

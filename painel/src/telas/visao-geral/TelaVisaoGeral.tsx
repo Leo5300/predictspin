@@ -1,6 +1,6 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, ViewTransition } from 'react'
 
 import {
   INTERVALO_DE_CONSULTA_MS,
@@ -22,7 +22,8 @@ import { Button } from '@/componentes/ui/button'
 import { estadoDaMaquina } from '@/dominio/estado'
 import { formatarDataHora, formatarG, formatarRpm, TRACO } from '@/dominio/formato'
 import { SPARKLINE_BALDES, SPARKLINE_SEGUNDOS } from '@/dominio/periodos'
-import { ordenarCodigos, tracoDoPonto } from '@/dominio/pontos'
+import { ultimoContato } from '@/dominio/maquina'
+import { ordenarCodigos } from '@/dominio/pontos'
 import { definirFonte, useFonte } from '@/estado/preferencias'
 import { definirTransporte, definirUltimaObservacao } from '@/estado/transporte'
 import { useFrescorDaMaquina } from '@/hooks/useFrescorDaMaquina'
@@ -88,70 +89,72 @@ export function TelaVisaoGeral() {
   const semMedicaoReal = !simulado && carregouUltimas && ultimas.every((u) => u.data === null)
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-baseline gap-x-3">
-        <h1 className="text-18 font-semibold">Visão geral</h1>
-        {maquinas.data ? (
-          <p className="text-13 text-apoio">
-            <span className="valor text-texto">{maquinas.data.total_elementos}</span>{' '}
-            {maquinas.data.total_elementos === 1 ? 'máquina' : 'máquinas'}
-          </p>
-        ) : null}
-      </div>
+    <ViewTransition enter="pagina" exit="none" default="none">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-baseline gap-x-3">
+          <h1 className="text-18 font-semibold">Visão geral</h1>
+          {maquinas.data ? (
+            <p className="text-13 text-apoio">
+              <span className="valor text-texto">{maquinas.data.total_elementos}</span>{' '}
+              {maquinas.data.total_elementos === 1 ? 'máquina' : 'máquinas'}
+            </p>
+          ) : null}
+        </div>
 
-      {semMedicaoReal ? (
-        <Painel>
-          <Modulo rotulo="Medição real" semRecuo>
-            <EstadoVazio
-              titulo="Nenhuma medição real recebida."
-              acao={<Button onClick={() => definirFonte('simulado')}>Ver dados simulados</Button>}
-            >
-              O dispositivo do torno ainda não enviou janelas. Os dados simulados servem para
-              conhecer o painel e nunca substituem medição.
-            </EstadoVazio>
-          </Modulo>
-        </Painel>
-      ) : null}
-
-      <Painel>
-        <Modulo rotulo="Máquinas" simulado={simulado} semRecuo>
-          {maquinas.isPending ? (
-            <EstadoCarregando rotulo="Carregando máquinas…" />
-          ) : maquinas.isError ? (
-            <EstadoErro erro={maquinas.error} aoTentarDeNovo={() => void maquinas.refetch()} />
-          ) : lista.length === 0 ? (
-            <EstadoVazio titulo="Nenhuma máquina cadastrada.">
-              As máquinas são cadastradas na API. Quando houver uma, ela aparece aqui.
-            </EstadoVazio>
-          ) : (
-            <div role="table" aria-label="Máquinas">
-              <div
-                role="row"
-                className={cn(
-                  'hidden gap-x-4 border-b border-linha px-3 py-1 @min-[84rem]:grid',
-                  COLUNAS,
-                )}
+        {semMedicaoReal ? (
+          <Painel>
+            <Modulo rotulo="Medição real" semRecuo>
+              <EstadoVazio
+                titulo="Nenhuma medição real recebida."
+                acao={<Button onClick={() => definirFonte('simulado')}>Ver dados simulados</Button>}
               >
-                {CABECALHOS.map((titulo, i) => (
-                  <span key={i} role="columnheader" className="rotulo">
-                    {titulo}
-                  </span>
+                O dispositivo do torno ainda não enviou janelas. Os dados simulados servem para
+                conhecer o painel e nunca substituem medição.
+              </EstadoVazio>
+            </Modulo>
+          </Painel>
+        ) : null}
+
+        <Painel>
+          <Modulo rotulo="Máquinas" simulado={simulado} semRecuo>
+            {maquinas.isPending ? (
+              <EstadoCarregando rotulo="Carregando máquinas…" />
+            ) : maquinas.isError ? (
+              <EstadoErro erro={maquinas.error} aoTentarDeNovo={() => void maquinas.refetch()} />
+            ) : lista.length === 0 ? (
+              <EstadoVazio titulo="Nenhuma máquina cadastrada.">
+                As máquinas são cadastradas na API. Quando houver uma, ela aparece aqui.
+              </EstadoVazio>
+            ) : (
+              <div role="table" aria-label="Máquinas">
+                <div
+                  role="row"
+                  className={cn(
+                    'hidden gap-x-4 border-b border-linha px-3 py-1 @min-[84rem]:grid',
+                    COLUNAS,
+                  )}
+                >
+                  {CABECALHOS.map((titulo, i) => (
+                    <span key={i} role="columnheader" className="rotulo">
+                      {titulo}
+                    </span>
+                  ))}
+                </div>
+                {lista.map((maquina, i) => (
+                  <LinhaDaMaquina
+                    key={maquina.id}
+                    maquina={maquina}
+                    simulado={simulado}
+                    ultima={ultimas[i]?.data}
+                    carregando={ultimas[i]?.isPending ?? true}
+                  />
                 ))}
               </div>
-              {lista.map((maquina, i) => (
-                <LinhaDaMaquina
-                  key={maquina.id}
-                  maquina={maquina}
-                  simulado={simulado}
-                  ultima={ultimas[i]?.data}
-                  carregando={ultimas[i]?.isPending ?? true}
-                />
-              ))}
-            </div>
-          )}
-        </Modulo>
-      </Painel>
-    </div>
+            )}
+          </Modulo>
+        </Painel>
+      </div>
+    </ViewTransition>
   )
 }
 
@@ -177,6 +180,9 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
     pontos.data?.filter((p) => p.ativo).map((p) => p.codigo) ?? Object.keys(janela?.pontos ?? {}),
   ).slice(0, 3)
   const dispositivo = dispositivos.data?.[0]
+  const contato = dispositivo
+    ? ultimoContato(dispositivo.ultimo_contato, janela, dispositivo.identificador)
+    : null
 
   return (
     <div
@@ -231,7 +237,6 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
 
       {[0, 1, 2].map((indice) => {
         const codigo = codigos[indice]
-        const traco = tracoDoPonto(indice)
         return (
           <Celula key={indice} rotulo={codigo ? `RMS ${codigo}` : 'RMS'}>
             {codigo ? (
@@ -251,8 +256,6 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
                       (intervalo) => intervalo.pontos[codigo]?.rms_media_g ?? null,
                     ) ?? []
                   }
-                  tracejado={traco.tracejado}
-                  cor={traco.variavel}
                   velho={velho}
                   largura={88}
                   altura={22}
@@ -290,10 +293,9 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
               {dispositivo.simulado ? <SeloSim /> : null}
             </span>
             <span className="block text-12 text-apoio">
-              {dispositivo.ultimo_contato ? (
+              {contato ? (
                 <>
-                  último contato{' '}
-                  <span className="valor">{formatarDataHora(dispositivo.ultimo_contato)}</span>
+                  último contato <span className="valor">{formatarDataHora(contato)}</span>
                 </>
               ) : (
                 'nunca enviou'

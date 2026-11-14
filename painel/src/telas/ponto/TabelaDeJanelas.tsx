@@ -66,7 +66,11 @@ export function TabelaDeJanelas({
             <TableHead>Medida em</TableHead>
             <TableHead className="text-right">RMS g</TableHead>
             <TableHead className="text-right">Pico g</TableHead>
-            <TableHead className="text-right">Curt</TableHead>
+            <TableHead className="text-right">
+              <abbr title="curtose" className="no-underline">
+                Curt
+              </abbr>
+            </TableHead>
             <TableHead className="text-right">1X g</TableHead>
             <TableHead className="text-right">2X g</TableHead>
             <TableHead className="text-right">3X g</TableHead>

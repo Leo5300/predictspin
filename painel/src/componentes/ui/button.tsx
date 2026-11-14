@@ -26,6 +26,9 @@ const buttonVariants = cva(
         ghost:
           'border-transparent bg-transparent text-texto [@media(hover:hover)_and_(pointer:fine)]:hover:bg-realce',
         link: 'min-h-0 border-transparent px-0 text-texto underline underline-offset-4 pointer-coarse:min-h-11',
+        // AO VIVO: o único botão na cor de sinal (função, não estado)
+        sinal:
+          'relevo border-sinal bg-modulo text-sinal [@media(hover:hover)_and_(pointer:fine)]:hover:bg-sinal-suave',
         destructive:
           'relevo border-alarme-texto bg-modulo text-alarme-texto [@media(hover:hover)_and_(pointer:fine)]:hover:bg-realce',
       },

@@ -12,7 +12,7 @@ import {
 } from '@/dominio/formato'
 import { cn } from '@/lib/utils'
 
-import { cinzaDoNivel, useCoresDoCanvas, type CoresDoCanvas } from './cores'
+import { cinzaDoNivel, DEGRAUS_DA_RAMPA, useCoresDoCanvas, type CoresDoCanvas } from './cores'
 import { SeloSim } from './SeloSim'
 
 export type IntervaloDoMapa = {
@@ -52,7 +52,7 @@ const ESPACO_ENTRE_PONTOS = 5
  * A·1X, A·2X, A·3X, depois B e C). Cada célula é um intervalo de tempo.
  *
  * Sem referência, a célula é um tom de cinza proporcional à amplitude, com a escala de cada linha
- * indo de zero ao máximo da própria linha no período. Com referência, o que passa do limite de
+ * indo do mínimo ao máximo da própria linha no período. Com referência, o que passa do limite de
  * atenção fica âmbar e o que passa do de alarme, vermelho. Lacuna fica vazia, período com
  * saturação leva marca no topo e fonte simulada leva hachura.
  */
@@ -62,6 +62,8 @@ export function MapaOrdens({ intervalos, linhas, simulado = false, className }: 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [largura, setLargura] = useState(0)
   const [cursor, setCursor] = useState<number | null>(null)
+  const [linhaSobCursor, setLinhaSobCursor] = useState<number | null>(null)
+  const ultimoInicio = useRef<string | null>(null)
 
   const escalas = useMemo(() => linhas.map((l) => escalaDaLinha(l.valores)), [linhas])
   const temReferencia = linhas.some((l) => l.referencia)
@@ -109,6 +111,30 @@ export function MapaOrdens({ intervalos, linhas, simulado = false, className }: 
     })
   }, [largura, posicoes, intervalos, linhas, escalas, simulado, cores])
 
+  // A coluna nova entra pela direita: o desenho desliza uma célula em 200 ms (só transform)
+  const inicioDaUltima = intervalos.at(-1)?.inicio ?? null
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const anterior = ultimoInicio.current
+    ultimoInicio.current = inicioDaUltima
+    if (!canvas || anterior === null || inicioDaUltima === null || anterior === inicioDaUltima)
+      return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const celula = largura / Math.max(1, intervalos.length)
+    canvas.animate([{ transform: `translateX(${celula}px)` }, { transform: 'translateX(0)' }], {
+      duration: 200,
+      easing: 'cubic-bezier(0.23, 1, 0.32, 1)',
+    })
+  }, [inicioDaUltima, largura, intervalos.length])
+
+  const linhaEm = (clientY: number): number | null => {
+    const area = areaRef.current
+    if (!area) return null
+    const y = clientY - area.getBoundingClientRect().top
+    const indice = posicoes.ys.findIndex((topo) => y >= topo && y < topo + ALTURA_DA_LINHA)
+    return indice >= 0 ? indice : null
+  }
+
   const indiceEm = (clientX: number): number | null => {
     const area = areaRef.current
     if (!area || total === 0) return null
@@ -123,6 +149,16 @@ export function MapaOrdens({ intervalos, linhas, simulado = false, className }: 
   const ultimo = intervalos[total - 1]
   const meio = intervalos[Math.floor(total / 2)]
   const passoS = primeiro ? (Date.parse(primeiro.fim) - Date.parse(primeiro.inicio)) / 1000 : 0
+
+  // Com dado em menos de 25 % do período, o mapa ainda está "aquecendo"
+  const primeiroComDado = intervalos.findIndex((i) => i.janelas > 0)
+  const aquecimento =
+    primeiroComDado > 0 && (total - primeiroComDado) / total < 0.25
+      ? {
+          minutos: Math.max(1, Math.round(((total - primeiroComDado) * passoS) / 60)),
+          total: Math.round((total * passoS) / 60),
+        }
+      : null
 
   return (
     <div
@@ -158,12 +194,21 @@ export function MapaOrdens({ intervalos, linhas, simulado = false, className }: 
               ? `${formatarHora(intervalo.inicio)} a ${formatarHora(intervalo.fim)}`
               : 'nenhum intervalo escolhido'
           }
-          className="relative min-w-0 cursor-crosshair border border-linha-forte bg-rebaixo"
+          className="relative min-w-0 cursor-crosshair overflow-hidden border border-linha-forte bg-modulo"
           style={{ height: posicoes.altura + 2 }}
-          onPointerMove={(evento) => setCursor(indiceEm(evento.clientX))}
-          onPointerDown={(evento) => setCursor(indiceEm(evento.clientX))}
+          onPointerMove={(evento) => {
+            setCursor(indiceEm(evento.clientX))
+            setLinhaSobCursor(linhaEm(evento.clientY))
+          }}
+          onPointerDown={(evento) => {
+            setCursor(indiceEm(evento.clientX))
+            setLinhaSobCursor(linhaEm(evento.clientY))
+          }}
           onPointerLeave={(evento) => {
-            if (evento.pointerType === 'mouse') setCursor(null)
+            if (evento.pointerType === 'mouse') {
+              setCursor(null)
+              setLinhaSobCursor(null)
+            }
           }}
           onKeyDown={(evento) => {
             if (total === 0) return
@@ -180,9 +225,29 @@ export function MapaOrdens({ intervalos, linhas, simulado = false, className }: 
           {cursor !== null && total > 0 ? (
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute top-0 bottom-0 border-x border-texto"
+              className="pointer-events-none absolute top-0 bottom-0 border-x border-sinal/50"
               style={{ left: `${(cursor / total) * 100}%`, width: `max(${100 / total}%, 3px)` }}
             />
+          ) : null}
+          {cursor !== null && linhaSobCursor !== null && total > 0 ? (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute border-2 border-sinal"
+              style={{
+                left: `calc(${(cursor / total) * 100}% - 1px)`,
+                width: `calc(max(${100 / total}%, 3px) + 2px)`,
+                top: (posicoes.ys[linhaSobCursor] ?? 0) - 1,
+                height: ALTURA_DA_LINHA + 1,
+              }}
+            />
+          ) : null}
+          {aquecimento ? (
+            <span className="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 border border-linha-forte bg-modulo px-1.5 py-0.5 text-12 text-texto">
+              aquecendo:{' '}
+              <span className="valor">
+                {aquecimento.minutos} min de {aquecimento.total}
+              </span>
+            </span>
           ) : null}
         </div>
 
@@ -286,7 +351,7 @@ function Legenda({
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-12 text-apoio">
       <span className="flex items-center gap-1.5">
         <span className="flex border border-linha-forte" aria-hidden="true">
-          {[0, 0.25, 0.5, 0.75, 1].map((nivel) => (
+          {Array.from({ length: DEGRAUS_DA_RAMPA }, (_, i) => i / DEGRAUS_DA_RAMPA).map((nivel) => (
             <span
               key={nivel}
               className="size-3"
@@ -294,7 +359,7 @@ function Legenda({
             />
           ))}
         </span>
-        cinza: de 0 ao máximo da linha no período
+        cinza em {DEGRAUS_DA_RAMPA} degraus: do mínimo ao máximo da linha no período
       </span>
       {temReferencia ? (
         <>
@@ -312,10 +377,17 @@ function Legenda({
       )}
       <span className="flex items-center gap-1.5">
         <span
-          className="size-3 border border-dashed border-linha-forte bg-rebaixo"
+          className="size-3 border border-dashed border-linha-forte bg-modulo"
           aria-hidden="true"
         />
         lacuna
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span
+          className="size-3 border border-linha-forte bg-modulo bg-[radial-gradient(var(--linha)_1px,transparent_1px)] bg-size-[4px_4px]"
+          aria-hidden="true"
+        />
+        sem dado (antes da primeira janela)
       </span>
       <span className="flex items-center gap-1.5">
         <span className="h-1 w-3 bg-texto" aria-hidden="true" />
@@ -347,6 +419,16 @@ function desenhar(ctx: CanvasRenderingContext2D, d: Desenho) {
   ctx.clearRect(0, 0, d.largura, d.altura)
   if (total === 0) return
   const passo = d.largura / total
+
+  // antes do primeiro dado do período: padrão discreto de pontos ("sem dado")
+  const primeiroComDado = d.intervalos.findIndex((i) => i.janelas > 0)
+  const fimSemDado = primeiroComDado === -1 ? d.largura : Math.floor(primeiroComDado * passo)
+  if (fimSemDado > 0) {
+    ctx.fillStyle = d.cores.linha
+    for (let x = 4; x < fimSemDado; x += 8) {
+      for (let y = 4; y < d.altura; y += 8) ctx.fillRect(x, y, 1, 1)
+    }
+  }
 
   d.linhas.forEach((linha, i) => {
     const y = d.ys[i]

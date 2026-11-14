@@ -1,6 +1,6 @@
 /**
  * Preferências guardadas no navegador: a fonte dos dados (Real, o padrão, ou Simulado) e o tema
- * (claro "cinza ISA", o padrão, ou escuro "grafite").
+ * (escuro "grafite", o padrão, ou claro "cinza ISA").
  */
 import { useSyncExternalStore } from 'react'
 
@@ -11,7 +11,7 @@ const CHAVE_FONTE = 'ps.fonte'
 const CHAVE_TEMA = 'ps.tema'
 
 /** Cor de fundo de cada tema, para a barra do navegador no celular (igual a --superficie-fundo). */
-const COR_DO_NAVEGADOR: Record<Tema, string> = { claro: '#d1d1d1', grafite: '#191919' }
+const COR_DO_NAVEGADOR: Record<Tema, string> = { claro: '#d1d1d1', grafite: '#161616' }
 
 function ler(chave: string): string | null {
   try {
@@ -30,7 +30,7 @@ function gravar(chave: string, valor: string) {
 }
 
 let fonte: Fonte = ler(CHAVE_FONTE) === 'simulado' ? 'simulado' : 'real'
-let tema: Tema = ler(CHAVE_TEMA) === 'grafite' ? 'grafite' : 'claro'
+let tema: Tema = ler(CHAVE_TEMA) === 'claro' ? 'claro' : 'grafite'
 
 const ouvintes = new Set<() => void>()
 

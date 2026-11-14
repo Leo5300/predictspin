@@ -1,8 +1,11 @@
+import { useEffect } from 'react'
+
 import type { UltimaObservada } from '@/api/consultas'
 import type { ModoRapido } from '@/api/tipos'
 import { limiarVelhoS, type Frescor } from '@/dominio/idade'
 import { modoRapidoAtivo } from '@/dominio/modoRapido'
 import { agoraDoServidorMs, useSegundo } from '@/estado/relogio'
+import { definirLimiarVelhoS } from '@/estado/transporte'
 
 import { useFrescor } from './useFrescor'
 
@@ -20,5 +23,8 @@ export function useFrescorDaMaquina(
     modoRapidoAtivo(modoRapido.modo_rapido_ate, agoraDoServidorMs(epocaMs))
   const limiar = limiarVelhoS(ultima?.janela.modo ?? 'normal', rapidoAtivo)
   const resultado = useFrescor(ultima?.observacao, limiar)
+  useEffect(() => {
+    definirLimiarVelhoS(limiar)
+  }, [limiar])
   return { ...resultado, velho: resultado.frescor !== 'vivo' }
 }

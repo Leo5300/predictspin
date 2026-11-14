@@ -24,6 +24,8 @@ export type SerieDoGrafico = {
   tom: 0 | 1 | 2
   tracejado?: readonly number[]
   espessura?: number
+  /** Dado ao vivo do período atual: traço na cor de sinal (só no gráfico AO VIVO). */
+  aoVivo?: boolean
 }
 
 export type FaixaDoGrafico = { inicioS: number; fimS: number; rotulo: string }
@@ -132,7 +134,10 @@ export function GraficoTendencia({
 
   // A estrutura (quantas séries, traços, tema) recria o gráfico; os dados só são trocados.
   const estrutura = series
-    .map((s) => `${s.rotulo}|${s.tom}|${(s.tracejado ?? []).join(',')}|${s.espessura ?? ''}`)
+    .map(
+      (s) =>
+        `${s.rotulo}|${s.tom}|${(s.tracejado ?? []).join(',')}|${s.espessura ?? ''}|${s.aoVivo ? 'v' : ''}`,
+    )
     .join(';')
   const pronto = largura > 0
 
@@ -262,7 +267,7 @@ function Traco({ serie, cores }: { serie: SerieDoGrafico; cores: CoresDoCanvas }
         y1="3"
         x2="22"
         y2="3"
-        stroke={cores.pontos[serie.tom]}
+        stroke={serie.aoVivo ? cores.sinal : cores.pontos[serie.tom]}
         strokeWidth={serie.espessura ?? 1.5}
         strokeDasharray={(serie.tracejado ?? []).join(' ') || undefined}
       />
@@ -348,14 +353,14 @@ function montarOpcoes({
       {},
       ...extras.current.series.map((s): uPlot.Series => ({
         label: s.rotulo,
-        stroke: cores.pontos[s.tom],
+        stroke: s.aoVivo ? cores.sinal : cores.pontos[s.tom],
         width: s.espessura ?? 1.5,
         dash: s.tracejado && s.tracejado.length > 0 ? [...s.tracejado] : undefined,
         spanGaps: false,
         points: {
           show: true,
           size: 3,
-          fill: cores.pontos[s.tom],
+          fill: s.aoVivo ? cores.sinal : cores.pontos[s.tom],
           // só as amostras isoladas (sem vizinho) viram ponto: senão sumiriam entre duas lacunas
           filter: (u, indiceDaSerie) => {
             const valores = u.data[indiceDaSerie]

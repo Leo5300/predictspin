@@ -93,3 +93,8 @@ export const PICO_TENDENCIA: (number | null)[] = serieExemplo(120, 0.19, 0.03, 1
 
 export const NOME_MUITO_LONGO = 'TORNO-CNC-ROMI-GL-280-LINHA-DE-USINAGEM-PESADA-SETOR-B-POSICAO-14'
 export const NUMERO_ENORME = 987_654_321.123
+
+/** Rotações nominais de exemplo (as mesmas da placa do torno, para o tacômetro da galeria). */
+export const NOMINAIS_EXEMPLO = [
+  45, 71, 90, 112, 140, 180, 224, 265, 280, 355, 450, 560, 710, 900, 1120, 1400, 1800, 2240,
+]

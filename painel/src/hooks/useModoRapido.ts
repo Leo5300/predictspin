@@ -7,6 +7,7 @@ import { tokenAtual } from '@/api/sessao'
 import type { ModoRapido } from '@/api/tipos'
 import { desvioPeloPrazo, deveRenovar, segundosRestantes } from '@/dominio/modoRapido'
 import { agoraDoServidorMs, registrarDesvioDoServidor, useSegundo } from '@/estado/relogio'
+import { definirAoVivo } from '@/estado/transporte'
 
 import { usePaginaVisivel } from './usePaginaVisivel'
 
@@ -100,6 +101,11 @@ export function useModoRapido(
       }
     }
   }, [cliente, maquinaId])
+
+  useEffect(() => {
+    definirAoVivo(ativo)
+    return () => definirAoVivo(false)
+  }, [ativo])
 
   const { mutate: pedirLigar } = ligar
   const { mutate: pedirDesligar } = desligar

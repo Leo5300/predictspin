@@ -9,9 +9,16 @@ import type { Observacao } from '@/dominio/idade'
 
 export type Transporte = 'eventos' | 'consulta' | 'inativo'
 
-type Estado = { transporte: Transporte; ultima: Observacao | null }
+type Estado = {
+  transporte: Transporte
+  ultima: Observacao | null
+  /** Limite de dado velho da tela aberta: 15 s, ou 4 s com o modo rápido valendo. */
+  limiarS: number
+  /** Algum gráfico da tela está em AO VIVO (modo rápido pedido por este painel). */
+  aoVivo: boolean
+}
 
-let estado: Estado = { transporte: 'inativo', ultima: null }
+let estado: Estado = { transporte: 'inativo', ultima: null, limiarS: 15, aoVivo: false }
 const ouvintes = new Set<() => void>()
 
 function publicar(novo: Estado) {
@@ -30,6 +37,22 @@ export function useTransporte(): Transporte {
 
 export function useUltimaObservacao(): Observacao | null {
   return useSyncExternalStore(assinar, () => estado.ultima)
+}
+
+export function useLimiarVelhoS(): number {
+  return useSyncExternalStore(assinar, () => estado.limiarS)
+}
+
+export function useAoVivo(): boolean {
+  return useSyncExternalStore(assinar, () => estado.aoVivo)
+}
+
+export function definirLimiarVelhoS(limiarS: number) {
+  if (estado.limiarS !== limiarS) publicar({ ...estado, limiarS })
+}
+
+export function definirAoVivo(aoVivo: boolean) {
+  if (estado.aoVivo !== aoVivo) publicar({ ...estado, aoVivo })
 }
 
 export function definirTransporte(transporte: Transporte) {

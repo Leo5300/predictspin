@@ -96,22 +96,24 @@ describe('estado da máquina e avaliação', () => {
 
 describe('escala do mapa de ordens', () => {
   it('cada linha vai de zero ao próprio máximo', () => {
-    const escala = escalaDaLinha([0.02, null, 0.08, undefined, 0.04])
-    expect(escala.maximo).toBe(0.08)
-    expect(nivelDeCinza(0, escala)).toBe(0)
-    expect(nivelDeCinza(0.04, escala)).toBe(0.5)
+    const escala = escalaDaLinha([0.02, null, 0.08, undefined, 0.05])
+    expect(escala).toEqual({ minimo: 0.02, maximo: 0.08 })
+    expect(nivelDeCinza(0.02, escala)).toBe(0)
+    expect(nivelDeCinza(0.05, escala)).toBeCloseTo(0.5)
     expect(nivelDeCinza(0.08, escala)).toBe(1)
     expect(nivelDeCinza(0.5, escala)).toBe(1)
+    expect(nivelDeCinza(0, escala)).toBe(0)
   })
 
   it('linha vazia ou zerada não divide por zero', () => {
-    expect(escalaDaLinha([]).maximo).toBe(0)
-    expect(nivelDeCinza(0, escalaDaLinha([0, 0]))).toBe(0)
-    expect(nivelDeCinza(Number.NaN, { maximo: 1 })).toBe(0)
+    expect(escalaDaLinha([])).toEqual({ minimo: 0, maximo: 0 })
+    // linha constante: há dado, mas não há variação a mostrar
+    expect(nivelDeCinza(0.03, escalaDaLinha([0.03, 0.03]))).toBe(0.5)
+    expect(nivelDeCinza(Number.NaN, { minimo: 0, maximo: 1 })).toBe(0)
   })
 
   it('lacuna, cinza sem referência e cor de desvio com referência', () => {
-    const escala = { maximo: 0.1 }
+    const escala = { minimo: 0, maximo: 0.1 }
     const referencia: Referencia = { centro: 0.04, tolerancia: 0.01, atencao: 0.06, alarme: 0.09 }
     expect(corDaCelula(null, escala)).toEqual({ tipo: 'lacuna' })
     expect(corDaCelula(0.05, escala)).toEqual({ tipo: 'cinza', nivel: 0.5 })

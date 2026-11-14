@@ -28,10 +28,11 @@ describe('formatação pt-BR', () => {
     expect(formatarNumero(-0.5, 1)).toBe('-0,5')
   })
 
-  it('usa ponto de milhar e não mostra casas na rotação', () => {
-    expect(formatarRpm(1180.4)).toBe('1.180')
+  it('rotação inteira e sem separador de milhar', () => {
+    expect(formatarRpm(1180.4)).toBe('1180')
     expect(formatarRpm(0)).toBe('0')
-    expect(formatarRpm(2240)).toBe('2.240')
+    expect(formatarRpm(2240)).toBe('2240')
+    expect(formatarRpm(null)).toBe(TRACO)
   })
 
   it('valor ausente ou inválido vira travessão, nunca NaN', () => {

@@ -19,6 +19,7 @@ export type CoresDoCanvas = {
   atencao: string
   alarme: string
   simulado: string
+  sinal: string
   reticula: string
   reticulaFina: string
   pontos: [string, string, string]
@@ -36,6 +37,7 @@ const TOKENS = {
   atencao: '--estado-atencao',
   alarme: '--estado-alarme',
   simulado: '--simulado',
+  sinal: '--sinal',
   reticula: '--reticula',
   reticulaFina: '--reticula-fina',
 } as const
@@ -59,6 +61,7 @@ function ler(): CoresDoCanvas {
     atencao: valor(TOKENS.atencao),
     alarme: valor(TOKENS.alarme),
     simulado: valor(TOKENS.simulado),
+    sinal: valor(TOKENS.sinal),
     reticula: valor(TOKENS.reticula),
     reticulaFina: valor(TOKENS.reticulaFina),
     pontos: [valor('--ponto-a'), valor('--ponto-b'), valor('--ponto-c')],
@@ -72,13 +75,24 @@ export function useCoresDoCanvas(): CoresDoCanvas {
   return useSyncExternalStore(aoMudarTema, ler)
 }
 
+/** Degraus da rampa de cinza do mapa de ordens. */
+export const DEGRAUS_DA_RAMPA = 8
+
 /**
- * Tom de cinza de uma célula do mapa de ordens: nível 0 é a cor do fundo rebaixado e nível 1 é o
- * tom do texto, misturados em OKLCH.
+ * Tom de cinza de uma célula do mapa de ordens: a amplitude (0 a 1 da escala da linha) cai em um de
+ * 8 degraus. Os degraus são misturas em OKLCH entre o fundo rebaixado e o tom do texto, com passos
+ * iguais de luminosidade (perceptualmente uniformes), de 10 % a 72 %: o degrau mais baixo ainda se
+ * distingue da lacuna (vazia) e o mais alto não chega à cor do texto nem domina a tela.
  */
+export function degrauDoNivel(nivel: number): number {
+  return Math.min(
+    DEGRAUS_DA_RAMPA - 1,
+    Math.floor(Math.min(1, Math.max(0, nivel)) * DEGRAUS_DA_RAMPA),
+  )
+}
+
 export function cinzaDoNivel(nivel: number, cores: CoresDoCanvas): string {
-  // de 6 % (amplitude zero ainda se distingue da lacuna, que fica vazia) a 62 % (o máximo da linha):
-  // o topo da escala não chega ao preto, para a tela continuar calma e a hachura continuar visível
-  const parte = Math.round(6 + Math.min(1, Math.max(0, nivel)) * 56)
+  const degrau = degrauDoNivel(nivel)
+  const parte = Math.round(10 + (degrau * (72 - 10)) / (DEGRAUS_DA_RAMPA - 1))
   return `color-mix(in oklch, ${cores.texto} ${parte}%, ${cores.rebaixo})`
 }
