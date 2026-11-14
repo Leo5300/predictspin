@@ -1,8 +1,6 @@
-import { grafemas } from '@/dominio/texto'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { Referencia } from '@/dominio/estado'
-import { corDaCelula, escalaDaLinha, type EscalaLinha } from '@/dominio/escalas'
 import {
   formatarG,
   formatarHora,
@@ -11,9 +9,22 @@ import {
   formatarRpm,
   TRACO,
 } from '@/dominio/formato'
+import {
+  classificarLinha,
+  destaquesDoMapa,
+  FAIXA_MORTA,
+  intervalosCompletos,
+  marchaDoIntervalo,
+  textoDoDestaque,
+  TEXTO_NORMAL,
+  tipicosPorMarcha,
+  trocasDeMarcha,
+  type ClasseDaCelula,
+} from '@/dominio/mapaTipico'
+import { grafemas } from '@/dominio/texto'
 import { cn } from '@/lib/utils'
 
-import { cinzaDoNivel, DEGRAUS_DA_RAMPA, useCoresDoCanvas, type CoresDoCanvas } from './cores'
+import { pontoAbaixo, tomDaCelula, useCoresDoCanvas, type CoresDoCanvas } from './cores'
 import { SeloSim } from './SeloSim'
 import { Unidade } from './Unidade'
 
@@ -34,13 +45,22 @@ export type LinhaDoMapa = {
   grandeza: string
   /** Um valor por intervalo; nulo onde não há dado. */
   valores: readonly (number | null)[]
-  /** Referência do ponto para esta grandeza; sem ela a linha é só cinza. */
+  /** Referência do ponto para esta grandeza; só com ela aparecem âmbar e vermelho. */
   referencia?: Referencia | null
 }
+
+/** Ensaio do período, como faixa acima das linhas (código e etapa). */
+export type EnsaioDoMapa = { inicio: string; fim: string | null; codigo: string; etapa: string }
+/** Evento marcado num ensaio, como marca na faixa dos ensaios. */
+export type EventoDoMapa = { instante: string; motivo: string }
 
 type Props = {
   intervalos: readonly IntervaloDoMapa[]
   linhas: readonly LinhaDoMapa[]
+  /** Rotações nominais da máquina: definem a marcha de cada intervalo. */
+  nominais?: readonly number[]
+  ensaios?: readonly EnsaioDoMapa[]
+  eventos?: readonly EventoDoMapa[]
   simulado?: boolean
   className?: string
 }
@@ -49,17 +69,30 @@ const ALTURA_DA_LINHA = 18
 const ALTURA_DA_MARCA = 8
 const ESPACO_ENTRE_PONTOS = 5
 
+const ROTULO_MOTIVO: Record<string, string> = {
+  pancada: 'pancada',
+  cavaco: 'cavaco',
+  maquina_vizinha: 'máquina vizinha',
+  outro: 'outro',
+}
+
 /**
- * Mapa de ordens: o tempo corre na horizontal e cada linha é uma grandeza de um ponto (A·RMS,
- * A·1X, A·2X, A·3X, depois B e C). Cada célula é um intervalo de tempo.
- *
- * Sem referência, a célula é um tom de cinza proporcional à amplitude, com a escala de cada linha
- * indo de zero ao máximo da própria linha no período (mais escuro = maior): a variação normal fica
- * em cinzas próximos e a máquina saudável parece um tapete uniforme. Com referência, o que passa do limite de
- * atenção fica âmbar e o que passa do de alarme, vermelho. Lacuna fica vazia, período com
- * saturação leva marca no topo e fonte simulada leva hachura.
+ * Mapa de ordens: o tempo corre na horizontal e cada linha é uma medida de um ponto (A·RMS, A·1X,
+ * A·2X, A·3X, depois B e C). Cada célula é um intervalo de tempo, comparado com o TÍPICO da própria
+ * linha (mediana do período na mesma marcha): tom igual = dentro de ±15 %; mais contraste = acima;
+ * pontilhado = abaixo; tracejado = lacuna. Acima das linhas, a marcha ao longo do tempo e os ensaios
+ * do período; abaixo, a leitura em texto do que fugiu do típico. Sem referência aprendida não há
+ * âmbar nem vermelho. Dado simulado: hachura na moldura e selo SIM, nunca sobre as células.
  */
-export function MapaOrdens({ intervalos, linhas, simulado = false, className }: Props) {
+export function MapaOrdens({
+  intervalos,
+  linhas,
+  nominais = [],
+  ensaios = [],
+  eventos = [],
+  simulado = false,
+  className,
+}: Props) {
   const cores = useCoresDoCanvas()
   const areaRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -67,10 +100,35 @@ export function MapaOrdens({ intervalos, linhas, simulado = false, className }: 
   const [cursor, setCursor] = useState<number | null>(null)
   const [linhaSobCursor, setLinhaSobCursor] = useState<number | null>(null)
   const ultimoInicio = useRef<string | null>(null)
-
-  const escalas = useMemo(() => linhas.map((l) => escalaDaLinha(l.valores)), [linhas])
-  const temReferencia = linhas.some((l) => l.referencia)
   const total = intervalos.length
+
+  const marchas = useMemo(
+    () => intervalos.map((i) => (i.janelas > 0 ? marchaDoIntervalo(i.rotacaoRpm, nominais) : null)),
+    [intervalos, nominais],
+  )
+  const janelasPorIntervalo = useMemo(() => intervalos.map((i) => i.janelas), [intervalos])
+  const classes = useMemo(
+    () => linhas.map((l) => classificarLinha(l.valores, marchas, janelasPorIntervalo)),
+    [linhas, marchas, janelasPorIntervalo],
+  )
+  /** Típico de cada linha na marcha do último intervalo com dado (coluna da direita). */
+  const tipicosAtuais = useMemo(() => {
+    const completos = intervalosCompletos(janelasPorIntervalo, intervalos.length)
+    const ultimaMarcha = marchas.findLast((m) => m !== null) ?? null
+    return linhas.map((l) => {
+      const grupo = tipicosPorMarcha(l.valores, marchas, completos).get(
+        ultimaMarcha === null ? 'sem' : String(ultimaMarcha),
+      )
+      return grupo?.tipico ?? null
+    })
+  }, [linhas, marchas, janelasPorIntervalo, intervalos.length])
+  const destaques = useMemo(
+    () =>
+      destaquesDoMapa(
+        linhas.map((l, i) => ({ ponto: l.ponto, grandeza: l.grandeza, classes: classes[i] ?? [] })),
+      ),
+    [linhas, classes],
+  )
 
   // posição vertical de cada linha, com um espaço entre os pontos
   const posicoes = useMemo(() => {
@@ -108,11 +166,10 @@ export function MapaOrdens({ intervalos, linhas, simulado = false, className }: 
       ys: posicoes.ys,
       intervalos,
       linhas,
-      escalas,
-      simulado,
+      classes,
       cores,
     })
-  }, [largura, posicoes, intervalos, linhas, escalas, simulado, cores])
+  }, [largura, posicoes, intervalos, linhas, classes, cores])
 
   // A coluna nova entra pela direita: o desenho desliza uma célula em 200 ms (só transform)
   const inicioDaUltima = intervalos.at(-1)?.inicio ?? null
@@ -152,6 +209,12 @@ export function MapaOrdens({ intervalos, linhas, simulado = false, className }: 
   const ultimo = intervalos[total - 1]
   const meio = intervalos[Math.floor(total / 2)]
   const passoS = primeiro ? (Date.parse(primeiro.fim) - Date.parse(primeiro.inicio)) / 1000 : 0
+  const inicioMs = primeiro ? Date.parse(primeiro.inicio) : 0
+  const fimMs = ultimo ? Date.parse(ultimo.fim) : 0
+  const posicaoNoTempo = (instante: string) =>
+    fimMs > inicioMs
+      ? Math.min(1, Math.max(0, (Date.parse(instante) - inicioMs) / (fimMs - inicioMs)))
+      : 0
 
   // Com dado em menos de 25 % do período, o mapa ainda está "aquecendo"
   const primeiroComDado = intervalos.findIndex((i) => i.janelas > 0)
@@ -163,113 +226,225 @@ export function MapaOrdens({ intervalos, linhas, simulado = false, className }: 
         }
       : null
 
+  const trocas = trocasDeMarcha(marchas)
+  const ensaiosNoPeriodo = ensaios.filter(
+    (e) => Date.parse(e.inicio) < fimMs && (e.fim === null || Date.parse(e.fim) > inicioMs),
+  )
+  const eventosNoPeriodo = eventos.filter((e) => {
+    const t = Date.parse(e.instante)
+    return t >= inicioMs && t <= fimMs
+  })
+  const temFaixaDeEnsaios = ensaiosNoPeriodo.length > 0 || eventosNoPeriodo.length > 0
+  const colunas = `max(3.25rem, ${larguraDosRotulos(linhas)}ch) minmax(0, 1fr) 4.5rem`
+  // a moldura hachurada (simulado) e a borda empurram as células: os rótulos acompanham
+  const deslocamento = simulado ? 5 : 1
+
   return (
-    <div
-      className={cn('flex min-w-0 flex-col gap-2', className)}
-      data-simulado={simulado || undefined}
-    >
-      <div
-        className="grid min-w-0 gap-x-2"
-        style={{
-          gridTemplateColumns: `max(3.25rem, ${larguraDosRotulos(linhas)}ch) minmax(0, 1fr) 4.5rem`,
-        }}
-      >
+    <div className={cn('flex min-w-0 flex-col gap-2', className)}>
+      {/* contexto: a marcha ao longo do tempo e os ensaios do período */}
+      <div className="grid min-w-0 gap-x-2 gap-y-px" style={{ gridTemplateColumns: colunas }}>
+        <span className="rotulo self-center text-right">marcha</span>
+        <div
+          className="relative h-5 min-w-0 overflow-hidden border border-linha bg-rebaixo"
+          data-testid="faixa-de-marcha"
+        >
+          {trocas.map((troca, i) => {
+            const proxima = trocas[i + 1]?.indice ?? total
+            // segmento estreito (o intervalo da troca, com a média de duas marchas, ou pouco tempo
+            // numa marcha): só a marca; o número fica na dica, nunca cortado
+            const texto = troca.marcha === 0 ? 'parada' : formatarRpm(troca.marcha)
+            const larguraPx = ((proxima - troca.indice) / Math.max(1, total)) * largura
+            const curto = larguraPx < texto.length * 7.5 + 10
+            return (
+              <span
+                key={`${troca.indice}-${troca.marcha}`}
+                title={troca.marcha === 0 ? 'parada' : `marcha ${troca.marcha} rpm`}
+                className={cn(
+                  'valor absolute inset-y-0 flex items-center truncate px-1 text-12 text-texto',
+                  i > 0 && 'border-l-2 border-texto',
+                )}
+                style={{
+                  left: `${(troca.indice / Math.max(1, total)) * 100}%`,
+                  width: `${((proxima - troca.indice) / Math.max(1, total)) * 100}%`,
+                }}
+              >
+                {curto ? null : texto}
+              </span>
+            )
+          })}
+        </div>
+        <span className="rotulo self-center">rpm</span>
+
+        {temFaixaDeEnsaios ? (
+          <>
+            <span className="rotulo self-center text-right">ensaio</span>
+            <div
+              className="relative h-5 min-w-0 overflow-hidden border border-linha bg-modulo"
+              data-testid="faixa-de-ensaios"
+            >
+              {ensaiosNoPeriodo.map((e) => {
+                const x0 = posicaoNoTempo(e.inicio)
+                const x1 = e.fim === null ? 1 : posicaoNoTempo(e.fim)
+                return (
+                  <span
+                    key={e.codigo}
+                    title={`${e.codigo} · ${e.etapa}`}
+                    className="valor absolute inset-y-0 flex items-center truncate border-x border-linha-forte bg-realce px-1 text-12 text-texto"
+                    style={{
+                      left: `${x0 * 100}%`,
+                      width: `max(${(x1 - x0) * 100}%, 3px)`,
+                    }}
+                  >
+                    {e.etapa} · {e.codigo}
+                  </span>
+                )
+              })}
+              {eventosNoPeriodo.map((e) => (
+                <span
+                  key={`${e.instante}-${e.motivo}`}
+                  title={`evento marcado: ${ROTULO_MOTIVO[e.motivo] ?? e.motivo} às ${formatarHora(e.instante)}`}
+                  className="absolute top-0 bottom-0 w-0 border-l-2 border-dashed border-texto"
+                  style={{ left: `${posicaoNoTempo(e.instante) * 100}%` }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-0.5 -left-1 text-12 leading-none"
+                  >
+                    ▾
+                  </span>
+                </span>
+              ))}
+            </div>
+            <span />
+          </>
+        ) : null}
+      </div>
+
+      <div className="grid min-w-0 gap-x-2" style={{ gridTemplateColumns: colunas }}>
         {/* rótulos das linhas */}
-        <div className="relative" style={{ height: posicoes.altura }} aria-hidden="true">
+        <div
+          className="relative"
+          style={{ height: posicoes.altura + 2 * deslocamento }}
+          aria-hidden="true"
+        >
           {linhas.map((linha, i) => (
             <span
               key={linha.chave}
               className="valor absolute right-0 flex items-center text-12 whitespace-nowrap text-apoio"
-              style={{ top: posicoes.ys[i], height: ALTURA_DA_LINHA }}
+              style={{ top: (posicoes.ys[i] ?? 0) + deslocamento, height: ALTURA_DA_LINHA }}
             >
               <span className="font-semibold text-texto">{linha.ponto}</span>·{linha.grandeza}
             </span>
           ))}
         </div>
 
-        {/* células */}
+        {/* moldura: com dado simulado, a hachura fica nela (e no selo SIM), nunca sobre as células */}
         <div
-          ref={areaRef}
-          role="slider"
-          tabIndex={0}
-          aria-label={`Mapa de ordens: ${linhas.length} linhas por ${total} intervalos de ${formatarIntervalo(passoS)}. Use as setas para percorrer os intervalos.`}
-          aria-orientation="horizontal"
-          aria-valuemin={1}
-          aria-valuemax={Math.max(1, total)}
-          aria-valuenow={(cursor ?? 0) + 1}
-          aria-valuetext={
-            intervalo
-              ? `${formatarHora(intervalo.inicio)} a ${formatarHora(intervalo.fim)}`
-              : 'nenhum intervalo escolhido'
-          }
-          className="relative min-w-0 cursor-crosshair overflow-hidden border border-linha-forte bg-modulo"
-          style={{ height: posicoes.altura + 2 }}
-          onPointerMove={(evento) => {
-            setCursor(indiceEm(evento.clientX))
-            setLinhaSobCursor(linhaEm(evento.clientY))
-          }}
-          onPointerDown={(evento) => {
-            setCursor(indiceEm(evento.clientX))
-            setLinhaSobCursor(linhaEm(evento.clientY))
-          }}
-          onPointerLeave={(evento) => {
-            if (evento.pointerType === 'mouse') {
-              setCursor(null)
-              setLinhaSobCursor(null)
-            }
-          }}
-          onKeyDown={(evento) => {
-            if (total === 0) return
-            if (evento.key === 'ArrowRight') setCursor((c) => Math.min(total - 1, (c ?? -1) + 1))
-            else if (evento.key === 'ArrowLeft') setCursor((c) => Math.max(0, (c ?? total) - 1))
-            else if (evento.key === 'Home') setCursor(0)
-            else if (evento.key === 'End') setCursor(total - 1)
-            else if (evento.key === 'Escape') setCursor(null)
-            else return
-            evento.preventDefault()
-          }}
+          className={cn('min-w-0', simulado && 'hachura border border-linha-forte p-[3px]')}
+          data-simulado={simulado || undefined}
         >
-          <canvas ref={canvasRef} className="block w-full" style={{ height: posicoes.altura }} />
-          {cursor !== null && total > 0 ? (
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute top-0 bottom-0 border-x border-sinal/50"
-              style={{ left: `${(cursor / total) * 100}%`, width: `max(${100 / total}%, 3px)` }}
-            />
-          ) : null}
-          {cursor !== null && linhaSobCursor !== null && total > 0 ? (
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute border-2 border-sinal"
-              style={{
-                left: `calc(${(cursor / total) * 100}% - 1px)`,
-                width: `calc(max(${100 / total}%, 3px) + 2px)`,
-                top: (posicoes.ys[linhaSobCursor] ?? 0) - 1,
-                height: ALTURA_DA_LINHA + 1,
-              }}
-            />
-          ) : null}
-          {aquecimento ? (
-            <span className="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 border border-linha-forte bg-modulo px-1.5 py-0.5 text-12 text-texto">
-              aquecendo:{' '}
-              <span className="valor">
-                {aquecimento.minutos} min de {aquecimento.total}
+          <div
+            ref={areaRef}
+            role="slider"
+            tabIndex={0}
+            aria-label={`Mapa de ordens: ${linhas.length} linhas por ${total} intervalos de ${formatarIntervalo(passoS)}. Setas para os lados percorrem os intervalos; para cima e para baixo, as linhas.`}
+            aria-orientation="horizontal"
+            aria-valuemin={1}
+            aria-valuemax={Math.max(1, total)}
+            aria-valuenow={(cursor ?? 0) + 1}
+            aria-valuetext={
+              intervalo
+                ? `${formatarHora(intervalo.inicio)} a ${formatarHora(intervalo.fim)}`
+                : 'nenhum intervalo escolhido'
+            }
+            className="relative min-w-0 cursor-crosshair overflow-hidden border border-linha-forte bg-modulo"
+            style={{ height: posicoes.altura + 2 }}
+            onPointerMove={(evento) => {
+              setCursor(indiceEm(evento.clientX))
+              setLinhaSobCursor(linhaEm(evento.clientY))
+            }}
+            onPointerDown={(evento) => {
+              setCursor(indiceEm(evento.clientX))
+              setLinhaSobCursor(linhaEm(evento.clientY))
+            }}
+            onPointerLeave={(evento) => {
+              if (evento.pointerType === 'mouse') {
+                setCursor(null)
+                setLinhaSobCursor(null)
+              }
+            }}
+            onKeyDown={(evento) => {
+              if (total === 0) return
+              const n = linhas.length
+              if (evento.key === 'ArrowRight') setCursor((c) => Math.min(total - 1, (c ?? -1) + 1))
+              else if (evento.key === 'ArrowLeft') setCursor((c) => Math.max(0, (c ?? total) - 1))
+              else if (evento.key === 'ArrowDown') {
+                setCursor((c) => c ?? total - 1)
+                setLinhaSobCursor((l) => Math.min(n - 1, (l ?? -1) + 1))
+              } else if (evento.key === 'ArrowUp') {
+                setCursor((c) => c ?? total - 1)
+                setLinhaSobCursor((l) => Math.max(0, (l ?? 1) - 1))
+              } else if (evento.key === 'Home') setCursor(0)
+              else if (evento.key === 'End') setCursor(total - 1)
+              else if (evento.key === 'Escape') {
+                setCursor(null)
+                setLinhaSobCursor(null)
+              } else return
+              if (evento.key === 'ArrowLeft' || evento.key === 'ArrowRight')
+                setLinhaSobCursor((l) => l ?? 0)
+              evento.preventDefault()
+            }}
+          >
+            <canvas ref={canvasRef} className="block w-full" style={{ height: posicoes.altura }} />
+            {/* trocas de marcha também marcadas sobre as linhas, como na faixa de cima */}
+            {trocas.slice(1).map((troca) => (
+              <span
+                key={`troca-${troca.indice}`}
+                aria-hidden="true"
+                className="pointer-events-none absolute top-0 bottom-0 border-l border-dashed border-linha-forte"
+                style={{ left: `${(troca.indice / total) * 100}%` }}
+              />
+            ))}
+            {cursor !== null && total > 0 ? (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute top-0 bottom-0 border-x border-sinal/50"
+                style={{ left: `${(cursor / total) * 100}%`, width: `max(${100 / total}%, 3px)` }}
+              />
+            ) : null}
+            {cursor !== null && linhaSobCursor !== null && total > 0 ? (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute border-2 border-sinal"
+                style={{
+                  left: `calc(${(cursor / total) * 100}% - 1px)`,
+                  width: `calc(max(${100 / total}%, 3px) + 2px)`,
+                  top: (posicoes.ys[linhaSobCursor] ?? 0) - 1,
+                  height: ALTURA_DA_LINHA + 1,
+                }}
+              />
+            ) : null}
+            {aquecimento ? (
+              <span className="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 border border-linha-forte bg-modulo px-1.5 py-0.5 text-12 text-texto">
+                aquecendo:{' '}
+                <span className="valor">
+                  {aquecimento.minutos} min de {aquecimento.total}
+                </span>
               </span>
-            </span>
-          ) : null}
+            ) : null}
+          </div>
         </div>
 
-        {/* máximo de cada linha: é o fim da escala de cinza dela */}
+        {/* típico de cada linha (marcha atual): é o "zero" da comparação */}
         <div className="relative" style={{ height: posicoes.altura }}>
-          <span className="rotulo absolute -top-0.5 left-0 hidden">máx</span>
           {linhas.map((linha, i) => (
             <span
               key={linha.chave}
               className="valor absolute left-0 flex items-center text-12 whitespace-nowrap text-apoio"
-              style={{ top: posicoes.ys[i], height: ALTURA_DA_LINHA }}
-              title={`Máximo de ${linha.ponto}·${linha.grandeza} no período`}
+              style={{ top: (posicoes.ys[i] ?? 0) + deslocamento, height: ALTURA_DA_LINHA }}
+              title={`Típico de ${linha.ponto}·${linha.grandeza} na marcha atual (mediana do período)`}
             >
-              {escalas[i] && escalas[i].maximo > 0 ? formatarG(escalas[i].maximo) : TRACO}
+              {tipicosAtuais[i] === null ? TRACO : formatarG(tipicosAtuais[i])}
             </span>
           ))}
         </div>
@@ -282,39 +457,77 @@ export function MapaOrdens({ intervalos, linhas, simulado = false, className }: 
           <span>{ultimo ? formatarHoraMinuto(ultimo.fim) : TRACO}</span>
         </div>
         <span className="rotulo pt-1">
-          máx <Unidade>g</Unidade>
+          típico <Unidade>g</Unidade>
         </span>
       </div>
 
-      {/* leitura do intervalo sob o cursor */}
+      {/* leitura em texto: calculada pela regra do típico, sem inventar causa */}
+      <div
+        role="status"
+        className="flex flex-col gap-0.5 border border-linha bg-modulo px-2 py-1.5 text-13"
+        data-testid="leitura-do-mapa"
+      >
+        {destaques.length === 0 ? (
+          <span className="text-texto">{TEXTO_NORMAL}</span>
+        ) : (
+          destaques.map((d) => (
+            <span key={`${d.ponto}-${d.grandeza}`} className="text-texto">
+              {textoDoDestaque(
+                d,
+                formatarHoraMinuto(intervalos[d.inicio]?.inicio ?? ''),
+                formatarHoraMinuto(intervalos[d.fim]?.fim ?? ''),
+              )}
+            </span>
+          ))
+        )}
+      </div>
+
+      {/* leitura do intervalo (e da célula) sob o cursor */}
       <div
         aria-live="polite"
         className="flex min-h-12 flex-wrap items-center gap-x-4 gap-y-1 border border-linha bg-rebaixo px-2 py-1 text-12"
       >
         {intervalo ? (
-          <LeituraDoIntervalo intervalo={intervalo} indice={cursor ?? 0} linhas={linhas} />
+          <LeituraDoCursor
+            intervalo={intervalo}
+            marcha={marchas[cursor ?? 0] ?? null}
+            linha={linhaSobCursor === null ? undefined : linhas[linhaSobCursor]}
+            classe={linhaSobCursor === null ? undefined : classes[linhaSobCursor]?.[cursor ?? 0]}
+          />
         ) : (
           <span className="text-apoio">
-            Passe o cursor ou use as setas sobre o mapa para ler um intervalo.
+            Passe o cursor numa célula, ou use as setas sobre o mapa, para ler o valor, o típico da
+            linha e a diferença.
           </span>
         )}
       </div>
 
-      <Legenda temReferencia={temReferencia} simulado={simulado} passoS={passoS} cores={cores} />
+      <Legenda
+        simulado={simulado}
+        passoS={passoS}
+        cores={cores}
+        temReferencia={linhas.some((l) => l.referencia)}
+      />
     </div>
   )
 }
 
-function LeituraDoIntervalo({
+function percentual(desvio: number): string {
+  const p = Math.round(desvio * 100)
+  return `${p > 0 ? '+' : p < 0 ? '−' : ''}${Math.abs(p)}%`
+}
+
+function LeituraDoCursor({
   intervalo,
-  indice,
-  linhas,
+  marcha,
+  linha,
+  classe,
 }: {
   intervalo: IntervaloDoMapa
-  indice: number
-  linhas: readonly LinhaDoMapa[]
+  marcha: number | null
+  linha: LinhaDoMapa | undefined
+  classe: ClasseDaCelula | undefined
 }) {
-  const pontos = [...new Set(linhas.map((l) => l.ponto))]
   return (
     <>
       <span className="valor font-medium whitespace-nowrap text-texto">
@@ -326,20 +539,46 @@ function LeituraDoIntervalo({
         <>
           <span className="whitespace-nowrap text-apoio">
             <span className="valor text-texto">{intervalo.janelas}</span>{' '}
-            {intervalo.janelas === 1 ? 'janela' : 'janelas'} ·{' '}
-            <span className="valor text-texto">{formatarRpm(intervalo.rotacaoRpm)}</span> rpm
+            {intervalo.janelas === 1 ? 'janela' : 'janelas'} · marcha{' '}
+            <span className="valor text-texto">
+              {marcha === null ? TRACO : marcha === 0 ? 'parada' : formatarRpm(marcha)}
+            </span>{' '}
+            (medida <span className="valor text-texto">{formatarRpm(intervalo.rotacaoRpm)}</span>{' '}
+            rpm)
             {intervalo.saturou ? <span className="font-medium text-texto"> · saturou</span> : null}
           </span>
-          {pontos.map((ponto) => (
-            <span key={ponto} className="valor whitespace-nowrap text-apoio">
-              <span className="font-semibold text-texto">{ponto}</span>{' '}
-              {linhas
-                .filter((l) => l.ponto === ponto)
-                .map((l) => `${l.grandeza} ${formatarG(l.valores[indice])}`)
-                .join(' · ')}{' '}
-              g
+          {linha && classe && classe.tipo !== 'lacuna' ? (
+            <span className="whitespace-nowrap text-apoio">
+              <span className="valor font-semibold text-texto">
+                {linha.ponto}·{linha.grandeza}
+              </span>{' '}
+              <span className="valor text-texto">{formatarG(classe.valor)}</span> g
+              {classe.tipo === 'sem_tipico' ? (
+                <>
+                  {' '}
+                  ·{' '}
+                  {classe.incompleto
+                    ? 'intervalo incompleto (poucas janelas): sem comparação'
+                    : 'sem típico (poucos intervalos nesta marcha)'}
+                </>
+              ) : (
+                <>
+                  {' '}
+                  · típico <span className="valor text-texto">{formatarG(classe.tipico)}</span> g ·{' '}
+                  <span className="valor text-texto">{percentual(classe.desvio)}</span>{' '}
+                  {classe.tipo === 'tipico'
+                    ? `(dentro de ±${Math.round(FAIXA_MORTA * 100)}%)`
+                    : `(${classe.tipo} do típico)`}
+                </>
+              )}
             </span>
-          ))}
+          ) : linha ? (
+            <span className="text-apoio">
+              {linha.ponto}·{linha.grandeza}: sem valor neste intervalo
+            </span>
+          ) : (
+            <span className="text-apoio">escolha uma linha (setas para cima e para baixo)</span>
+          )}
         </>
       )}
     </>
@@ -347,30 +586,57 @@ function LeituraDoIntervalo({
 }
 
 function Legenda({
-  temReferencia,
   simulado,
   passoS,
   cores,
+  temReferencia,
 }: {
-  temReferencia: boolean
   simulado: boolean
   passoS: number
   cores: CoresDoCanvas
+  temReferencia: boolean
 }) {
+  const faixa = Math.round(FAIXA_MORTA * 100)
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-12 text-apoio">
       <span className="flex items-center gap-1.5">
-        <span className="flex border border-linha-forte" aria-hidden="true">
-          {Array.from({ length: DEGRAUS_DA_RAMPA }, (_, i) => i / DEGRAUS_DA_RAMPA).map((nivel) => (
-            <span
-              key={nivel}
-              className="size-3"
-              style={{ backgroundColor: cinzaDoNivel(nivel, cores) }}
-            />
+        <span
+          className="size-3 border border-linha"
+          style={{ backgroundColor: tomDaCelula(0, cores) }}
+          aria-hidden="true"
+        />
+        tom igual = dentro de ±{faixa}% do típico da linha
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="flex border border-linha" aria-hidden="true">
+          {[0, 0.35, 0.7, 1].map((t) => (
+            <span key={t} className="size-3" style={{ backgroundColor: tomDaCelula(t, cores) }} />
           ))}
         </span>
-        {DEGRAUS_DA_RAMPA} degraus de cinza, de zero ao máximo da linha no período (mais escuro =
-        maior)
+        mais contraste = acima do típico
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span
+          className="size-3 border border-linha"
+          style={{
+            backgroundColor: tomDaCelula(0, cores),
+            backgroundImage: `radial-gradient(${pontoAbaixo(cores)} 1px, transparent 1px)`,
+            backgroundSize: '4px 4px',
+          }}
+          aria-hidden="true"
+        />
+        pontilhado = abaixo
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span
+          className="size-3 border border-dashed border-linha-forte bg-modulo"
+          aria-hidden="true"
+        />
+        tracejado = lacuna
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-1 w-3 bg-texto" aria-hidden="true" />
+        saturação
       </span>
       {temReferencia ? (
         <>
@@ -384,29 +650,11 @@ function Legenda({
           </span>
         </>
       ) : (
-        <span>sem referência aprendida: cor de desvio indisponível</span>
+        <span>sem cor de alarme até existir referência</span>
       )}
-      <span className="flex items-center gap-1.5">
-        <span
-          className="size-3 border border-dashed border-linha-forte bg-modulo"
-          aria-hidden="true"
-        />
-        lacuna
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span
-          className="size-3 border border-linha-forte bg-modulo bg-[radial-gradient(var(--linha)_1px,transparent_1px)] bg-size-[4px_4px]"
-          aria-hidden="true"
-        />
-        sem dado (antes da primeira janela)
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span className="h-1 w-3 bg-texto" aria-hidden="true" />
-        saturação
-      </span>
       {simulado ? (
         <span className="flex items-center gap-1.5">
-          <SeloSim /> hachura: dado simulado
+          <SeloSim /> moldura hachurada: dado simulado
         </span>
       ) : null}
       <span className="ml-auto whitespace-nowrap">1 célula = {formatarIntervalo(passoS)}</span>
@@ -420,8 +668,7 @@ type Desenho = {
   ys: number[]
   intervalos: readonly IntervaloDoMapa[]
   linhas: readonly LinhaDoMapa[]
-  escalas: EscalaLinha[]
-  simulado: boolean
+  classes: readonly ClasseDaCelula[][]
   cores: CoresDoCanvas
 }
 
@@ -431,7 +678,7 @@ function desenhar(ctx: CanvasRenderingContext2D, d: Desenho) {
   if (total === 0) return
   const passo = d.largura / total
 
-  // antes do primeiro dado do período: padrão discreto de pontos ("sem dado")
+  // antes do primeiro dado do período: padrão esparso de pontos ("sem dado")
   const primeiroComDado = d.intervalos.findIndex((i) => i.janelas > 0)
   const fimSemDado = primeiroComDado === -1 ? d.largura : Math.floor(primeiroComDado * passo)
   if (fimSemDado > 0) {
@@ -441,27 +688,34 @@ function desenhar(ctx: CanvasRenderingContext2D, d: Desenho) {
     }
   }
 
+  const corDosPontos = pontoAbaixo(d.cores)
   d.linhas.forEach((linha, i) => {
     const y = d.ys[i]
-    const escala = d.escalas[i]
-    if (y === undefined || !escala) return
+    const classes = d.classes[i]
+    if (y === undefined || !classes) return
     for (let k = 0; k < total; k++) {
-      const cor = corDaCelula(linha.valores[k], escala, linha.referencia)
-      if (cor.tipo === 'lacuna') continue
-      ctx.fillStyle =
-        cor.tipo === 'alarme'
-          ? d.cores.alarme
-          : cor.tipo === 'atencao'
-            ? d.cores.atencao
-            : cinzaDoNivel(cor.nivel, d.cores)
+      const classe = classes[k]
+      if (!classe || classe.tipo === 'lacuna') continue
       const x0 = Math.floor(k * passo)
       const x1 = Math.floor((k + 1) * passo)
-      ctx.fillRect(x0, y, Math.max(1, x1 - x0), ALTURA_DA_LINHA - 1)
+      const larguraDaCelula = Math.max(1, x1 - x0)
+      const referencia = linha.referencia
+      // com referência aprendida (prompt futuro), atenção e alarme vencem a comparação com o típico
+      if (referencia && classe.valor >= referencia.alarme) ctx.fillStyle = d.cores.alarme
+      else if (referencia && classe.valor >= referencia.atencao) ctx.fillStyle = d.cores.atencao
+      else ctx.fillStyle = tomDaCelula(classe.tipo === 'acima' ? classe.intensidade : 0, d.cores)
+      ctx.fillRect(x0, y, larguraDaCelula, ALTURA_DA_LINHA - 1)
+      if (classe.tipo === 'abaixo') {
+        ctx.fillStyle = corDosPontos
+        for (let px = x0 + 1; px < x0 + larguraDaCelula; px += 3) {
+          for (let py = y + 2; py < y + ALTURA_DA_LINHA - 2; py += 3) ctx.fillRect(px, py, 1, 1)
+        }
+      }
     }
   })
 
-  // lacuna (intervalo sem janela depois da primeira): contorno tracejado, como na legenda, para não
-  // se confundir com "sem dado" (pontos) nem com o fundo
+  // lacuna (intervalo sem janela depois da primeira): contorno tracejado, para não se confundir com
+  // "sem dado" (pontos esparsos) nem com o fundo
   if (primeiroComDado !== -1) {
     ctx.save()
     ctx.strokeStyle = d.cores.linhaForte
@@ -489,33 +743,12 @@ function desenhar(ctx: CanvasRenderingContext2D, d: Desenho) {
     const x0 = Math.floor(k * passo)
     ctx.fillRect(x0, 1, Math.max(2, Math.floor((k + 1) * passo) - x0), ALTURA_DA_MARCA - 4)
   })
-
-  if (d.simulado) {
-    // hachura diagonal sobre os intervalos que têm dado (a lacuna fica limpa)
-    ctx.save()
-    ctx.beginPath()
-    d.intervalos.forEach((intervalo, k) => {
-      if (intervalo.janelas === 0) return
-      const x0 = Math.floor(k * passo)
-      ctx.rect(x0, 0, Math.max(1, Math.floor((k + 1) * passo) - x0), d.altura)
-    })
-    ctx.clip()
-    ctx.strokeStyle = d.cores.simulado
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    for (let x = -d.altura; x < d.largura; x += 8) {
-      ctx.moveTo(x, d.altura)
-      ctx.lineTo(x + d.altura, 0)
-    }
-    ctx.stroke()
-    ctx.restore()
-  }
 }
 
 /** Largura da coluna de rótulos, em caracteres da fonte monoespaçada: "MANCAL-T2·RMS" cabe inteiro. */
 function larguraDosRotulos(linhas: readonly { ponto: string; grandeza: string }[]): number {
   return (
-    Math.max(0, ...linhas.map((l) => grafemas(l.ponto).length + 1 + grafemas(l.grandeza).length)) +
+    Math.max(6, ...linhas.map((l) => grafemas(l.ponto).length + 1 + grafemas(l.grandeza).length)) +
     0.5
   )
 }

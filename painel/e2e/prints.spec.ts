@@ -27,6 +27,10 @@ type Tela = {
   fonte?: 'real' | 'simulado'
   /** Página inteira (padrão) ou só a área visível. */
   inteira?: boolean
+  /** Fotografa só esta região (nome acessível de uma seção). */
+  regiao?: string
+  /** Sem login (galeria). */
+  semLogin?: boolean
 }
 
 test.describe.configure({ mode: 'serial' })
@@ -50,14 +54,37 @@ async function preparar(page: Page, tema: string) {
   }, tema)
 }
 
-async function fotografar(page: Page, nome: string, inteira = true) {
+async function fotografar(page: Page, nome: string, tela: Tela) {
   // o mouse sai de cima de tudo: hover não aparece no print
   await page.mouse.move(0, 0)
   await page.waitForTimeout(400)
-  await page.screenshot({ path: path.join(PASTA, `${nome}.png`), fullPage: inteira })
+  const arquivo = path.join(PASTA, `${nome}.png`)
+  if (tela.regiao) {
+    await page.getByRole('region', { name: tela.regiao, exact: true }).screenshot({ path: arquivo })
+    return
+  }
+  await page.screenshot({ path: arquivo, fullPage: tela.inteira ?? true })
 }
 
 export const TELAS: Tela[] = [
+  {
+    nome: 'galeria-mapa',
+    semLogin: true,
+    regiao: 'Mapa de ordens',
+    abrir: async (page) => {
+      await page.goto('/galeria.html')
+      await page.getByRole('region', { name: 'Mapa de ordens', exact: true }).waitFor()
+      await page.waitForTimeout(800)
+    },
+  },
+  {
+    nome: 'galeria',
+    semLogin: true,
+    abrir: async (page) => {
+      await page.goto('/galeria.html')
+      await page.waitForTimeout(1500)
+    },
+  },
   {
     nome: 'l1-vivo',
     fonte: 'simulado',
@@ -107,9 +134,9 @@ for (const tela of TELAS) {
         await page.setViewportSize(largura.viewport)
         await preparar(page, tema)
         if (tela.fonte) await usarFonte(page, tela.fonte)
-        await entrarPelaTela(page)
+        if (!tela.semLogin) await entrarPelaTela(page)
         await tela.abrir(page)
-        await fotografar(page, `${tela.nome}-${tema}-${largura.nome}`, tela.inteira ?? true)
+        await fotografar(page, `${tela.nome}-${tema}-${largura.nome}`, tela)
       })
     }
   }

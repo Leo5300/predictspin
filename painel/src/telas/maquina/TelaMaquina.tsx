@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 
 import {
   consultaDispositivos,
+  consultaEnsaios,
   consultaMaquina,
   consultaPontos,
   consultaSerieRecente,
@@ -43,8 +44,10 @@ import {
 } from '@/dominio/formato'
 import type { Frescor } from '@/dominio/idade'
 import { PERIODO_MAPA_PADRAO, PERIODOS_MAPA, type PeriodoMapa } from '@/dominio/periodos'
+import { useSessao } from '@/api/sessao'
 import { rotuloDoCanal } from '@/dominio/canais'
 import { descricaoDoModelo, ultimoContato } from '@/dominio/maquina'
+import { podeAbrir } from '@/dominio/papeis'
 import { ordenarCodigos, rotuloDoPapel } from '@/dominio/pontos'
 import { rpmSemMilhar } from '@/dominio/tacometro'
 import { definirFonte } from '@/estado/preferencias'
@@ -283,6 +286,7 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
           simulado={aoVivo.simulado}
           periodo={periodoDoMapa}
           codigos={pontosAtivos.map((p) => p.codigo)}
+          nominais={maquina.data.rotacoes_nominais_rpm}
         />
       </Painel>
     </div>
@@ -563,9 +567,13 @@ type PropsDoMapa = {
   simulado: boolean
   periodo: PeriodoMapa['chave']
   codigos: string[]
+  nominais: readonly number[]
 }
 
-function SecaoDoMapa({ maquinaId, simulado, periodo, codigos }: PropsDoMapa) {
+function SecaoDoMapa({ maquinaId, simulado, periodo, codigos, nominais }: PropsDoMapa) {
+  const sessao = useSessao()
+  const veEnsaios = sessao.fase === 'autenticada' && podeAbrir(sessao.usuario.papel, 'ensaios')
+  const ensaios = useQuery({ ...consultaEnsaios(maquinaId, simulado), enabled: veEnsaios })
   const navegar = useNavigate({ from: '/maquinas/$maquinaId/' })
   const escolhido = PERIODOS_MAPA.find((p) => p.chave === periodo) ?? PERIODO_MAPA_PADRAO
   // no celular, um quarto dos intervalos: cada célula fica larga o bastante para ser lida
@@ -601,7 +609,7 @@ function SecaoDoMapa({ maquinaId, simulado, periodo, codigos }: PropsDoMapa) {
           ponto,
           grandeza: g.rotulo,
           valores: dados.intervalos.map((i) => i.pontos[ponto]?.[g.chave] ?? null),
-          // A referência (faixa normal) ainda não existe na API: o mapa fica em cinza
+          // A referência (faixa normal) ainda não existe na API: sem âmbar nem vermelho
           referencia: null,
         })),
       ),
@@ -613,7 +621,7 @@ function SecaoDoMapa({ maquinaId, simulado, periodo, codigos }: PropsDoMapa) {
   return (
     <Modulo
       rotulo="Mapa de ordens"
-      detalhe="amplitude por intervalo de tempo, média de cada intervalo"
+      detalhe="cada célula comparada com o típico da própria linha, na mesma marcha"
       simulado={simulado && temDado}
       className="xl:col-span-12"
       acoes={
@@ -643,7 +651,18 @@ function SecaoDoMapa({ maquinaId, simulado, periodo, codigos }: PropsDoMapa) {
           O mapa mostra a amplitude de cada ponto ao longo do tempo assim que houver janelas.
         </EstadoVazio>
       ) : (
-        <MapaOrdens intervalos={intervalos} linhas={linhas} simulado={simulado} />
+        <MapaOrdens
+          intervalos={intervalos}
+          linhas={linhas}
+          nominais={nominais}
+          ensaios={(ensaios.data ?? []).map((e) => ({
+            inicio: e.iniciado_em,
+            fim: e.encerrado_em ?? null,
+            codigo: e.codigo,
+            etapa: e.etapa,
+          }))}
+          simulado={simulado}
+        />
       )}
     </Modulo>
   )

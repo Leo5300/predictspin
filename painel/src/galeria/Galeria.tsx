@@ -32,7 +32,13 @@ import { definirTema, useTema } from '@/estado/preferencias'
 import {
   INTERVALOS_MAPA,
   LINHAS_MAPA_COM_REFERENCIA,
-  LINHAS_MAPA_SEM_REFERENCIA,
+  ENSAIOS_MAPA_EXEMPLO,
+  EVENTOS_MAPA_EXEMPLO,
+  MAPA_ABAIXO,
+  MAPA_B_FUGINDO,
+  MAPA_LACUNA_E_SATURACAO,
+  MAPA_NORMAL,
+  MAPA_TROCA_DE_MARCHA,
   MARCA_DA_GALERIA,
   NOME_MUITO_LONGO,
   NOMINAIS_EXEMPLO,
@@ -348,18 +354,31 @@ export function Galeria() {
         <section className="flex flex-col gap-2" aria-label="Mapa de ordens">
           <h2 className="text-15 font-semibold">Mapa de ordens</h2>
           <Painel>
-            <Modulo rotulo="Sem referência (hoje) · com lacuna e saturação">
-              <MapaOrdens intervalos={INTERVALOS_MAPA} linhas={LINHAS_MAPA_SEM_REFERENCIA} />
+            <Modulo rotulo="Normal: tapete liso">
+              <MapaOrdens {...MAPA_NORMAL} nominais={NOMINAIS_EXEMPLO} />
+            </Modulo>
+            <Modulo rotulo="Troca de marcha no meio: o tapete continua liso">
+              <MapaOrdens {...MAPA_TROCA_DE_MARCHA} nominais={NOMINAIS_EXEMPLO} />
+            </Modulo>
+            <Modulo rotulo="B fugindo do típico durante um ensaio, com evento marcado">
+              <MapaOrdens
+                {...MAPA_B_FUGINDO}
+                nominais={NOMINAIS_EXEMPLO}
+                ensaios={ENSAIOS_MAPA_EXEMPLO}
+                eventos={EVENTOS_MAPA_EXEMPLO}
+              />
+            </Modulo>
+            <Modulo rotulo="Abaixo do típico: pontilhado">
+              <MapaOrdens {...MAPA_ABAIXO} nominais={NOMINAIS_EXEMPLO} />
+            </Modulo>
+            <Modulo rotulo="Lacuna e saturação">
+              <MapaOrdens {...MAPA_LACUNA_E_SATURACAO} nominais={NOMINAIS_EXEMPLO} />
+            </Modulo>
+            <Modulo rotulo="Fonte simulada: hachura só na moldura" simulado>
+              <MapaOrdens {...MAPA_NORMAL} nominais={NOMINAIS_EXEMPLO} simulado />
             </Modulo>
             <Modulo rotulo="Com referência (futuro): atenção em âmbar, alarme em vermelho">
               <MapaOrdens intervalos={INTERVALOS_MAPA} linhas={LINHAS_MAPA_COM_REFERENCIA} />
-            </Modulo>
-            <Modulo rotulo="Fonte simulada" simulado>
-              <MapaOrdens
-                intervalos={INTERVALOS_MAPA}
-                linhas={LINHAS_MAPA_SEM_REFERENCIA}
-                simulado
-              />
             </Modulo>
           </Painel>
         </section>

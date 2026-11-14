@@ -23,8 +23,6 @@ export type CoresDoCanvas = {
   reticula: string
   reticulaFina: string
   pontos: [string, string, string]
-  /** Tema escuro: a rampa do mapa vai do claro (zero) ao escuro (máximo), como no tema claro. */
-  escuro: boolean
 }
 
 const TOKENS = {
@@ -67,7 +65,6 @@ function ler(): CoresDoCanvas {
     reticula: valor(TOKENS.reticula),
     reticulaFina: valor(TOKENS.reticulaFina),
     pontos: [valor('--ponto-a'), valor('--ponto-b'), valor('--ponto-c')],
-    escuro: tema === 'grafite',
   }
   cache = { tema, cores }
   return cores
@@ -78,32 +75,22 @@ export function useCoresDoCanvas(): CoresDoCanvas {
   return useSyncExternalStore(aoMudarTema, ler)
 }
 
-/** Degraus da rampa de cinza do mapa de ordens. */
-export const DEGRAUS_DA_RAMPA = 8
-
 /**
- * Tom de cinza de uma célula do mapa de ordens: a amplitude (0 a 1 da escala da linha) cai em um de
- * 8 degraus, com passos iguais de luminosidade em OKLCH (perceptualmente uniformes). Nos dois temas,
- * tom mais escuro = valor maior (é o que o glossário diz). No claro, o degrau sobe do fundo rebaixado
- * para o tom do texto (escuro); no grafite, o texto é claro, então a mistura corre ao contrário: o
- * zero é o cinza mais claro e o máximo o mais escuro, que ainda se distingue da lacuna (vazia, com
- * contorno tracejado). No grafite o degrau do máximo ainda fica bem acima do fundo (28 % do texto),
- * para a máquina saudável não sumir no escuro.
+ * Tom de uma célula do mapa de ordens comparada com o típico da linha. Dentro da faixa morta, todas
+ * as células têm o mesmo tom (BASE). Acima do típico, o tom se afasta do fundo de forma contínua
+ * (sem degraus) até o MÁXIMO: a mistura vai em direção ao tom do texto, então "mais longe do típico
+ * = mais contraste" vale nos dois temas (no grafite fica mais claro; no claro, mais escuro).
  */
-export function degrauDoNivel(nivel: number): number {
-  return Math.min(
-    DEGRAUS_DA_RAMPA - 1,
-    Math.floor(Math.min(1, Math.max(0, nivel)) * DEGRAUS_DA_RAMPA),
-  )
+const MISTURA_BASE = 26
+const MISTURA_MAXIMA = 84
+
+export function tomDaCelula(intensidade: number, cores: CoresDoCanvas): string {
+  const t = Math.min(1, Math.max(0, intensidade))
+  const parte = Math.round(MISTURA_BASE + (MISTURA_MAXIMA - MISTURA_BASE) * t)
+  return `color-mix(in oklch, ${cores.texto} ${parte}%, ${cores.rebaixo})`
 }
 
-/** Fração do tom do texto na mistura: no claro sobe de 12 % a 70 %; no grafite desce de 74 % a 28 %. */
-const RAMPA_CLARO = [12, 70] as const
-const RAMPA_GRAFITE = [74, 28] as const
-
-export function cinzaDoNivel(nivel: number, cores: CoresDoCanvas): string {
-  const degrau = degrauDoNivel(nivel)
-  const [inicio, fim] = cores.escuro ? RAMPA_GRAFITE : RAMPA_CLARO
-  const parte = Math.round(inicio + ((fim - inicio) * degrau) / (DEGRAUS_DA_RAMPA - 1))
-  return `color-mix(in oklch, ${cores.texto} ${parte}%, ${cores.rebaixo})`
+/** Pontos do padrão "abaixo do típico": discretos, sem competir com o contraste do "acima". */
+export function pontoAbaixo(cores: CoresDoCanvas): string {
+  return `color-mix(in oklch, ${cores.texto} 70%, ${cores.rebaixo})`
 }

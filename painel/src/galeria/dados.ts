@@ -63,17 +63,101 @@ function linha(
   }
 }
 
-export const LINHAS_MAPA_SEM_REFERENCIA: LinhaDoMapa[] = [
-  linha('A', 'RMS', 0.05, 0.0015, null),
-  linha('A', '1X', 0.04, 0.0012, null),
-  linha('B', 'RMS', 0.08, 0.0008, null),
-  linha('B', '1X', 0.06, 0.0004, null),
-]
-
 export const LINHAS_MAPA_COM_REFERENCIA: LinhaDoMapa[] = [
   linha('A', 'RMS', 0.05, 0.0035, REFERENCIA_EXEMPLO),
   linha('A', '1X', 0.04, 0.0012, { centro: 0.04, tolerancia: 0.01, atencao: 0.06, alarme: 0.08 }),
   linha('B', 'RMS', 0.05, 0.0005, REFERENCIA_EXEMPLO),
+]
+
+// ---- cenários do mapa de ordens comparado com o típico (todos inventados, só para a galeria)
+
+type Cenario = {
+  /** Marcha (rpm medidos) de cada intervalo; nulo = lacuna. */
+  rotacao: (i: number) => number | null
+  /** Valor da linha no intervalo, a partir da base da linha. */
+  valor: (ponto: string, base: number, i: number) => number
+  saturou?: (i: number) => boolean
+}
+
+const PONTOS_E_BASES: [string, string, number][] = [
+  ['A', 'RMS', 0.05],
+  ['A', '1X', 0.04],
+  ['A', '2X', 0.015],
+  ['A', '3X', 0.007],
+  ['B', 'RMS', 0.08],
+  ['B', '1X', 0.06],
+  ['B', '2X', 0.025],
+  ['B', '3X', 0.015],
+  ['C', 'RMS', 0.04],
+  ['C', '1X', 0.035],
+  ['C', '2X', 0.014],
+  ['C', '3X', 0.008],
+]
+
+/** Ruído pequeno (±4 %), determinístico. */
+const ruido = (i: number, base: number) => base * 0.04 * Math.sin(i * 1.3 + base * 100)
+
+function cenarioDoMapa(c: Cenario): { intervalos: IntervaloDoMapa[]; linhas: LinhaDoMapa[] } {
+  const intervalos = Array.from({ length: 60 }, (_, i) => {
+    const rotacao = c.rotacao(i)
+    return {
+      inicio: new Date(INICIO_MAPA + i * 30_000).toISOString(),
+      fim: new Date(INICIO_MAPA + (i + 1) * 30_000).toISOString(),
+      janelas: rotacao === null ? 0 : 6,
+      saturou: c.saturou?.(i) ?? false,
+      rotacaoRpm: rotacao,
+    }
+  })
+  const linhas = PONTOS_E_BASES.map(([ponto, grandeza, base]) => ({
+    chave: `${ponto}-${grandeza}`,
+    ponto,
+    grandeza,
+    valores: intervalos.map((intervalo, i) =>
+      intervalo.janelas === 0 ? null : c.valor(ponto, base, i) + ruido(i, base),
+    ),
+    referencia: null,
+  }))
+  return { intervalos, linhas }
+}
+
+export const MAPA_NORMAL = cenarioDoMapa({ rotacao: () => 1178, valor: (_, b) => b })
+
+/** Troca de 1120 para 450 rpm no meio: todas as linhas mudam de nível, mas é a marcha. */
+export const MAPA_TROCA_DE_MARCHA = cenarioDoMapa({
+  rotacao: (i) => (i < 30 ? 1178 : 452),
+  valor: (_, b, i) => (i < 30 ? b : b * 0.45),
+})
+
+/** Só as linhas do B sobem a partir do intervalo 40 (corte com avanço acima do recomendado). */
+export const MAPA_B_FUGINDO = cenarioDoMapa({
+  rotacao: () => 1178,
+  valor: (ponto, b, i) => (ponto === 'B' && i >= 40 ? b * (1.2 + (i - 40) * 0.03) : b),
+})
+
+/** O ponto C cai para 60 % do típico num trecho (abaixo do típico: pontilhado). */
+export const MAPA_ABAIXO = cenarioDoMapa({
+  rotacao: () => 1178,
+  valor: (ponto, b, i) => (ponto === 'C' && i >= 20 && i < 35 ? b * 0.6 : b),
+})
+
+/** Lacuna entre os intervalos 18 e 24 e saturação em 44 e 45. */
+export const MAPA_LACUNA_E_SATURACAO = cenarioDoMapa({
+  rotacao: (i) => (i >= 18 && i < 25 ? null : 1178),
+  valor: (_, b, i) => (i === 44 || i === 45 ? b * 1.6 : b),
+  saturou: (i) => i === 44 || i === 45,
+})
+
+export const ENSAIOS_MAPA_EXEMPLO = [
+  {
+    inicio: new Date(INICIO_MAPA + 40 * 30_000).toISOString(),
+    fim: new Date(INICIO_MAPA + 55 * 30_000).toISOString(),
+    codigo: 'TORNO-01-T3-00012',
+    etapa: 'T3',
+  },
+]
+
+export const EVENTOS_MAPA_EXEMPLO = [
+  { instante: new Date(INICIO_MAPA + 47 * 30_000 + 9_000).toISOString(), motivo: 'pancada' },
 ]
 
 const INICIO_TENDENCIA = Date.parse('2026-11-12T10:00:00Z') / 1000
