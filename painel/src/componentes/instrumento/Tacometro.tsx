@@ -156,6 +156,7 @@ export function Tacometro({ rpm, nominais, velho = false, className }: Props) {
           {rpmSemMilhar(rpm)}
         </span>
         <span
+          hidden={!temRotacao}
           className="rotulo absolute left-1/2 -translate-x-1/2"
           style={{ top: `${((CY + 112) / ALTURA) * 100}%` }}
         >
