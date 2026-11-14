@@ -23,6 +23,8 @@ export type CoresDoCanvas = {
   reticula: string
   reticulaFina: string
   pontos: [string, string, string]
+  /** Tema escuro: a rampa do mapa vai do claro (zero) ao escuro (máximo), como no tema claro. */
+  escuro: boolean
 }
 
 const TOKENS = {
@@ -65,6 +67,7 @@ function ler(): CoresDoCanvas {
     reticula: valor(TOKENS.reticula),
     reticulaFina: valor(TOKENS.reticulaFina),
     pontos: [valor('--ponto-a'), valor('--ponto-b'), valor('--ponto-c')],
+    escuro: tema === 'grafite',
   }
   cache = { tema, cores }
   return cores
@@ -80,9 +83,12 @@ export const DEGRAUS_DA_RAMPA = 8
 
 /**
  * Tom de cinza de uma célula do mapa de ordens: a amplitude (0 a 1 da escala da linha) cai em um de
- * 8 degraus. Os degraus são misturas em OKLCH entre o fundo rebaixado e o tom do texto, com passos
- * iguais de luminosidade (perceptualmente uniformes), de 10 % a 72 %: o degrau mais baixo ainda se
- * distingue da lacuna (vazia) e o mais alto não chega à cor do texto nem domina a tela.
+ * 8 degraus, com passos iguais de luminosidade em OKLCH (perceptualmente uniformes). Nos dois temas,
+ * tom mais escuro = valor maior (é o que o glossário diz). No claro, o degrau sobe do fundo rebaixado
+ * para o tom do texto (escuro); no grafite, o texto é claro, então a mistura corre ao contrário: o
+ * zero é o cinza mais claro e o máximo o mais escuro, que ainda se distingue da lacuna (vazia, com
+ * contorno tracejado). No grafite o degrau do máximo ainda fica bem acima do fundo (28 % do texto),
+ * para a máquina saudável não sumir no escuro.
  */
 export function degrauDoNivel(nivel: number): number {
   return Math.min(
@@ -91,8 +97,13 @@ export function degrauDoNivel(nivel: number): number {
   )
 }
 
+/** Fração do tom do texto na mistura: no claro sobe de 12 % a 70 %; no grafite desce de 74 % a 28 %. */
+const RAMPA_CLARO = [12, 70] as const
+const RAMPA_GRAFITE = [74, 28] as const
+
 export function cinzaDoNivel(nivel: number, cores: CoresDoCanvas): string {
   const degrau = degrauDoNivel(nivel)
-  const parte = Math.round(10 + (degrau * (72 - 10)) / (DEGRAUS_DA_RAMPA - 1))
+  const [inicio, fim] = cores.escuro ? RAMPA_GRAFITE : RAMPA_CLARO
+  const parte = Math.round(inicio + ((fim - inicio) * degrau) / (DEGRAUS_DA_RAMPA - 1))
   return `color-mix(in oklch, ${cores.texto} ${parte}%, ${cores.rebaixo})`
 }

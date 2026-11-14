@@ -43,6 +43,7 @@ import {
 } from '@/dominio/formato'
 import type { Frescor } from '@/dominio/idade'
 import { PERIODO_MAPA_PADRAO, PERIODOS_MAPA, type PeriodoMapa } from '@/dominio/periodos'
+import { rotuloDoCanal } from '@/dominio/canais'
 import { descricaoDoModelo, ultimoContato } from '@/dominio/maquina'
 import { ordenarCodigos, rotuloDoPapel } from '@/dominio/pontos'
 import { rpmSemMilhar } from '@/dominio/tacometro'
@@ -147,7 +148,7 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
         <Modulo
           rotulo="Sensores na máquina"
           simulado={aoVivo.simulado && !semNenhumDado}
-          className="xl:col-span-4 [&>div:last-child]:flex [&>div:last-child]:flex-col [&>div:last-child]:justify-center"
+          className="xl:col-span-5 [&>div:last-child]:flex [&>div:last-child]:flex-col [&>div:last-child]:justify-between"
           acoes={
             frescor === 'vivo' ? undefined : <MarcaDeIdade frescor={frescor} idadeS={idadeS} />
           }
@@ -165,7 +166,7 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
                 velho={velho}
               />
               {/* o que as marcas do desenho querem dizer (sem dado, não há barra nem anel) */}
-              <p className="mt-6 text-12 text-apoio" hidden={semNenhumDado}>
+              <p className="mt-4 text-12 text-apoio" hidden={semNenhumDado}>
                 Barra ao lado do ponto: RMS atual em relação ao maior RMS dos últimos 15 min. Anel:
                 janela que acabou de chegar. Clique no ponto para abrir a tendência.
               </p>
@@ -187,7 +188,7 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
         <Modulo
           rotulo="Rotação"
           simulado={aoVivo.simulado && !semNenhumDado}
-          className="xl:col-span-4"
+          className="xl:col-span-3"
           acoes={
             frescor === 'vivo' ? undefined : <MarcaDeIdade frescor={frescor} idadeS={idadeS} />
           }
@@ -408,18 +409,12 @@ function Canais({ janela, velho }: { janela: Janela; velho: boolean }) {
       >
         {Object.entries(janela.canais).map(([codigo, canal]) => (
           <div key={codigo} className="contents">
-            {/* a API dá a grandeza e o código do canal (não há nome por extenso): a grandeza é o
-                rótulo e o código, que distingue dois canais da mesma grandeza, vem ao lado */}
-            <dt className="flex min-w-0 items-baseline gap-2 text-13" title={codigo}>
-              <span
-                className={cn(
-                  'shrink-0 first-letter:uppercase',
-                  velho ? 'text-fraco' : 'text-texto',
-                )}
-              >
-                {canal.grandeza}
+            {/* rótulo pelo local (ambiente, cabeçote, ferramenta), tirado do código do canal; o
+                código fica na dica */}
+            <dt className="min-w-0 text-13" title={codigo}>
+              <span className={cn(velho ? 'text-fraco' : 'text-texto')}>
+                {rotuloDoCanal(codigo, canal.grandeza)}
               </span>
-              <span className="valor truncate text-12 text-fraco">{codigo}</span>
             </dt>
             <dd className="text-right">
               <span

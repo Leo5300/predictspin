@@ -3,33 +3,32 @@ import type { Referencia } from './estado'
 /**
  * Escalas do mapa de ordens e da régua de desvio.
  *
- * Mapa de ordens sem referência: cada linha (ponto × grandeza) tem a própria escala, do menor ao
- * maior valor da linha no período; a célula é um tom de cinza proporcional à posição da amplitude
- * nessa faixa (de zero ao máximo, um sinal estável deixaria todas as células no topo). Com
- * referência, o que passa do limite de atenção fica âmbar e o que passa do de alarme, vermelho.
+ * Mapa de ordens sem referência: cada linha (ponto × grandeza) tem a própria escala, do ZERO ao
+ * maior valor da linha no período; a célula é um tom proporcional à amplitude nessa faixa. Do mínimo
+ * ao máximo, a variação normal de uma máquina saudável (por exemplo 0,040 a 0,050 g) virava contraste
+ * total e o mapa parecia estática ou alarme; do zero, essa variação fica em degraus vizinhos e a
+ * máquina saudável parece um tapete uniforme. Com referência, o que passa do limite de atenção fica
+ * âmbar e o que passa do de alarme, vermelho.
  */
 
 export type EscalaLinha = { minimo: number; maximo: number }
 
 export function escalaDaLinha(valores: readonly (number | null | undefined)[]): EscalaLinha {
-  let minimo = Number.POSITIVE_INFINITY
   let maximo = 0
   for (const v of valores) {
     if (v === null || v === undefined || !Number.isFinite(v)) continue
     if (v > maximo) maximo = v
-    if (v < minimo) minimo = v
   }
-  return { minimo: Number.isFinite(minimo) ? minimo : 0, maximo }
+  return { minimo: 0, maximo }
 }
 
 /**
- * Nível de 0 (o menor valor da linha) a 1 (o maior). Linha constante fica no meio (0,5): não há
- * variação para mostrar, mas há dado.
+ * Nível de 0 (zero) a 1 (o maior valor da linha). Linha toda zerada fica em 0: não há amplitude.
  */
 export function nivelDeCinza(valor: number, escala: EscalaLinha): number {
   if (!Number.isFinite(valor)) return 0
   const faixa = escala.maximo - escala.minimo
-  if (faixa <= 0) return 0.5
+  if (faixa <= 0) return 0
   return Math.min(1, Math.max(0, (valor - escala.minimo) / faixa))
 }
 

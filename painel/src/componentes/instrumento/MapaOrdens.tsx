@@ -54,7 +54,8 @@ const ESPACO_ENTRE_PONTOS = 5
  * A·1X, A·2X, A·3X, depois B e C). Cada célula é um intervalo de tempo.
  *
  * Sem referência, a célula é um tom de cinza proporcional à amplitude, com a escala de cada linha
- * indo do mínimo ao máximo da própria linha no período. Com referência, o que passa do limite de
+ * indo de zero ao máximo da própria linha no período (mais escuro = maior): a variação normal fica
+ * em cinzas próximos e a máquina saudável parece um tapete uniforme. Com referência, o que passa do limite de
  * atenção fica âmbar e o que passa do de alarme, vermelho. Lacuna fica vazia, período com
  * saturação leva marca no topo e fonte simulada leva hachura.
  */
@@ -368,7 +369,8 @@ function Legenda({
             />
           ))}
         </span>
-        cinza em {DEGRAUS_DA_RAMPA} degraus: do mínimo ao máximo da linha no período
+        {DEGRAUS_DA_RAMPA} degraus de cinza, de zero ao máximo da linha no período (mais escuro =
+        maior)
       </span>
       {temReferencia ? (
         <>

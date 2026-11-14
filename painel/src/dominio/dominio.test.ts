@@ -98,9 +98,9 @@ describe('estado da máquina e avaliação', () => {
 describe('escala do mapa de ordens', () => {
   it('cada linha vai de zero ao próprio máximo', () => {
     const escala = escalaDaLinha([0.02, null, 0.08, undefined, 0.05])
-    expect(escala).toEqual({ minimo: 0.02, maximo: 0.08 })
-    expect(nivelDeCinza(0.02, escala)).toBe(0)
-    expect(nivelDeCinza(0.05, escala)).toBeCloseTo(0.5)
+    expect(escala).toEqual({ minimo: 0, maximo: 0.08 })
+    expect(nivelDeCinza(0.02, escala)).toBeCloseTo(0.25)
+    expect(nivelDeCinza(0.04, escala)).toBeCloseTo(0.5)
     expect(nivelDeCinza(0.08, escala)).toBe(1)
     expect(nivelDeCinza(0.5, escala)).toBe(1)
     expect(nivelDeCinza(0, escala)).toBe(0)
@@ -108,9 +108,17 @@ describe('escala do mapa de ordens', () => {
 
   it('linha vazia ou zerada não divide por zero', () => {
     expect(escalaDaLinha([])).toEqual({ minimo: 0, maximo: 0 })
-    // linha constante: há dado, mas não há variação a mostrar
-    expect(nivelDeCinza(0.03, escalaDaLinha([0.03, 0.03]))).toBe(0.5)
+    expect(nivelDeCinza(0, escalaDaLinha([0, 0]))).toBe(0)
+    // linha constante: todas as células no topo da escala, iguais entre si
+    expect(nivelDeCinza(0.03, escalaDaLinha([0.03, 0.03]))).toBe(1)
     expect(nivelDeCinza(Number.NaN, { minimo: 0, maximo: 1 })).toBe(0)
+  })
+
+  it('variação normal (0,040 a 0,050 g) cai em degraus vizinhos, não em contraste total', () => {
+    const valores = [0.04, 0.045, 0.05, 0.042, 0.048]
+    const escala = escalaDaLinha(valores)
+    const niveis = valores.map((v) => nivelDeCinza(v, escala))
+    expect(Math.max(...niveis) - Math.min(...niveis)).toBeLessThanOrEqual(0.2 + 1e-9)
   })
 
   it('lacuna, cinza sem referência e cor de desvio com referência', () => {

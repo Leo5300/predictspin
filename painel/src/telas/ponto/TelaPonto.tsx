@@ -820,9 +820,14 @@ function FaixaDoQuadro({
   )
 }
 
-/** Gráfico ao vivo: as janelas de 1 s dos últimos 60 s, com o tempo deslizando de forma linear. */
+/**
+ * Gráfico ao vivo: as janelas de 1 s dos últimos 60 s, com o tempo deslizando de forma linear. RMS
+ * e pico ficam em quadros próprios, cada um com o seu eixo: na mesma escala (0 a 0,300 g) o RMS
+ * virava uma reta encostada no zero. Os dois quadros dividem o cursor, as lacunas e a marca de
+ * janela rápida na base.
+ */
 function QuadroAoVivo({ recentes, codigo }: { recentes: Janela[]; codigo: string }) {
-  const { temposS, series, rapidas, instantesRapidos } = useMemo(() => {
+  const { temposS, serieRms, seriePico, rapidas, instantesRapidos } = useMemo(() => {
     // só o trecho que pode aparecer na tela: do último instante recebido para trás
     const ultima = recentes.at(-1)
     const corte = (ultima ? Date.parse(ultima.medido_em) : 0) - (AO_VIVO_SEGUNDOS + 30) * 1000
@@ -842,7 +847,7 @@ function QuadroAoVivo({ recentes, codigo }: { recentes: Janela[]; codigo: string
       instantesRapidos: janelas
         .filter((j) => j.modo === 'rapido')
         .map((j) => Date.parse(j.medido_em) / 1000),
-      series: [
+      serieRms: [
         {
           rotulo: 'RMS',
           valores: rms,
@@ -851,30 +856,55 @@ function QuadroAoVivo({ recentes, codigo }: { recentes: Janela[]; codigo: string
           tom: 0,
           espessura: 1.75,
         },
-        { rotulo: 'PICO', valores: pico, tom: 2, espessura: 1 },
+      ] satisfies SerieDoGrafico[],
+      seriePico: [
+        { rotulo: 'PICO', valores: pico, tom: 1, espessura: 1.25 },
       ] satisfies SerieDoGrafico[],
     }
   }, [recentes, codigo])
+  const sincronia = `ao-vivo-${codigo}`
 
   return (
     <div className="flex flex-col" data-testid="quadro-ao-vivo">
       <FaixaDoQuadro
         rotulo={
           <>
-            RMS e pico · <Unidade>g</Unidade> · últimos 60 <Unidade>s</Unidade>
+            RMS · <Unidade>g</Unidade> · últimos 60 <Unidade>s</Unidade>
           </>
         }
       >
         <GraficoTendencia
           temposS={temposS}
-          series={series}
-          altura={320}
+          series={serieRms}
+          altura={220}
           unidade="g"
           casas={3}
           deslizarS={AO_VIVO_SEGUNDOS}
           rapidas={instantesRapidos}
           referencia={null}
-          descricao={`RMS e pico do ponto ${codigo} ao vivo`}
+          mostrarTempo={false}
+          sincronia={sincronia}
+          descricao={`RMS do ponto ${codigo} ao vivo`}
+        />
+      </FaixaDoQuadro>
+      <FaixaDoQuadro
+        rotulo={
+          <>
+            Pico · <Unidade>g</Unidade> · eixo próprio
+          </>
+        }
+      >
+        <GraficoTendencia
+          temposS={temposS}
+          series={seriePico}
+          altura={150}
+          unidade="g"
+          casas={3}
+          deslizarS={AO_VIVO_SEGUNDOS}
+          rapidas={instantesRapidos}
+          referencia={null}
+          sincronia={sincronia}
+          descricao={`Pico do ponto ${codigo} ao vivo`}
         />
       </FaixaDoQuadro>
       <p className="flex flex-wrap gap-x-4 border-t border-linha px-3 py-1.5 text-12 text-apoio">
