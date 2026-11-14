@@ -68,7 +68,10 @@ type Extras = Pick<
 }
 
 const FONTE = '12px "IBM Plex Mono", monospace'
-const MARGEM_DIREITA = 66
+/** Faixa à direita do gráfico para os rótulos das séries; menor em gráfico estreito (celular). */
+const GRAFICO_ESTREITO = 520
+const margemDireita = (largura: number) => (largura < GRAFICO_ESTREITO ? 46 : 66)
+const afastamentoDoRotulo = (larguraCss: number) => (larguraCss < GRAFICO_ESTREITO ? 6 : 12)
 
 /**
  * Gráfico de tendência (uPlot) com retícula de osciloscópio 10 × 8 ao fundo. As linhas usam tons
@@ -308,7 +311,7 @@ function montarOpcoes({
     width: largura,
     height: altura,
     // sem o eixo do tempo embaixo, a folga inferior evita que o rótulo do zero seja cortado
-    padding: [8, MARGEM_DIREITA, mostrarTempo ? 0 : 8, 0],
+    padding: [8, margemDireita(largura), mostrarTempo ? 0 : 8, 0],
     legend: { show: false },
     cursor: {
       y: false,
@@ -601,7 +604,8 @@ function desenharRotulosNoFim(u: uPlot, series: readonly SerieDoGrafico[], cores
   // ponto em vez de começar nele, e caía dentro do gráfico
   ctx.textAlign = 'left'
   ctx.fillStyle = cores.texto
-  for (const d of desejados) ctx.fillText(d.rotulo, left + width + 12 * escala, d.y)
+  const afastamento = afastamentoDoRotulo(u.over.clientWidth || width / escala)
+  for (const d of desejados) ctx.fillText(d.rotulo, left + width + afastamento * escala, d.y)
   ctx.restore()
 }
 

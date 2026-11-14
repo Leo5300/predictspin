@@ -27,6 +27,7 @@ import { ordenarCodigos } from '@/dominio/pontos'
 import { definirFonte, useFonte } from '@/estado/preferencias'
 import { definirTransporte, definirUltimaObservacao } from '@/estado/transporte'
 import { useFrescorDaMaquina } from '@/hooks/useFrescorDaMaquina'
+import { useTelaEstreita } from '@/hooks/useTelaEstreita'
 import { cn } from '@/lib/utils'
 
 /** Colunas da linha de máquina quando o módulo é largo; abaixo disso as células se empilham. */
@@ -182,6 +183,8 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
   })
   const dispositivos = useQuery(consultaDispositivos(maquina.id, simulado))
   const { frescor, idadeS, velho } = useFrescorDaMaquina(ultima)
+  // no celular as células ficam em duas colunas: a sparkline encolhe para caber no campo
+  const estreita = useTelaEstreita()
 
   const janela = ultima?.janela
   const estado = estadoDaMaquina(frescor, janela?.rotacao_rpm)
@@ -253,7 +256,8 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
         return (
           <Celula key={indice} rotulo={codigo ? `RMS ${codigo}` : 'RMS'}>
             {codigo ? (
-              <span className="flex items-center gap-2">
+              // nada sai do próprio campo: a sparkline nunca cobre o valor vizinho
+              <span className="flex min-w-0 items-center gap-2 overflow-hidden pr-4">
                 <span className="valor w-4 text-13 font-semibold text-texto @max-[84rem]:hidden">
                   {codigo}
                 </span>
@@ -272,7 +276,7 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
                     ) ?? []
                   }
                   velho={velho}
-                  largura={128}
+                  largura={estreita ? 72 : 128}
                   altura={22}
                   descricao={`RMS do ponto ${codigo} nos últimos 15 minutos`}
                 />

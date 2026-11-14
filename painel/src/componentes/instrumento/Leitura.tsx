@@ -86,9 +86,10 @@ export function Leitura({
       >
         <span
           className={cn(
-            'truncate font-medium',
+            'truncate',
             !texto && 'valor',
-            velho ? 'text-fraco' : 'text-texto',
+            // velho: tom fraco e sem peso, como a regra de dado velho faz com os números
+            velho ? 'font-normal text-fraco' : 'font-medium text-texto',
           )}
           title={valor}
         >
