@@ -1,4 +1,5 @@
-# Blueprint do Render: API em Docker (pasta api/) e banco PostgreSQL gerenciado.
+# Blueprint do Render: API em Docker (pasta api/), banco PostgreSQL gerenciado e o painel web como
+# site estático (pasta painel/).
 # Passo a passo em docs/deploy-render.md.
 #
 # Nenhum segredo fica neste arquivo. As variáveis com "sync: false" são pedidas pelo Render
@@ -61,3 +62,47 @@ services:
         sync: false
       - key: CORS_ORIGENS
         sync: false
+
+  # --- Painel web: site estático (build do Vite), servido pela CDN do Render ---
+  # Sem plano nem região: site estático não tem (o esquema do Blueprint recusa os dois campos).
+  - type: web
+    name: predictspin-painel
+    runtime: static
+    # caminhos relativos à raiz do repositório
+    buildCommand: cd painel && npm ci && npm run build
+    staticPublishPath: ./painel/dist
+    # Só reconstrói quando o painel muda
+    buildFilter:
+      paths:
+        - painel/**
+    # SPA: toda rota volta para o index.html (o roteador do painel resolve no navegador)
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      # arquivos com hash no nome nunca mudam: cache longo e imutável
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      # o index.html aponta para os arquivos novos a cada publicação: sempre conferido
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+    # A Content-Security-Policy vai numa <meta> gerada no build (vite.config.ts), porque o endereço
+    # da API vem de VITE_API_URL e o render.yaml não monta cabeçalho a partir de variável.
+    envVars:
+      # endereço da API publicada (https://...onrender.com), sem barra no fim; lido no build
+      - key: VITE_API_URL
+        sync: false
+      - key: NODE_VERSION
+        value: "24"

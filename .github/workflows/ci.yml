@@ -74,3 +74,41 @@ jobs:
 
       - name: Testes
         run: python -m pytest -q
+
+  painel:
+    name: Painel (lint, tipos, testes e build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: painel
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: painel/package-lock.json
+
+      - name: Dependências
+        run: npm ci
+
+      - name: Lint (sem avisos)
+        run: npm run lint
+
+      - name: Checagem de tipos
+        run: npm run typecheck
+
+      - name: Testes (Vitest)
+        run: npm test
+
+      - name: Build de produção
+        run: npm run build
+        env:
+          # endereço fictício só para o build da CI (a política de segurança é gerada com ele)
+          VITE_API_URL: https://api.exemplo.invalid
+
+      # Os testes de ponta a ponta (Playwright) precisam do compose com a API, o banco e o
+      # simulador; não cabem com folga em 15 minutos aqui e rodam localmente (docs/painel.md).

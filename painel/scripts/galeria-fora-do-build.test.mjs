@@ -40,6 +40,12 @@ describe('build de produção', () => {
     const lista = await arquivos(destino)
     expect(lista.some((f) => f.endsWith('index.html'))).toBe(true)
     expect(lista.some((f) => path.basename(f).startsWith('galeria'))).toBe(false)
+    // política de segurança escrita no build: só a origem da API, script em linha pelo hash
+    const indice = await readFile(path.join(destino, 'index.html'), 'utf8')
+    expect(indice).toContain('http-equiv="Content-Security-Policy"')
+    expect(indice).toMatch(/script-src 'self' 'sha256-[A-Za-z0-9+/=]+'/)
+    expect(indice).toContain("connect-src 'self' http://localhost:8080")
+    expect(indice).not.toContain("script-src 'self' 'unsafe-inline'")
     for (const arquivo of lista) {
       if (!/\.(html|js|css)$/.test(arquivo)) continue
       const texto = await readFile(arquivo, 'utf8')

@@ -15,6 +15,7 @@ sozinha pelo Flyway no próximo deploy.
 |---|---|---|---|
 | Banco PostgreSQL 16 | `predictspin-db` | `free` | banco `predictspin`, usuário `predictspin` |
 | Serviço web (Docker) | `predictspin-api` | `free` | imagem construída de `api/Dockerfile` |
+| Site estático | `predictspin-painel` | (sem plano: CDN) | build do painel (`painel/`), pasta publicada `painel/dist` |
 
 Os dois ficam na região `virginia`, a mais próxima do Brasil entre as oferecidas. A região não pode
 ser trocada depois de criada; para usar outra, edite `region` nos dois blocos antes de aplicar.
@@ -65,6 +66,44 @@ ser trocada depois de criada; para usar outra, edite `region` nos dois blocos an
    ```
 
    São dados simulados, gravados com a marca `simulado`; não substituem medição.
+
+## Publicar o painel web
+
+O painel é um site estático (Vite + React) descrito no mesmo `render.yaml`, no serviço
+`predictspin-painel`. Ele só reconstrói quando algo em `painel/**` muda. **Nada foi publicado ainda:**
+os passos abaixo são para você fazer.
+
+1. **Envie os commits ao GitHub** (`git push`).
+2. **Sincronize o Blueprint.** No Render, abra o Blueprint do `predictspin` e clique em **Manual
+   Sync** (ou **New > Blueprint** se ainda não existir). O serviço novo `predictspin-painel` aparece
+   na lista. A API e o banco não mudam.
+3. **Preencha `VITE_API_URL`** quando o Render pedir (é `sync: false`): o endereço da API publicada,
+   com `https://` e **sem barra no fim**, por exemplo `https://predictspin-api.onrender.com`. O valor
+   entra no build: trocar depois exige **Manual Deploy** do painel.
+4. **Espere o build** (instala as dependências e roda `npm run build`; o build roda a checagem de
+   tipos). Quando o site aparecer como **Live**, anote o endereço dele, por exemplo
+   `https://predictspin-painel.onrender.com`.
+5. **Libere o painel na API.** Em **predictspin-api > Environment**, acrescente o endereço do painel
+   em `CORS_ORIGENS` (várias origens separadas por vírgula, sem barra no fim) e salve. O Render
+   reimplanta a API; espere ela voltar a **Live**.
+6. **Entre no painel** com o administrador (`ADMIN_EMAIL`, `ADMIN_SENHA`). A primeira chamada pode
+   demorar cerca de 1 minuto se a API estava hibernando: o painel mostra "API acordando".
+7. **Crie os usuários** em **Diagnóstico > Usuários** (só ADMIN): técnicos e operadores, com senha de
+   pelo menos 8 caracteres.
+8. **Cadastre os primeiros materiais e ferramentas.** Os catálogos começam vazios. O jeito mais
+   simples é pela Coleta: em **Preparar > Receita**, digite o nome e confirme "criar no catálogo". Um
+   ADMIN corrige nomes e desativa duplicados em **Diagnóstico > Catálogos**.
+
+**Cabeçalhos e segurança do site.** O `render.yaml` manda `X-Content-Type-Options: nosniff`,
+`Referrer-Policy: no-referrer`, `X-Frame-Options: DENY` em tudo, cache longo e imutável em
+`/assets/*` (arquivos com hash no nome) e `no-cache` no `index.html`. A **Content-Security-Policy**
+vai numa `<meta>` que o build escreve no `index.html` a partir de `VITE_API_URL`: o `render.yaml` não
+consegue montar um cabeçalho com o valor de uma variável, e a política precisa citar a origem da
+API em `connect-src`. Ela não libera nenhuma origem externa além da API (as fontes vêm do próprio
+site). Detalhes em [`painel.md`](painel.md#publicação).
+
+**Rotas.** A regra `rewrite /* → /index.html` faz qualquer endereço do painel (por exemplo
+`/coleta/preparar`) abrir o app, que resolve a rota no navegador.
 
 ## Variáveis
 
