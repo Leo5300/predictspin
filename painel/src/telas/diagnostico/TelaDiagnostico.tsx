@@ -477,6 +477,10 @@ function Usuarios() {
   const sessao = useSessao()
   const meuId = sessao.fase === 'autenticada' ? sessao.usuario.id : null
   const usuarios = useQuery(consultaUsuarios())
+  // como nos catálogos: desativados ficam fora da lista até pedir
+  const [mostrarInativos, setMostrarInativos] = useState(false)
+  const idInativos = useId()
+  const inativos = (usuarios.data ?? []).filter((u) => !u.ativo).length
   const [form, setForm] = useState({ nome: '', email: '', senha: '', papel: 'OPERADOR' as Papel })
   const [erros, setErros] = useState<Partial<Record<keyof typeof form, string>>>({})
   const [falha, setFalha] = useState<string | null>(null)
@@ -518,7 +522,35 @@ function Usuarios() {
 
   return (
     <Painel className="xl:grid-cols-12">
-      <Modulo rotulo="Usuários" className="xl:col-span-8" semRecuo>
+      <Modulo
+        rotulo="Usuários"
+        className="xl:col-span-8"
+        semRecuo
+        detalhe={
+          usuarios.data
+            ? `${String(usuarios.data.length - inativos)} ativos${
+                inativos > 0 && !mostrarInativos ? ` · ${String(inativos)} desativados ocultos` : ''
+              }`
+            : undefined
+        }
+        acoes={
+          inativos > 0 ? (
+            <label
+              htmlFor={idInativos}
+              className="flex min-h-11 items-center gap-2 text-13 text-texto sm:min-h-8"
+            >
+              <input
+                id={idInativos}
+                type="checkbox"
+                checked={mostrarInativos}
+                onChange={(e) => setMostrarInativos(e.target.checked)}
+                className="size-5"
+              />
+              mostrar desativados
+            </label>
+          ) : undefined
+        }
+      >
         {usuarios.isPending ? (
           <EstadoCarregando />
         ) : usuarios.isError ? (
@@ -549,40 +581,45 @@ function Usuarios() {
                 </tr>
               </thead>
               <tbody>
-                {usuarios.data.map((u) => (
-                  <tr
-                    key={u.id}
-                    className="border-b border-linha last:border-b-0"
-                    data-usuario={u.email}
-                  >
-                    <td className="max-w-56 px-3 py-1.5 [overflow-wrap:anywhere] text-texto max-sm:max-w-none max-sm:basis-full max-sm:font-medium">
-                      {u.nome}
-                    </td>
-                    <td className="valor max-w-64 px-3 py-1.5 [overflow-wrap:anywhere] max-sm:max-w-none max-sm:basis-full">
-                      {u.email}
-                    </td>
-                    <td className="px-3 py-1.5">{ROTULO_PAPEL_USUARIO[u.papel]}</td>
-                    <td className="px-3 py-1.5">{u.ativo ? 'ativo' : 'desativado'}</td>
-                    <td className="px-3 py-1.5 text-right max-sm:basis-full max-sm:pt-1.5 max-sm:text-left">
-                      {u.ativo && u.id !== meuId ? (
-                        <SegurarParaConfirmar
-                          aoConfirmar={() => {
-                            desativarUsuario(u.id)
-                              .then(() => {
-                                toast(`${u.nome} desativado.`)
-                                void cliente.invalidateQueries({ queryKey: ['usuarios'] })
-                              })
-                              .catch((e: unknown) => toast(mensagemDoErro(e)))
-                          }}
-                        >
-                          Segure para desativar
-                        </SegurarParaConfirmar>
-                      ) : u.id === meuId ? (
-                        <span className="text-12 text-apoio">você</span>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
+                {usuarios.data
+                  .filter((u) => u.ativo || mostrarInativos)
+                  .map((u) => (
+                    <tr
+                      key={u.id}
+                      className={cn(
+                        'border-b border-linha last:border-b-0',
+                        !u.ativo && 'text-apoio [&_td]:text-apoio',
+                      )}
+                      data-usuario={u.email}
+                    >
+                      <td className="max-w-56 px-3 py-1.5 [overflow-wrap:anywhere] text-texto max-sm:max-w-none max-sm:basis-full max-sm:font-medium">
+                        {u.nome}
+                      </td>
+                      <td className="valor max-w-64 px-3 py-1.5 [overflow-wrap:anywhere] max-sm:max-w-none max-sm:basis-full">
+                        {u.email}
+                      </td>
+                      <td className="px-3 py-1.5">{ROTULO_PAPEL_USUARIO[u.papel]}</td>
+                      <td className="px-3 py-1.5">{u.ativo ? 'ativo' : 'desativado'}</td>
+                      <td className="px-3 py-1.5 text-right max-sm:basis-full max-sm:pt-1.5 max-sm:text-left">
+                        {u.ativo && u.id !== meuId ? (
+                          <SegurarParaConfirmar
+                            aoConfirmar={() => {
+                              desativarUsuario(u.id)
+                                .then(() => {
+                                  toast(`${u.nome} desativado.`)
+                                  void cliente.invalidateQueries({ queryKey: ['usuarios'] })
+                                })
+                                .catch((e: unknown) => toast(mensagemDoErro(e)))
+                            }}
+                          >
+                            Segure para desativar
+                          </SegurarParaConfirmar>
+                        ) : u.id === meuId ? (
+                          <span className="text-12 text-apoio">você</span>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>

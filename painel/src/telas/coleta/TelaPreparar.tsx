@@ -230,7 +230,10 @@ function Preparo({ maquinaId, busca }: { maquinaId: number; busca: BuscaDoPrepar
             {celula ? ` · ${celula.validos}/${celula.meta} feitos` : ''}
           </p>
         </div>
-        <ol className="ml-auto flex items-center gap-1 lg:hidden" aria-label="Passos">
+        <ol
+          className="flex items-center gap-1 max-sm:basis-full sm:ml-auto lg:hidden"
+          aria-label="Passos"
+        >
           {passos.map((p, i) => (
             <li key={p}>
               <button

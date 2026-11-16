@@ -192,7 +192,10 @@ export function Gravacao({ ensaio, maquinaId }: { ensaio: Ensaio; maquinaId: num
   }))
 
   return (
-    <div className="flex flex-col gap-3 pb-28 lg:pb-0" data-testid="gravacao">
+    <div
+      className={cn('flex flex-col gap-3 lg:pb-0', marcando !== null ? 'pb-80' : 'pb-28')}
+      data-testid="gravacao"
+    >
       {/* faixa de gravação: ponto vermelho (convenção de gravador), etapa e código */}
       <div
         className={cn(
@@ -270,34 +273,20 @@ export function Gravacao({ ensaio, maquinaId }: { ensaio: Ensaio; maquinaId: num
               )}
             </div>
           </Modulo>
+          {/* no desktop os motivos vêm num módulo; no celular, na barra de baixo (sem rolar) */}
           {marcando !== null ? (
-            <Modulo rotulo="Marcar evento" detalhe="o instante já foi guardado: o do toque">
-              <div className="flex flex-col gap-3" data-testid="painel-evento">
-                <div className="grid grid-cols-2 gap-2">
-                  {MOTIVOS.map((m) => (
-                    <Button
-                      key={m.valor}
-                      size="toque"
-                      disabled={enviandoEvento}
-                      onClick={() => void enviarEvento(m.valor)}
-                    >
-                      {m.rotulo}
-                    </Button>
-                  ))}
-                </div>
-                <label className="flex flex-col gap-1">
-                  <span className="rotulo">Nota (opcional, antes de escolher o motivo)</span>
-                  <input
-                    value={nota}
-                    maxLength={500}
-                    onChange={(e) => setNota(e.target.value)}
-                    className="min-h-11 rounded-2 border border-linha-forte bg-rebaixo px-2.5 text-15"
-                  />
-                </label>
-                <Button variant="ghost" onClick={() => setMarcando(null)}>
-                  Cancelar <Kbd>Esc</Kbd>
-                </Button>
-              </div>
+            <Modulo
+              rotulo="Marcar evento"
+              detalhe="o instante já foi guardado: o do toque"
+              className="hidden lg:flex"
+            >
+              <PainelDeEvento
+                aoEscolher={(m) => void enviarEvento(m)}
+                aoCancelar={() => setMarcando(null)}
+                enviando={enviandoEvento}
+                nota={nota}
+                aoMudarNota={setNota}
+              />
             </Modulo>
           ) : null}
         </Painel>
@@ -373,12 +362,28 @@ export function Gravacao({ ensaio, maquinaId }: { ensaio: Ensaio; maquinaId: num
 
       {/* zona do polegar (celular): marcar evento e encerrar embaixo; o descarte fica longe dela */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-linha-forte bg-modulo px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
-        <Controles
-          aoMarcar={comecarMarcacao}
-          aoEncerrar={() => void encerrar()}
-          encerrando={encerrando}
-          marcando={marcando !== null}
-        />
+        {marcando !== null ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-13 text-texto">
+              <span className="font-semibold">Marcar evento</span>
+              <span className="text-apoio"> · o instante já foi guardado: o do toque</span>
+            </p>
+            <PainelDeEvento
+              aoEscolher={(m) => void enviarEvento(m)}
+              aoCancelar={() => setMarcando(null)}
+              enviando={enviandoEvento}
+              nota={nota}
+              aoMudarNota={setNota}
+            />
+          </div>
+        ) : (
+          <Controles
+            aoMarcar={comecarMarcacao}
+            aoEncerrar={() => void encerrar()}
+            encerrando={encerrando}
+            marcando={false}
+          />
+        )}
       </div>
     </div>
   )
@@ -446,5 +451,51 @@ function CodigoDoEnsaio({ codigo }: { codigo: string }) {
         <Copy aria-hidden="true" strokeWidth={1.5} />
       </Button>
     </span>
+  )
+}
+
+/** Motivos do evento (o instante já foi guardado no toque), nota opcional e cancelar. */
+function PainelDeEvento({
+  aoEscolher,
+  aoCancelar,
+  enviando,
+  nota,
+  aoMudarNota,
+}: {
+  aoEscolher: (motivo: Motivo) => void
+  aoCancelar: () => void
+  enviando: boolean
+  nota: string
+  aoMudarNota: (nota: string) => void
+}) {
+  return (
+    <div className="flex flex-col gap-2" data-testid="painel-evento">
+      <div className="grid grid-cols-2 gap-2">
+        {MOTIVOS.map((m) => (
+          <Button
+            key={m.valor}
+            size="toque"
+            disabled={enviando}
+            onClick={() => aoEscolher(m.valor)}
+          >
+            {m.rotulo}
+          </Button>
+        ))}
+      </div>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
+        <label className="flex min-w-0 flex-col gap-1">
+          <span className="rotulo">Nota (opcional, antes do motivo)</span>
+          <input
+            value={nota}
+            maxLength={500}
+            onChange={(e) => aoMudarNota(e.target.value)}
+            className="min-h-11 rounded-2 border border-linha-forte bg-rebaixo px-2.5 text-15"
+          />
+        </label>
+        <Button variant="ghost" className="min-h-11" onClick={aoCancelar}>
+          Cancelar <Kbd>Esc</Kbd>
+        </Button>
+      </div>
+    </div>
   )
 }

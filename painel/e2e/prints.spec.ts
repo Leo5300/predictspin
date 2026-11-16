@@ -209,8 +209,8 @@ export const TELAS: Tela[] = [
         .getByRole('button', { name: /Marcar evento/ })
         .filter({ visible: true })
         .click()
-      await page.getByTestId('painel-evento').waitFor()
-      await page.getByTestId('painel-evento').scrollIntoViewIfNeeded()
+      // no celular os motivos aparecem na barra de baixo, sem rolar a página
+      await page.getByTestId('painel-evento').filter({ visible: true }).waitFor()
     },
   },
   {

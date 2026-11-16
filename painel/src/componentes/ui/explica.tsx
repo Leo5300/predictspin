@@ -27,7 +27,9 @@ export function Explica({ chave, className }: { chave: ChaveDoGlossario; classNa
         <CircleHelp aria-hidden="true" className="size-3.5" strokeWidth={1.75} />
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Positioner sideOffset={8} collisionPadding={16} className="z-50">
+        {/* acima do termo: o valor que o termo explica fica logo abaixo dele e não pode sumir
+            atrás do balão (sem espaço em cima, o balão vira para baixo sozinho) */}
+        <Popover.Positioner side="top" sideOffset={8} collisionPadding={16} className="z-50">
           <Popover.Popup
             data-testid="balao-explica"
             className={cn(

@@ -48,6 +48,12 @@ test('usuários: criar, e-mail repetido, senha curta e desativar segurando', asy
   await expect(form.getByText(/Já existe usuário com o e-mail/)).toBeVisible()
 
   await segurar(page, /Segure para desativar/, linha)
+  // desativado sai da lista; volta com "mostrar desativados", marcado como desativado
+  await expect(linha).toBeHidden()
+  await page
+    .getByRole('region', { name: 'Usuários', exact: true })
+    .getByRole('checkbox', { name: 'mostrar desativados' })
+    .check()
   await expect(linha).toContainText('desativado')
 })
 

@@ -193,7 +193,14 @@ export function CampoCatalogo({ tipo, rotulo, valor, aoMudar, erro }: PropsCatal
           tipo === 'materiais' ? 'buscar ou criar material' : 'buscar ou criar ferramenta'
         }
         value={texto}
-        onFocus={() => setAberto(true)}
+        onFocus={(e) => {
+          setAberto(true)
+          // celular: a lista de sugestões abre embaixo do campo e a barra fixa (Voltar, Checagem)
+          // ocupa o fim da tela; o campo sobe para o topo, e a lista fica à vista
+          if (window.matchMedia('(width < 64rem)').matches) {
+            e.currentTarget.scrollIntoView({ block: 'start' })
+          }
+        }}
         onChange={(e) => {
           setTexto(e.target.value)
           setAberto(true)

@@ -220,7 +220,7 @@ function EntradaDaColeta({ maquinaId }: { maquinaId: number }) {
               />
             )}
             <p className="border-t border-linha px-3 py-1.5 text-12 text-apoio">
-              Toque numa célula para preparar aquela gravação. ✓ preenchida = meta atingida;
+              Toque numa célula para preparar aquela gravação. ✓ e borda forte = meta atingida;
               tracejada = validação (sensor solto), não é classe de treino; ▸ = sugerida.
             </p>
             <PlanoEMeta
@@ -232,7 +232,7 @@ function EntradaDaColeta({ maquinaId }: { maquinaId: number }) {
           </div>
         </Modulo>
       </Painel>
-      <AcoesDaColeta maquinaId={maquinaId} className="lg:hidden" />
+      <AcoesDaColeta maquinaId={maquinaId} className="pb-6 lg:hidden" />
     </div>
   )
 }

@@ -98,9 +98,13 @@ test.describe('no celular', () => {
       .getByRole('button', { name: /Marcar evento/ })
       .filter({ visible: true })
       .click()
-    await expect(page.getByTestId('painel-evento')).toBeVisible()
-    await page.getByTestId('painel-evento').getByRole('button', { name: 'Pancada' }).click()
-    await expect(page.getByTestId('painel-evento')).toBeHidden()
+    await expect(page.getByTestId('painel-evento').filter({ visible: true })).toBeVisible()
+    await page
+      .getByTestId('painel-evento')
+      .filter({ visible: true })
+      .getByRole('button', { name: 'Pancada' })
+      .click()
+    await expect(page.getByTestId('painel-evento').filter({ visible: true })).toBeHidden()
     // janelas chegam (o simulador manda uma a cada 5 s)
     await expect(page.getByTestId('contador-janelas')).not.toHaveText('0', { timeout: 20_000 })
     await expect

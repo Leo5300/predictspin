@@ -174,8 +174,10 @@ function Reprodutor({ ensaio, janelas: janelasDaApi, eventos, nominais, pontos }
   }, [janelas, indice, pontos])
 
   const faixa = (
+    // no celular a barra superior rola com a página: a faixa REPLAY fica presa no topo, para que
+    // nada do replay, em nenhuma altura da página, pareça dado ao vivo
     <div
-      className="trama-replay flex flex-wrap items-center gap-x-3 gap-y-1 border border-linha-forte px-3 py-1.5"
+      className="trama-replay flex flex-wrap items-center gap-x-3 gap-y-1 border border-linha-forte bg-fundo px-3 py-1.5 max-sm:sticky max-sm:top-0 max-sm:z-30"
       role="status"
       data-testid="faixa-replay"
     >

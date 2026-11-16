@@ -93,6 +93,10 @@ export function PaletaDeComandos({
                 className="min-h-12 w-full bg-transparent text-15 text-texto outline-none placeholder:text-apoio"
               />
               <Kbd>Esc</Kbd>
+              {/* no toque não há Esc: um botão para fechar */}
+              <Dialog.Close className="relevo min-h-11 shrink-0 rounded-2 border border-linha-forte bg-modulo px-3 text-13 font-medium text-texto sm:hidden">
+                Fechar
+              </Dialog.Close>
             </div>
             <Command.List className="max-h-[60vh] overflow-y-auto py-1">
               <Command.Empty className="px-3 py-3 text-13 text-apoio">

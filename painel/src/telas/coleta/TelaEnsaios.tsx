@@ -295,7 +295,14 @@ function LinhaDoEnsaio({
           <span aria-hidden="true" className={cn('text-12 text-apoio', aberto && 'rotate-90')}>
             ▸
           </span>
-          <span className="valor text-15 font-semibold text-texto">{ensaio.codigo}</span>
+          <span
+            className={cn(
+              'valor text-15 font-semibold',
+              ensaio.descartado ? 'text-apoio' : 'text-texto',
+            )}
+          >
+            {ensaio.codigo}
+          </span>
           <span className="text-13 text-texto">
             <span className="valor">{ensaio.etapa}</span> · {ROTULO_CONDICAO[ensaio.condicao]} ·{' '}
             <span className="valor">{ensaio.rotacao_alvo_rpm}</span> rpm · rep.{' '}
@@ -306,7 +313,7 @@ function LinhaDoEnsaio({
             className={cn(
               'inline-flex items-center gap-1 border px-1.5 text-12 uppercase tracking-[0.06em]',
               ensaio.descartado
-                ? 'border-dashed border-linha-forte text-apoio line-through'
+                ? 'border-dashed border-linha-forte text-apoio'
                 : ensaio.aberto
                   ? 'border-texto text-texto'
                   : 'border-linha-forte text-texto',

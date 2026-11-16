@@ -147,7 +147,9 @@ export function Tacometro({ rpm, nominais, velho = false, gravado = false, class
         <span
           hidden={!temRotacao}
           className={cn(
-            gravado ? 'valor font-medium' : 'matriz',
+            // a matriz de pontos é o mostrador aceso: só para a rotação viva. Velha ou gravada, o
+            // número sai em Plex Mono (o velho também no tom fraco)
+            gravado || velho ? 'valor font-medium' : 'matriz',
             'absolute left-1/2 -translate-x-1/2',
             // 5 dígitos (leitura com defeito, até 30000 rpm) não cabem entre as pontas do arco
             // o número acompanha a largura do mostrador (no celular, 72 px encostaria nas pontas)

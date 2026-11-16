@@ -691,16 +691,6 @@ function desenhar(ctx: CanvasRenderingContext2D, d: Desenho) {
   if (total === 0) return
   const passo = d.largura / total
 
-  // antes do primeiro dado do período: padrão esparso de pontos ("sem dado")
-  const primeiroComDado = d.intervalos.findIndex((i) => i.janelas > 0)
-  const fimSemDado = primeiroComDado === -1 ? d.largura : Math.floor(primeiroComDado * passo)
-  if (fimSemDado > 0) {
-    ctx.fillStyle = d.cores.linha
-    for (let x = 4; x < fimSemDado; x += 8) {
-      for (let y = 4; y < d.altura; y += 8) ctx.fillRect(x, y, 1, 1)
-    }
-  }
-
   const corDosPontos = pontoAbaixo(d.cores)
   d.linhas.forEach((linha, i) => {
     const y = d.ys[i]
@@ -727,27 +717,25 @@ function desenhar(ctx: CanvasRenderingContext2D, d: Desenho) {
     }
   })
 
-  // lacuna (intervalo sem janela depois da primeira): contorno tracejado, para não se confundir com
-  // "sem dado" (pontos esparsos) nem com o fundo
-  if (primeiroComDado !== -1) {
-    ctx.save()
-    ctx.strokeStyle = d.cores.linhaForte
-    ctx.lineWidth = 1
-    ctx.setLineDash([2, 2])
-    let k = primeiroComDado
-    while (k < total) {
-      if ((d.intervalos[k]?.janelas ?? 0) > 0) {
-        k++
-        continue
-      }
-      const inicio = k
-      while (k < total && (d.intervalos[k]?.janelas ?? 0) === 0) k++
-      const x0 = Math.floor(inicio * passo) + 0.5
-      const x1 = Math.floor(k * passo) - 0.5
-      for (const y of d.ys) ctx.strokeRect(x0, y + 0.5, Math.max(1, x1 - x0), ALTURA_DA_LINHA - 2)
+  // lacuna (intervalo sem janela, inclusive antes da primeira do período): contorno tracejado, o
+  // mesmo símbolo da legenda; nunca pontos, que querem dizer "abaixo do típico"
+  ctx.save()
+  ctx.strokeStyle = d.cores.linhaForte
+  ctx.lineWidth = 1
+  ctx.setLineDash([2, 2])
+  let k = 0
+  while (k < total) {
+    if ((d.intervalos[k]?.janelas ?? 0) > 0) {
+      k++
+      continue
     }
-    ctx.restore()
+    const inicio = k
+    while (k < total && (d.intervalos[k]?.janelas ?? 0) === 0) k++
+    const x0 = Math.floor(inicio * passo) + 0.5
+    const x1 = Math.floor(k * passo) - 0.5
+    for (const y of d.ys) ctx.strokeRect(x0, y + 0.5, Math.max(1, x1 - x0), ALTURA_DA_LINHA - 2)
   }
+  ctx.restore()
 
   // marca de saturação no topo do intervalo
   ctx.fillStyle = d.cores.texto

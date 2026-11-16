@@ -185,11 +185,13 @@ function BotaoDaCelula({
       data-carimbada={ehCarimbada || undefined}
       className={cn(
         'relevo flex min-h-11 w-full min-w-14 items-center justify-center gap-1 rounded-2 border px-2 select-none',
+        // estado, não ação: nada aqui usa o preenchimento do botão principal. Meta atingida = afundada
+        // com borda forte e ✓; com gravações = texto forte; vazia = texto de apoio
         completa
-          ? 'border-acao bg-acao text-acao-texto'
+          ? 'border-texto bg-rebaixo font-semibold text-texto'
           : celula.validos > 0
-            ? 'border-linha-forte bg-realce text-texto'
-            : 'border-linha-forte bg-modulo text-texto',
+            ? 'border-linha-forte bg-modulo text-texto'
+            : 'border-linha-forte bg-modulo text-apoio',
         validacao && !completa && 'border-dashed',
         ehSugerida && 'outline-2 outline-offset-1 outline-texto',
         ehCarimbada &&
