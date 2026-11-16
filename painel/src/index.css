@@ -295,6 +295,24 @@
     border-color: var(--linha);
   }
 
+  /* exemplo dentro do campo no tom de apoio (contraste AA), em todo campo, não só no componente Input */
+  ::placeholder {
+    color: var(--texto-apoio);
+    opacity: 1;
+  }
+
+  /* parágrafos sem palavra sozinha na última linha */
+  p {
+    text-wrap: pretty;
+  }
+
+  /* títulos que quebram em duas linhas ficam com as linhas de tamanho parecido */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
   html {
     font-family: var(--font-sans);
     font-size: 16px;

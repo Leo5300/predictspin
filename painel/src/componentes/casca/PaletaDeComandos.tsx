@@ -90,7 +90,7 @@ export function PaletaDeComandos({
               <Command.Input
                 ref={campo}
                 placeholder="Ir para, máquina, tema, AO VIVO…"
-                className="min-h-12 w-full bg-transparent text-15 text-texto outline-none placeholder:text-fraco"
+                className="min-h-12 w-full bg-transparent text-15 text-texto outline-none placeholder:text-apoio"
               />
               <Kbd>Esc</Kbd>
             </div>

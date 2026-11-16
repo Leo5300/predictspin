@@ -26,7 +26,7 @@ export function MarcaDeIdade({ frescor: estado, idadeS, className }: Props) {
     <span
       data-frescor={estado}
       className={cn(
-        'inline-flex items-center gap-1 border border-dashed border-linha-forte px-1 text-12 font-medium whitespace-nowrap text-texto',
+        'inline-flex items-center gap-1 border border-dashed border-linha-forte px-1 py-0.5 text-12 leading-none font-medium whitespace-nowrap text-texto',
         className,
       )}
     >
