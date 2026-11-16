@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './rotas/__root'
 import { Route as PainelRouteImport } from './rotas/_painel'
 import { Route as LoginRouteImport } from './rotas/login'
 import { Route as PainelIndexRouteImport } from './rotas/_painel/index'
+import { Route as PainelAlarmesRouteImport } from './rotas/_painel/alarmes'
 import { Route as PainelDiagnosticoRouteImport } from './rotas/_painel/diagnostico'
 import { Route as PainelColetaIndexRouteImport } from './rotas/_painel/coleta.index'
 import { Route as PainelColetaPrepararRouteImport } from './rotas/_painel/coleta.preparar'
@@ -32,6 +33,11 @@ const LoginRoute = LoginRouteImport.update({
 const PainelIndexRoute = PainelIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => PainelRoute,
+} as any)
+const PainelAlarmesRoute = PainelAlarmesRouteImport.update({
+  id: '/alarmes',
+  path: '/alarmes',
   getParentRoute: () => PainelRoute,
 } as any)
 const PainelDiagnosticoRoute = PainelDiagnosticoRouteImport.update({
@@ -77,6 +83,7 @@ const PainelMaquinasMaquinaIdPontosCodigoRoute =
 export interface FileRoutesByFullPath {
   '/': typeof PainelIndexRoute
   '/login': typeof LoginRoute
+  '/alarmes': typeof PainelAlarmesRoute
   '/diagnostico': typeof PainelDiagnosticoRoute
   '/coleta/preparar': typeof PainelColetaPrepararRoute
   '/coleta/': typeof PainelColetaIndexRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/alarmes': typeof PainelAlarmesRoute
   '/diagnostico': typeof PainelDiagnosticoRoute
   '/': typeof PainelIndexRoute
   '/coleta/preparar': typeof PainelColetaPrepararRoute
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_painel': typeof PainelRouteWithChildren
   '/login': typeof LoginRoute
+  '/_painel/alarmes': typeof PainelAlarmesRoute
   '/_painel/diagnostico': typeof PainelDiagnosticoRoute
   '/_painel/': typeof PainelIndexRoute
   '/_painel/coleta/preparar': typeof PainelColetaPrepararRoute
@@ -114,6 +123,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/alarmes'
     | '/diagnostico'
     | '/coleta/preparar'
     | '/coleta/'
@@ -124,6 +134,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/alarmes'
     | '/diagnostico'
     | '/'
     | '/coleta/preparar'
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_painel'
     | '/login'
+    | '/_painel/alarmes'
     | '/_painel/diagnostico'
     | '/_painel/'
     | '/_painel/coleta/preparar'
@@ -172,6 +184,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof PainelIndexRouteImport
+      parentRoute: typeof PainelRoute
+    }
+    '/_painel/alarmes': {
+      id: '/_painel/alarmes'
+      path: '/alarmes'
+      fullPath: '/alarmes'
+      preLoaderRoute: typeof PainelAlarmesRouteImport
       parentRoute: typeof PainelRoute
     }
     '/_painel/diagnostico': {
@@ -227,6 +246,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface PainelRouteChildren {
+  PainelAlarmesRoute: typeof PainelAlarmesRoute
   PainelDiagnosticoRoute: typeof PainelDiagnosticoRoute
   PainelIndexRoute: typeof PainelIndexRoute
   PainelColetaPrepararRoute: typeof PainelColetaPrepararRoute
@@ -238,6 +258,7 @@ interface PainelRouteChildren {
 }
 
 const PainelRouteChildren: PainelRouteChildren = {
+  PainelAlarmesRoute: PainelAlarmesRoute,
   PainelDiagnosticoRoute: PainelDiagnosticoRoute,
   PainelIndexRoute: PainelIndexRoute,
   PainelColetaPrepararRoute: PainelColetaPrepararRoute,

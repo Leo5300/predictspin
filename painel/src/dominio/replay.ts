@@ -40,7 +40,10 @@ export function linhaDoTempo(
   const instantes = janelas.map((j) => Date.parse(j.medido_em)).sort((a, b) => a - b)
   const inicioMs = instantes[0] ?? 0
   const temposS = instantes.map((t) => (t - inicioMs) / 1000)
-  const ultima = janelas.length > 0 ? janelas.reduce((a, b) => (Date.parse(a.medido_em) > Date.parse(b.medido_em) ? a : b)) : null
+  const ultima =
+    janelas.length > 0
+      ? janelas.reduce((a, b) => (Date.parse(a.medido_em) > Date.parse(b.medido_em) ? a : b))
+      : null
   const duracaoUltima = ultima?.modo === 'rapido' ? 1 : PASSO_NORMAL_S
   const duracaoS = temposS.length === 0 ? 0 : (temposS.at(-1) ?? 0) + duracaoUltima
   return { inicioMs, duracaoS, temposS }
@@ -106,8 +109,11 @@ export function emLacuna(temposS: readonly number[], posicaoS: number): boolean 
   if (i < 0) return false
   const proxima = temposS[i + 1]
   const atual = temposS[i] ?? 0
-  return proxima !== undefined && proxima - atual > PASSO_NORMAL_S * FATOR_LACUNA &&
+  return (
+    proxima !== undefined &&
+    proxima - atual > PASSO_NORMAL_S * FATOR_LACUNA &&
     posicaoS - atual > PASSO_NORMAL_S * FATOR_LACUNA
+  )
 }
 
 /** Trechos sem janela (para desenhar na linha do tempo): [início, fim] em segundos. */

@@ -3,6 +3,7 @@
  * e não representam nenhuma medição. Só a galeria (página de desenvolvimento) importa este arquivo,
  * e um teste confere que nada daqui entra no build de produção.
  */
+import type { Alarme, OrdemServico } from '@/api/adaptadores/alarmes'
 import type { IntervaloDoMapa, LinhaDoMapa } from '@/componentes/instrumento/MapaOrdens'
 import type { Referencia } from '@/dominio/estado'
 
@@ -181,4 +182,54 @@ export const NUMERO_ENORME = 987_654_321.123
 /** Rotações nominais de exemplo (as mesmas da placa do torno, para o tacômetro da galeria). */
 export const NOMINAIS_EXEMPLO = [
   45, 71, 90, 112, 140, 180, 224, 265, 280, 355, 450, 560, 710, 900, 1120, 1400, 1800, 2240,
+]
+
+// ---- alarmes e ordens de serviço (a API ainda não tem; só a galeria mostra)
+
+const ACAO_EXEMPLO = 'Exemplo: conferir o aperto da placa e o balanceamento da peça'
+
+const alarme = (
+  id: number,
+  estado: Alarme['estado'],
+  prioridade: Alarme['prioridade'],
+): Alarme => ({
+  id,
+  maquina: 'TORNO-01',
+  origem: 'Ponto A',
+  metrica: '1X',
+  prioridade,
+  estado,
+  ocorridoEm: '2026-11-12T10:14:05Z',
+  valor: prioridade === 'alarme' ? 0.118 : 0.083,
+  unidade: 'g',
+  acaoRecomendada: ACAO_EXEMPLO,
+})
+
+export const ALARMES_EXEMPLO: Alarme[] = [
+  alarme(1, 'nao_reconhecido', 'alarme'),
+  alarme(2, 'nao_reconhecido', 'atencao'),
+  alarme(3, 'reconhecido', 'alarme'),
+  alarme(4, 'normalizado_sem_reconhecimento', 'atencao'),
+  alarme(5, 'suprimido', 'alarme'),
+]
+
+const ordem = (
+  id: number,
+  retorno: OrdemServico['retornoTecnico'],
+  status: OrdemServico['status'],
+): OrdemServico => ({
+  id,
+  numero: `OS-2026-${String(id).padStart(4, '0')}`,
+  maquina: 'TORNO-01',
+  status,
+  tipoFalha: 'desbalanceamento provável',
+  acaoRecomendada: ACAO_EXEMPLO,
+  abertaEm: '2026-11-12T10:20:00Z',
+  retornoTecnico: retorno,
+})
+
+export const ORDENS_EXEMPLO: OrdemServico[] = [
+  ordem(12, null, 'aberta'),
+  ordem(13, 'confirmada', 'concluida'),
+  ordem(14, 'rejeitada', 'concluida'),
 ]

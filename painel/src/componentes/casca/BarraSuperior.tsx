@@ -73,6 +73,7 @@ export function BarraSuperior({ usuario }: { usuario: Usuario }) {
             <LinkDeNavegacao para="/coleta">Coleta</LinkDeNavegacao>
           ) : null}
           <LinkDeNavegacao para="/diagnostico">Diagnóstico</LinkDeNavegacao>
+          <LinkDeNavegacao para="/alarmes">Alarmes</LinkDeNavegacao>
         </nav>
 
         <div className="col-span-3 row-start-3 flex items-center gap-x-4 sm:ml-auto">
@@ -123,7 +124,7 @@ function LinkDeNavegacao({
   para,
   children,
 }: {
-  para: '/' | '/coleta' | '/diagnostico'
+  para: '/' | '/coleta' | '/diagnostico' | '/alarmes'
   children: string
 }) {
   return (

@@ -95,11 +95,41 @@ async function gravando(page: Page) {
 
 export const TELAS: Tela[] = [
   {
+    nome: 'diagnostico',
+    fonte: 'simulado',
+    abrir: async (page) => {
+      await itemDoCatalogo(page.request, 'materiais', 'Aço SAE 1045')
+      await itemDoCatalogo(page.request, 'materiais', 'aço sae 1045 trefilado')
+      await page.goto('/diagnostico')
+      await page.getByTestId('tabela-usuarios').waitFor()
+      await page.waitForTimeout(1000)
+    },
+  },
+  {
+    nome: 'alarmes',
+    abrir: async (page) => {
+      await page.goto('/alarmes')
+      await page.getByText('A regra de alarme ainda não foi implantada na API.').waitFor()
+    },
+  },
+  {
+    nome: 'galeria-alarmes',
+    semLogin: true,
+    regiao: 'Alarmes e ordens de serviço',
+    abrir: async (page) => {
+      await page.goto('/galeria.html')
+      await page.getByRole('region', { name: 'Alarmes e ordens de serviço', exact: true }).waitFor()
+    },
+  },
+  {
     nome: 'replay',
     fonte: 'simulado',
     abrir: async (page) => {
       await page.goto('/coleta/ensaios?maquina=1&estado=encerrados')
-      await page.getByRole('link', { name: /Replay do ensaio/ }).first().click()
+      await page
+        .getByRole('link', { name: /Replay do ensaio/ })
+        .first()
+        .click()
       await page.getByTestId('replay').waitFor()
       await page.getByRole('button', { name: 'Velocidade 4 vezes' }).click()
       await page.getByRole('button', { name: 'Tocar' }).click()

@@ -11,6 +11,7 @@ import {
 import { GraficoTendencia } from '@/componentes/instrumento/GraficoTendencia'
 import { MarcaDeIdade } from '@/componentes/instrumento/Idade'
 import { Leitura } from '@/componentes/instrumento/Leitura'
+import { LinhaAlarme, LinhaOrdemServico } from '@/componentes/alarmes/LinhasDeAlarme'
 import { MapaOrdens } from '@/componentes/instrumento/MapaOrdens'
 import { MarcadorPonto } from '@/componentes/instrumento/MarcadorPonto'
 import { Modulo, Painel } from '@/componentes/instrumento/Modulo'
@@ -32,6 +33,7 @@ import { definirTema, useTema } from '@/estado/preferencias'
 import {
   INTERVALOS_MAPA,
   LINHAS_MAPA_COM_REFERENCIA,
+  ALARMES_EXEMPLO,
   ENSAIOS_MAPA_EXEMPLO,
   EVENTOS_MAPA_EXEMPLO,
   MAPA_ABAIXO,
@@ -42,6 +44,7 @@ import {
   MARCA_DA_GALERIA,
   NOME_MUITO_LONGO,
   NOMINAIS_EXEMPLO,
+  ORDENS_EXEMPLO,
   NUMERO_ENORME,
   PICO_TENDENCIA,
   RASTRO_ALARME,
@@ -379,6 +382,32 @@ export function Galeria() {
             </Modulo>
             <Modulo rotulo="Com referência (futuro): atenção em âmbar, alarme em vermelho">
               <MapaOrdens intervalos={INTERVALOS_MAPA} linhas={LINHAS_MAPA_COM_REFERENCIA} />
+            </Modulo>
+          </Painel>
+        </section>
+
+        <section className="flex flex-col gap-2" aria-label="Alarmes e ordens de serviço">
+          <h2 className="text-15 font-semibold">
+            Alarmes (ISA-18.2) e ordens de serviço: prontos, fora das telas até a API ter a regra
+          </h2>
+          <Painel className="lg:grid-cols-2">
+            <Modulo rotulo="Alarmes: não reconhecido, reconhecido, normalizado, suprimido" semRecuo>
+              <ul>
+                {ALARMES_EXEMPLO.map((a) => (
+                  <LinhaAlarme
+                    key={a.id}
+                    alarme={a}
+                    aoReconhecer={() => setConfirmacoes((n) => n + 1)}
+                  />
+                ))}
+              </ul>
+            </Modulo>
+            <Modulo rotulo="Ordens de serviço: sem retorno, confirmada, rejeitada" semRecuo>
+              <ul>
+                {ORDENS_EXEMPLO.map((o) => (
+                  <LinhaOrdemServico key={o.id} ordem={o} />
+                ))}
+              </ul>
             </Modulo>
           </Painel>
         </section>

@@ -542,6 +542,18 @@
   }
 }
 
+/* Alarme não reconhecido (ISA-18.2): só o ícone pisca, devagar; com movimento reduzido vira anel
+   parado (ver LinhaAlarme) */
+@keyframes piscar-lento {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
 /* Ponto do REC enquanto grava: pulso lento de opacidade (só opacidade, sem quique) */
 @keyframes pulso-rec {
   0%,

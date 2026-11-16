@@ -462,6 +462,58 @@ As 16 prints finais, comprimidas (1.039 kB no total), estão em
 As outras prints (44 por rodada, nos dois temas, nas duas larguras e nos estados vivo, velho, simulado
 e Real vazio) ficam fora do Git, em `painel/prints/`.
 
+## Contrato esperado para alarmes, OS e referência
+
+Proposta para o prompt que vai implantar a regra de alarme na API. Parte das tabelas que já existem
+desde a migração `V1` (`baseline`, `alerta`, `ordem_servico`) e diz o que acrescentar. No painel, as
+telas só conversam com dois adaptadores: [`api/adaptadores/alarmes.ts`](../painel/src/api/adaptadores/alarmes.ts)
+e [`api/adaptadores/referencia.ts`](../painel/src/api/adaptadores/referencia.ts). Hoje eles devolvem
+"indisponível" sem chamar rota; ligar a API será trocar o corpo das funções.
+
+**Referência (`baseline`).** Hoje: `ponto_medicao_id`, `condicao`, `rotacao_rpm`, `metrica`, `media`,
+`desvio_padrao`, `n_amostras`, `versao`. Acrescentar:
+
+| Campo | Para quê |
+|---|---|
+| `etapa` | T0, T1 e T3 têm faixas normais diferentes (desligado, em vazio, cortando). |
+| `material_id`, `ferramenta_id`, `avanco_alvo`, `profundidade_corte_mm` (nulos fora do T3) | No corte (T3) a vibração muda com a receita: a referência do corte deve poder ser separada por receita. T0 e T1 não dependem de receita; T2 usa a de T1. |
+| `limite_atencao`, `limite_alarme` (ou o múltiplo do desvio-padrão usado) | O painel desenha a régua de desvio e as cores do mapa a partir deles (`Referencia` em `dominio/estado.ts`). |
+| `limite_volta` (histerese) | Valor menor que o de disparo, para o alarme só voltar ao normal abaixo dele (ISA-18.2, contra alarme que liga e desliga). |
+| `janelas_para_disparar` (atraso) | Quantas janelas seguidas acima do limite antes de disparar (ISA-18.2). |
+| `aprendida_de` (lista de ensaios), `criada_em` | Rastreabilidade: de quais gravações normais a faixa saiu. |
+
+Rota sugerida: `GET /api/v1/pontos/{id}/referencia?metrica=&rotacao_rpm=&etapa=&material_id=...`,
+devolvendo `{centro, tolerancia, atencao, alarme, volta, janelas_para_disparar, versao}` ou 404 quando
+não há referência (o painel mostra SEM REFERÊNCIA).
+
+**Alerta (`alerta`).** Hoje: máquina, janela, ponto ou canal, baseline, métrica, valor, desvio,
+`severidade`, `classificacao_falha`, `confianca`, `versao_modelo`, `retorno_tecnico`, `criado_em`,
+`reconhecido_em`. Acrescentar:
+
+| Campo | Para quê |
+|---|---|
+| `prioridade` (`atencao` ou `alarme`) | O que o painel mostra (âmbar ou vermelho, com forma e texto). |
+| `estado` (`nao_reconhecido`, `reconhecido`, `normalizado_sem_reconhecimento`, `suprimido`) | Estados da ISA-18.2 que o componente `LinhaAlarme` já desenha. |
+| `normalizado_em`, `reconhecido_por`, `suprimido_ate`, `motivo_supressao` | Ciclo de vida completo. |
+| `acao_recomendada` (texto, obrigatório) | Uma frase do que fazer. Na ISA-18.2, alarme sem ação definida é evento, não alarme. |
+| `versao_firmware`, `versao_calibracao`, `versao_modelo` | Versões gravadas em cada alerta, para saber depois com que firmware, calibração do sensor e modelo ele nasceu. |
+
+Rotas sugeridas: `GET /api/v1/alertas?maquina_id=&estado=` (paginado, não reconhecidos primeiro),
+`POST /api/v1/alertas/{id}/reconhecer` (o painel pede segurando o botão), evento SSE `alerta` no fluxo
+da máquina.
+
+**Ordem de serviço (`ordem_servico`).** Hoje: máquina, alerta, componente, responsável, número,
+`status`, `tipo_falha`, `severidade_acumulada`, `peca_sugerida`, `versao_modelo`, `retorno_tecnico`,
+`aberta_em`, `concluida_em`. Acrescentar `acao_recomendada` (texto, obrigatório, em destaque no
+`LinhaOrdemServico`) e `observacao_tecnico` (o que o técnico achou ao confirmar ou rejeitar). Rotas:
+`GET /api/v1/ordens-servico`, `POST /api/v1/ordens-servico/{id}/retorno` com `confirmada` ou
+`rejeitada` (realimenta o modelo).
+
+**Indicadores de desempenho do alarme (para o Diagnóstico).** `GET /api/v1/maquinas/{id}/alarmes/indicadores?de=&ate=`
+com alarmes por hora (média e pico; a ISA-18.2 recomenda poucos por hora por operador) e alarmes
+repetitivos (o mesmo ponto e métrica disparando várias vezes no período), para ajustar atraso e
+histerese.
+
 ## Parte B: ponto de partida
 
 O que a Parte B (coleta de ensaios, replay, diagnóstico e alarmes) já encontra pronto, e o que falta.

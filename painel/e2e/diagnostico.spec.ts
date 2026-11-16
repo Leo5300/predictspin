@@ -74,17 +74,20 @@ test.describe('cada papel só vê o que pode', () => {
     await expect(page.getByRole('region', { name: 'Usuários' })).toHaveCount(0)
   })
 
-  test('OPERADOR: diagnóstico, sem coleta, catálogos nem usuários', async ({ page }) => {
+  test('OPERADOR: diagnóstico e alarmes, sem coleta, catálogos nem usuários', async ({ page }) => {
     if (!operador) throw new Error('sem operador')
     await entrarPelaTela(page, operador)
     const nav = page.getByRole('navigation', { name: 'Principal' })
     await expect(nav.getByRole('link', { name: 'Coleta' })).toHaveCount(0)
     await expect(nav.getByRole('link', { name: 'Diagnóstico' })).toBeVisible()
+    await expect(nav.getByRole('link', { name: 'Alarmes' })).toBeVisible()
     await page.goto('/diagnostico')
     await expect(page.getByRole('region', { name: 'Dispositivos' })).toBeVisible()
     await expect(page.getByRole('region', { name: 'Materiais' })).toHaveCount(0)
     await expect(page.getByRole('region', { name: 'Usuários' })).toHaveCount(0)
     await page.goto('/coleta/ensaios')
     await expect(page.getByRole('heading', { name: 'Sem permissão' })).toBeVisible()
+    await page.goto('/alarmes')
+    await expect(page.getByText('A regra de alarme ainda não foi implantada na API.')).toBeVisible()
   })
 })
