@@ -63,20 +63,25 @@ export function BarraSuperior({ usuario }: { usuario: Usuario }) {
           PredictSpin
         </Link>
 
-        <nav aria-label="Principal" className="col-start-2 row-start-1 flex items-center gap-1">
+        {/* no celular a navegação tem linha própria (quatro destinos não cabem ao lado da marca) */}
+        <nav
+          aria-label="Principal"
+          className="col-span-3 row-start-2 -mx-1 flex items-center gap-1 overflow-x-auto sm:mx-0"
+        >
           <LinkDeNavegacao para="/">Visão geral</LinkDeNavegacao>
           {podeAbrir(usuario.papel, 'coleta') ? (
             <LinkDeNavegacao para="/coleta">Coleta</LinkDeNavegacao>
           ) : null}
+          <LinkDeNavegacao para="/diagnostico">Diagnóstico</LinkDeNavegacao>
         </nav>
 
-        <div className="col-span-3 row-start-2 flex items-center gap-x-4 sm:ml-auto">
+        <div className="col-span-3 row-start-3 flex items-center gap-x-4 sm:ml-auto">
           <Conexao />
           <UltimaJanela />
           <Relogio />
         </div>
-        <SeletorDeFonte className="col-span-2 col-start-1 row-start-3 justify-self-start" />
-        <SeletorDeTema className="col-start-3 row-start-3 justify-self-end" />
+        <SeletorDeFonte className="col-span-2 col-start-1 row-start-4 justify-self-start" />
+        <SeletorDeTema className="col-start-3 row-start-4 justify-self-end" />
         <div className="col-start-3 row-start-1 flex items-center gap-2 justify-self-end">
           {/* no celular o nome sai da barra (fica na dica do botão de sair) */}
           <span className="flex min-w-0 flex-col leading-tight max-sm:hidden">
@@ -114,13 +119,19 @@ function mesmoTexto(a: string, b: string): boolean {
   return normal(a) === normal(b)
 }
 
-function LinkDeNavegacao({ para, children }: { para: '/' | '/coleta'; children: string }) {
+function LinkDeNavegacao({
+  para,
+  children,
+}: {
+  para: '/' | '/coleta' | '/diagnostico'
+  children: string
+}) {
   return (
     <Link
       to={para}
       activeOptions={{ exact: para === '/' }}
       className={cn(
-        'flex min-h-8 items-center border-b-2 border-transparent px-2 text-13 font-medium text-apoio',
+        'flex min-h-8 shrink-0 items-center border-b-2 border-transparent px-2 text-13 font-medium whitespace-nowrap text-apoio',
         'pointer-coarse:min-h-11 max-md:min-h-11',
         '[@media(hover:hover)_and_(pointer:fine)]:hover:text-texto',
         'aria-[current=page]:border-texto aria-[current=page]:text-texto',

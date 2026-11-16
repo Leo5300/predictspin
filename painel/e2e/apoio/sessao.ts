@@ -81,3 +81,27 @@ export async function definirPlano(
   })
   expect(resposta.ok()).toBeTruthy()
 }
+
+/** Cria um usuário descartável com o papel pedido (como ADMIN). */
+export async function criarUsuarioDeTeste(
+  request: APIRequestContext,
+  papel: 'TECNICO' | 'OPERADOR',
+): Promise<Credenciais & { id: number }> {
+  const token = await tokenDoAdmin(request)
+  const sufixo = `${Date.now()}${rand()}`
+  const credenciais = {
+    email: `${papel.toLowerCase()}.e2e.${sufixo}@exemplo.com`,
+    senha: `Teste-${sufixo}`,
+  }
+  const resposta = await request.post(`${URL_API}/api/v1/usuarios`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: {
+      nome: `${papel === 'TECNICO' ? 'Técnico' : 'Operador'} de teste`,
+      papel,
+      ...credenciais,
+    },
+  })
+  expect(resposta.status()).toBe(201)
+  const corpo = (await resposta.json()) as { id: number }
+  return { ...credenciais, id: corpo.id }
+}

@@ -1,9 +1,30 @@
+import { execSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
+
+/** Commit do build (Diagnóstico › Sobre): o do Render, se houver, ou o do Git local. */
+function commitDoBuild(): string {
+  const doRender = process.env.RENDER_GIT_COMMIT
+  if (doRender) return doRender.slice(0, 7)
+  try {
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim()
+  } catch {
+    return 'desconhecido'
+  }
+}
+
+const versao = (
+  JSON.parse(readFileSync(path.resolve(import.meta.dirname, 'package.json'), 'utf8')) as {
+    version: string
+  }
+).version
 
 // O build de produção só tem a entrada index.html. A galeria de componentes (galeria.html) é
 // servida apenas pelo servidor de desenvolvimento e nunca entra em dist/.
@@ -18,6 +39,10 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  define: {
+    __VERSAO_DO_PAINEL__: JSON.stringify(versao),
+    __COMMIT_DO_BUILD__: JSON.stringify(commitDoBuild()),
+  },
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, 'src') },
   },
