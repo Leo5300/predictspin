@@ -98,7 +98,23 @@ export function Cronometro({ inicio, fim }: { inicio: string; fim?: string | nul
         role="timer"
         aria-label={`Tempo gravado: ${formatarCronometro(decorrido)}`}
       >
-        {formatarCronometro(decorrido)}
+        {/* os dois-pontos da Doto parecem "‡": o separador é desenhado (dois pontos quadrados) */}
+        {formatarCronometro(decorrido)
+          .split(':')
+          .map((parte, i) => (
+            <span key={i} className="inline-flex items-center">
+              {i > 0 ? (
+                <span
+                  aria-hidden="true"
+                  className="mx-[0.08em] inline-flex h-[0.62em] flex-col justify-between"
+                >
+                  <span className="size-[0.12em] bg-current" />
+                  <span className="size-[0.12em] bg-current" />
+                </span>
+              ) : null}
+              {parte}
+            </span>
+          ))}
       </span>
       <span className="flex w-full max-w-64 items-center gap-2 text-12 text-apoio">
         <span aria-hidden="true" className="relative h-1 flex-1 border border-linha bg-rebaixo">

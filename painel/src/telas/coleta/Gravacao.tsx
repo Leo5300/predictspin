@@ -243,7 +243,11 @@ export function Gravacao({ ensaio, maquinaId }: { ensaio: Ensaio; maquinaId: num
               </div>
               {frescor !== 'vivo' ? (
                 <p className="border border-dashed border-linha-forte px-2 py-1 text-13 text-texto">
-                  Nenhuma janela {idadeS !== null ? `há ${Math.round(idadeS)} s` : 'chegou ainda'}:
+                  {idadeS !== null
+                    ? `Sem janela nova há ${Math.round(idadeS)} s: `
+                    : janelas.length > 0
+                      ? 'Sem janela nova da máquina: '
+                      : 'Nenhuma janela chegou ainda: '}
                   confira o dispositivo. A gravação continua aberta.
                 </p>
               ) : null}

@@ -26,6 +26,7 @@ dist-ssr
 # Testes de ponta a ponta e prints (os prints finais ficam em docs/evidencias/painel)
 playwright-report
 test-results
+test-results-*
 prints
 .env.local
 

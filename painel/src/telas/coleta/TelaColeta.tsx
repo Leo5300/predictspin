@@ -154,8 +154,10 @@ function EntradaDaColeta({ maquinaId }: { maquinaId: number }) {
                     {coleta.sugerida.etapa}
                   </span>
                   <span className="text-18 text-texto">
-                    {ROTULO_CONDICAO[coleta.sugerida.condicao]} ·{' '}
-                    <span className="valor">{coleta.sugerida.rotacao}</span> rpm
+                    {coleta.sugerida.etapa === 'T0'
+                      ? 'Torno desligado'
+                      : ROTULO_CONDICAO[coleta.sugerida.condicao]}{' '}
+                    · <span className="valor">{coleta.sugerida.rotacao}</span> rpm
                   </span>
                 </div>
                 <p className="text-15 text-apoio">{DEFINICAO_ETAPA[coleta.sugerida.etapa]}</p>

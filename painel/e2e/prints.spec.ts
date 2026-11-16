@@ -34,7 +34,7 @@ type Tela = {
   semLogin?: boolean
 }
 
-test.describe.configure({ mode: 'serial' })
+test.describe.configure({ timeout: 150_000 })
 test.skip(!ATIVO, 'prints só com PRINTS=1')
 
 let simulador: Simulador | null = null
@@ -94,6 +94,44 @@ async function gravando(page: Page) {
 }
 
 export const TELAS: Tela[] = [
+  {
+    nome: 'login',
+    semLogin: true,
+    inteira: false,
+    abrir: async (page) => {
+      await page.goto('/login')
+      await page.getByLabel('E-mail').waitFor()
+    },
+  },
+  {
+    nome: 'paleta',
+    fonte: 'simulado',
+    inteira: false,
+    abrir: async (page) => {
+      await page.goto('/maquinas/1')
+      await page
+        .getByRole('button', { name: /Comandos/ })
+        .or(page.getByRole('link', { name: 'Visão geral' }))
+        .first()
+        .waitFor()
+      await page.keyboard.press('Control+k')
+      await page.getByRole('dialog', { name: 'Paleta de comandos' }).waitFor()
+      await page.keyboard.type('ponto')
+    },
+  },
+  {
+    nome: 'balao',
+    fonte: 'simulado',
+    inteira: false,
+    abrir: async (page) => {
+      await page.goto('/maquinas/1')
+      const botao = page.getByRole('button', { name: 'O que é RMS?' }).first()
+      await botao.scrollIntoViewIfNeeded()
+      await botao.click()
+      await page.getByTestId('balao-explica').waitFor()
+      await page.waitForTimeout(400)
+    },
+  },
   {
     nome: 'diagnostico',
     fonte: 'simulado',

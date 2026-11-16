@@ -110,7 +110,7 @@ function Dispositivos({ maquinaId }: { maquinaId: number }) {
         <EstadoVazio titulo="Nenhum dispositivo cadastrado nesta máquina." />
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-13">
+          <table className="w-full text-13 max-sm:[&_thead]:sr-only max-sm:[&_tbody_tr]:flex max-sm:[&_tbody_tr]:flex-wrap max-sm:[&_tbody_tr]:items-baseline max-sm:[&_tbody_tr]:gap-x-3 max-sm:[&_tbody_tr]:py-2 max-sm:[&_tbody_td]:px-3 max-sm:[&_tbody_td]:py-0">
             <thead>
               <tr className="border-b border-linha text-left">
                 <th scope="col" className="rotulo px-3 py-1.5">
@@ -133,7 +133,9 @@ function Dispositivos({ maquinaId }: { maquinaId: number }) {
             <tbody>
               {dispositivos.data.map((d) => (
                 <tr key={d.id} className="border-b border-linha last:border-b-0">
-                  <td className="valor px-3 py-2 font-medium text-texto">{d.identificador}</td>
+                  <td className="valor px-3 py-2 font-medium text-texto max-sm:basis-full">
+                    {d.identificador}
+                  </td>
                   <td className="px-3 py-2">
                     {d.simulado ? (
                       <span className="flex items-center gap-1.5">
@@ -144,9 +146,13 @@ function Dispositivos({ maquinaId }: { maquinaId: number }) {
                     )}
                   </td>
                   <td className="valor px-3 py-2 whitespace-nowrap">
+                    <span className="font-sans text-apoio sm:hidden">último contato </span>
                     {d.ultimo_contato ? formatarDataHora(d.ultimo_contato) : 'nunca'}
                   </td>
-                  <td className="valor px-3 py-2">{d.firmware_versao ?? TRACO}</td>
+                  <td className="valor px-3 py-2">
+                    <span className="font-sans text-apoio sm:hidden">firmware </span>
+                    {d.firmware_versao ?? TRACO}
+                  </td>
                   <td className="px-3 py-2">{d.ativo ? 'ativo' : 'inativo'}</td>
                 </tr>
               ))}
@@ -235,9 +241,7 @@ function Qualidade({ maquinaId }: { maquinaId: number }) {
                       ) : null}
                     </td>
                     <td className="px-3 py-1.5">{j.saturou ? 'saturou' : 'não'}</td>
-                    <td className="px-3 py-1.5">
-                      {j.modo === 'rapido' ? 'rápido 1 s' : 'normal 5 s'}
-                    </td>
+                    <td className="px-3 py-1.5">{j.modo === 'rapido' ? 'rápido' : 'normal'}</td>
                     <td className="valor px-3 py-1.5 text-right whitespace-nowrap">
                       {formatarNumero(atrasoS(j), 1)} s
                     </td>
@@ -359,7 +363,7 @@ function Catalogo({ tipo, admin }: { tipo: TipoCatalogo; admin: boolean }) {
           {busca ? null : 'Os itens nascem na receita da Coleta, com confirmação.'}
         </EstadoVazio>
       ) : (
-        <ul className="max-h-[28rem] overflow-y-auto" data-testid={`catalogo-${tipo}`}>
+        <ul className="lg:max-h-[28rem] lg:overflow-y-auto" data-testid={`catalogo-${tipo}`}>
           {lista.map((item) => (
             <ItemDoCatalogo key={item.id} tipo={tipo} item={item} admin={admin} />
           ))}
@@ -395,7 +399,7 @@ function ItemDoCatalogo({
     }
   }
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-linha px-3 py-1.5 last:border-b-0">
+    <li className="@container flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-linha px-3 py-1.5 last:border-b-0">
       {editando ? (
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <label htmlFor={idCampo} className="sr-only">
@@ -421,7 +425,7 @@ function ItemDoCatalogo({
       ) : (
         <span
           className={cn(
-            'min-w-0 flex-1 [overflow-wrap:anywhere] text-15',
+            'min-w-0 flex-1 basis-56 [overflow-wrap:anywhere] text-15',
             item.ativo ? 'text-texto' : 'text-apoio line-through',
           )}
         >
@@ -521,7 +525,10 @@ function Usuarios() {
           <EstadoErro erro={usuarios.error} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-13" data-testid="tabela-usuarios">
+            <table
+              className="w-full text-13 max-sm:[&_thead]:sr-only max-sm:[&_tbody_tr]:flex max-sm:[&_tbody_tr]:flex-wrap max-sm:[&_tbody_tr]:items-baseline max-sm:[&_tbody_tr]:gap-x-3 max-sm:[&_tbody_tr]:py-2 max-sm:[&_tbody_td]:px-3 max-sm:[&_tbody_td]:py-0"
+              data-testid="tabela-usuarios"
+            >
               <thead>
                 <tr className="border-b border-linha text-left">
                   <th scope="col" className="rotulo px-3 py-1.5">
@@ -548,15 +555,15 @@ function Usuarios() {
                     className="border-b border-linha last:border-b-0"
                     data-usuario={u.email}
                   >
-                    <td className="max-w-56 px-3 py-1.5 [overflow-wrap:anywhere] text-texto">
+                    <td className="max-w-56 px-3 py-1.5 [overflow-wrap:anywhere] text-texto max-sm:max-w-none max-sm:basis-full max-sm:font-medium">
                       {u.nome}
                     </td>
-                    <td className="valor max-w-64 px-3 py-1.5 [overflow-wrap:anywhere]">
+                    <td className="valor max-w-64 px-3 py-1.5 [overflow-wrap:anywhere] max-sm:max-w-none max-sm:basis-full">
                       {u.email}
                     </td>
                     <td className="px-3 py-1.5">{ROTULO_PAPEL_USUARIO[u.papel]}</td>
                     <td className="px-3 py-1.5">{u.ativo ? 'ativo' : 'desativado'}</td>
-                    <td className="px-3 py-1.5 text-right">
+                    <td className="px-3 py-1.5 text-right max-sm:basis-full max-sm:pt-1.5 max-sm:text-left">
                       {u.ativo && u.id !== meuId ? (
                         <SegurarParaConfirmar
                           aoConfirmar={() => {

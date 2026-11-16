@@ -40,6 +40,8 @@ describe('similaridade', () => {
     expect(similaridade('latao', 'Latão')).toBe(1)
     expect(similaridade('nylon', 'Aço SAE 1045')).toBeLessThan(0.3)
     expect(similaridade('', 'x')).toBe(0)
+    // um pedaço curto contido num nome longo não é o mesmo material
+    expect(similaridade('aço 4', 'aço 4340 temperado e revenido')).toBeLessThan(0.55)
   })
 })
 

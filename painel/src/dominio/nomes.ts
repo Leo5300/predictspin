@@ -57,7 +57,7 @@ function bigramas(texto: string): Map<string, number> {
  * - pares de letras em comum (Dice): pega palavras trocadas de lugar e abreviações ("aco 1045" e
  *   "aço SAE 1045");
  * - distância de edição relativa: pega erros de digitação ("alumnio" e "alumínio");
- * - um nome contido no outro ("1045" em "aço SAE 1045").
+ * - um nome contido no outro, cobrindo ao menos metade dele ("sae 1045" em "aço SAE 1045").
  * Vale o maior dos três.
  */
 export function similaridade(a: string, b: string): number {
@@ -78,7 +78,9 @@ export function similaridade(a: string, b: string): number {
   const edicao = 1 - distanciaDeEdicao(x, y) / Math.max(x.length, y.length)
   const menor = x.length <= y.length ? x : y
   const maior = x.length <= y.length ? y : x
-  const contido = menor.length >= 3 && maior.includes(menor) ? 0.75 : 0
+  // contido só conta se o menor cobre pelo menos metade do maior ("aço 4" não é "aço 4340 temperado")
+  const contido =
+    menor.length >= 3 && maior.includes(menor) && menor.length / maior.length >= 0.5 ? 0.75 : 0
   return Math.max(dice, edicao, contido)
 }
 
