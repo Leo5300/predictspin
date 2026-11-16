@@ -28,3 +28,6 @@ playwright-report
 test-results
 prints
 .env.local
+
+# Arquivos temporários do gerador de rotas (TanStack Router)
+.tanstack
