@@ -15,8 +15,8 @@ type Props = {
   /** Dado velho: ponteiro e número no tom fraco. */
   velho?: boolean
   /**
-   * Gravado (replay): a marcha mais próxima é destacada em texto forte, não na cor de sinal, que é só
-   * do dado ao vivo.
+   * Gravado (replay): o número sai em Plex Mono; a matriz de pontos é só da rotação ao vivo da tela
+   * da máquina (item 9 da direção).
    */
   gravado?: boolean
   className?: string
@@ -45,7 +45,7 @@ function ponto(fracao: number, raio: number): { x: number; y: number } {
 
 /**
  * Tacômetro: o arco tem as rotações nominais do torno como marcas rotuladas (escala logarítmica),
- * o ponteiro fica na rotação medida e a marcha nominal mais próxima é destacada na cor de sinal.
+ * o ponteiro fica na rotação medida e a marcha nominal mais próxima é destacada em texto forte (traço mais longo e grosso, número em negrito).
  * O número em matriz de pontos fica embaixo, sem separador de milhar.
  */
 export function Tacometro({ rpm, nominais, velho = false, gravado = false, className }: Props) {
@@ -102,9 +102,7 @@ export function Tacometro({ rpm, nominais, velho = false, gravado = false, class
                   y1={externo.y}
                   x2={interno.x}
                   y2={interno.y}
-                  stroke={
-                    destaque ? (gravado ? 'var(--texto)' : 'var(--sinal)') : 'var(--texto-apoio)'
-                  }
+                  stroke={destaque ? 'var(--texto)' : 'var(--texto-apoio)'}
                   strokeWidth={destaque ? 3 : 1.25}
                 />
                 <text
@@ -115,9 +113,7 @@ export function Tacometro({ rpm, nominais, velho = false, gravado = false, class
                   className="valor"
                   fontSize={destaque ? 12.5 : 10.5}
                   fontWeight={destaque ? 600 : 400}
-                  fill={
-                    destaque ? (gravado ? 'var(--texto)' : 'var(--sinal)') : 'var(--texto-apoio)'
-                  }
+                  fill={destaque ? 'var(--texto)' : 'var(--texto-apoio)'}
                 >
                   {nominal}
                 </text>
@@ -151,7 +147,8 @@ export function Tacometro({ rpm, nominais, velho = false, gravado = false, class
         <span
           hidden={!temRotacao}
           className={cn(
-            'matriz absolute left-1/2 -translate-x-1/2',
+            gravado ? 'valor font-medium' : 'matriz',
+            'absolute left-1/2 -translate-x-1/2',
             // 5 dígitos (leitura com defeito, até 30000 rpm) não cabem entre as pontas do arco
             // o número acompanha a largura do mostrador (no celular, 72 px encostaria nas pontas)
             rpmSemMilhar(rpm).length > 4

@@ -1,4 +1,5 @@
 import { Check } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
 import {
   chaveDaCelula,
@@ -50,86 +51,105 @@ export function MatrizCobertura({
   const rotacoes = rotacoesDoPlano(plano)
   const porChave = new Map(grade.map((c) => [chaveDaCelula(c), c]))
   const colunas = Math.max(1, rotacoes.length)
+  // só avisa da rolagem quando a matriz não cabe de verdade (plano com muitas rotações)
+  const caixa = useRef<HTMLDivElement>(null)
+  const [transborda, setTransborda] = useState(false)
+  useEffect(() => {
+    const elemento = caixa.current
+    if (!elemento) return
+    const medir = () => setTransborda(elemento.scrollWidth > elemento.clientWidth + 1)
+    medir()
+    const observador = new ResizeObserver(medir)
+    observador.observe(elemento)
+    return () => observador.disconnect()
+  }, [colunas])
 
   return (
-    <div className={cn('min-w-0 overflow-x-auto', className)} data-testid="matriz-cobertura">
-      <table className="w-max min-w-full border-separate border-spacing-0 text-13">
-        <caption className="sr-only">
-          Cobertura da coleta: ensaios válidos e meta por etapa, condição e rotação
-        </caption>
-        <thead>
-          <tr>
-            <th
-              scope="col"
-              className="rotulo sticky left-0 z-10 border-b border-linha bg-modulo px-2 py-1.5 text-left"
-            >
-              Etapa · condição
-            </th>
-            {rotacoes.length === 0 ? (
-              <th scope="col" className="rotulo border-b border-linha px-2 py-1.5 text-left">
-                rpm
+    <div className={cn('flex min-w-0 flex-col', className)}>
+      {transborda ? (
+        <p className="border-b border-linha px-2 py-1 text-12 text-apoio">
+          Deslize a matriz para o lado para ver as outras rotações; a coluna da etapa fica parada.
+        </p>
+      ) : null}
+      <div ref={caixa} className="min-w-0 overflow-x-auto" data-testid="matriz-cobertura">
+        <table className="w-max min-w-full border-separate border-spacing-0 text-13">
+          <caption className="sr-only">
+            Cobertura da coleta: ensaios válidos e meta por etapa, condição e rotação
+          </caption>
+          <thead>
+            <tr>
+              <th
+                scope="col"
+                className="rotulo sticky left-0 z-10 border-b border-linha bg-modulo px-2 py-1.5 text-left"
+              >
+                Etapa · condição
               </th>
-            ) : (
-              rotacoes.map((r) => (
-                <th
-                  key={r}
-                  scope="col"
-                  className="border-b border-linha px-1 py-1.5 text-center font-normal"
-                >
-                  <span className="valor text-13 text-texto">{r}</span>{' '}
-                  <span className="text-12 text-apoio">rpm</span>
+              {rotacoes.length === 0 ? (
+                <th scope="col" className="rotulo border-b border-linha px-2 py-1.5 text-left">
+                  rpm
                 </th>
-              ))
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {LINHAS.map((linha) => {
-            const validacao = linha.condicao === 'sensor_solto'
-            return (
-              <tr key={`${linha.etapa}-${linha.condicao}`}>
-                <th
-                  scope="row"
-                  className="sticky left-0 z-10 border-b border-linha bg-modulo px-2 py-1 text-left font-normal whitespace-nowrap"
-                >
-                  <span className="valor font-semibold text-texto">{linha.etapa}</span>{' '}
-                  <span className="text-texto max-sm:hidden">
-                    {ROTULO_CONDICAO[linha.condicao].toLowerCase()}
-                  </span>
-                  <span className="text-texto sm:hidden">{SIGLA_CONDICAO[linha.condicao]}</span>
-                  {validacao ? <span className="text-apoio"> · valid.</span> : null}
-                </th>
-                {linha.etapa === 'T0' ? (
-                  <td colSpan={colunas} className="border-b border-linha p-1">
-                    <BotaoDaCelula
-                      celula={porChave.get(chaveDaCelula({ ...linha, rotacao: 0 }))}
-                      rotulo="0 rpm (desligado)"
-                      aoEscolher={aoEscolher}
-                      sugerida={sugerida}
-                      carimbada={carimbada}
-                    />
-                  </td>
-                ) : rotacoes.length === 0 ? (
-                  <td className="border-b border-linha px-2 py-1 text-12 text-apoio">
-                    sem rotação no plano
-                  </td>
-                ) : (
-                  rotacoes.map((rotacao) => (
-                    <td key={rotacao} className="border-b border-linha p-1">
+              ) : (
+                rotacoes.map((r) => (
+                  <th
+                    key={r}
+                    scope="col"
+                    className="border-b border-linha px-1 py-1.5 text-center font-normal"
+                  >
+                    <span className="valor text-13 text-texto">{r}</span>{' '}
+                    <span className="text-12 text-apoio">rpm</span>
+                  </th>
+                ))
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {LINHAS.map((linha) => {
+              const validacao = linha.condicao === 'sensor_solto'
+              return (
+                <tr key={`${linha.etapa}-${linha.condicao}`}>
+                  <th
+                    scope="row"
+                    className="sticky left-0 z-10 border-b border-linha bg-modulo px-2 py-1 text-left font-normal whitespace-nowrap"
+                  >
+                    <span className="valor font-semibold text-texto">{linha.etapa}</span>{' '}
+                    <span className="text-texto max-sm:hidden">
+                      {ROTULO_CONDICAO[linha.condicao].toLowerCase()}
+                    </span>
+                    <span className="text-texto sm:hidden">{SIGLA_CONDICAO[linha.condicao]}</span>
+                    {validacao ? <span className="text-apoio"> · valid.</span> : null}
+                  </th>
+                  {linha.etapa === 'T0' ? (
+                    <td colSpan={colunas} className="border-b border-linha p-1">
                       <BotaoDaCelula
-                        celula={porChave.get(chaveDaCelula({ ...linha, rotacao }))}
+                        celula={porChave.get(chaveDaCelula({ ...linha, rotacao: 0 }))}
+                        rotulo="0 rpm (desligado)"
                         aoEscolher={aoEscolher}
                         sugerida={sugerida}
                         carimbada={carimbada}
                       />
                     </td>
-                  ))
-                )}
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+                  ) : rotacoes.length === 0 ? (
+                    <td className="border-b border-linha px-2 py-1 text-12 text-apoio">
+                      sem rotação no plano
+                    </td>
+                  ) : (
+                    rotacoes.map((rotacao) => (
+                      <td key={rotacao} className="border-b border-linha p-1">
+                        <BotaoDaCelula
+                          celula={porChave.get(chaveDaCelula({ ...linha, rotacao }))}
+                          aoEscolher={aoEscolher}
+                          sugerida={sugerida}
+                          carimbada={carimbada}
+                        />
+                      </td>
+                    ))
+                  )}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -164,7 +184,7 @@ function BotaoDaCelula({
       data-completa={completa || undefined}
       data-carimbada={ehCarimbada || undefined}
       className={cn(
-        'relevo flex min-h-11 w-full min-w-16 items-center justify-center gap-1 rounded-2 border px-2 select-none',
+        'relevo flex min-h-11 w-full min-w-14 items-center justify-center gap-1 rounded-2 border px-2 select-none',
         completa
           ? 'border-acao bg-acao text-acao-texto'
           : celula.validos > 0
@@ -173,7 +193,9 @@ function BotaoDaCelula({
         validacao && !completa && 'border-dashed',
         ehSugerida && 'outline-2 outline-offset-1 outline-texto',
         ehCarimbada &&
-          'motion-safe:animate-[carimbo_160ms_var(--ease-out)_both] [&]:border-acao [&]:bg-acao [&]:text-acao-texto',
+          // a gravação que acabou de entrar: contorno tracejado próprio (a sugerida tem contorno cheio
+          // e ▸), além do preenchimento de meta quando ela foi atingida
+          'outline-2 outline-offset-2 outline-texto outline-dashed motion-safe:animate-[carimbo_160ms_var(--ease-out)_both]',
         '[@media(hover:hover)_and_(pointer:fine)]:hover:border-texto',
       )}
     >

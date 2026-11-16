@@ -61,6 +61,13 @@ async function fotografar(page: Page, nome: string, tela: Tela) {
   // o mouse sai de cima de tudo: hover não aparece no print
   await page.mouse.move(0, 0)
   await page.waitForTimeout(400)
+  // aviso (toast) é passageiro e fixo na tela: numa print de página inteira ele sairia no meio da
+  // página, a meio caminho de sumir. Espera os avisos irem embora (a tela de evento não depende deles)
+  await page
+    .locator('[data-sonner-toast]')
+    .first()
+    .waitFor({ state: 'detached', timeout: 12_000 })
+    .catch(() => undefined)
   const arquivo = path.join(PASTA, `${nome}.png`)
   if (tela.regiao) {
     await page.getByRole('region', { name: tela.regiao, exact: true }).screenshot({ path: arquivo })
@@ -335,29 +342,25 @@ export const TELAS: Tela[] = [
     },
   },
   // Dado velho: rodar com o simulador parado (TELAS=l1-velho,l2-velho,l3-velho PRINTS_SIMULADOR=0)
-  ...(['l1-velho', 'l2-velho', 'l3-velho'] as const).map(
-    (nome): Tela => ({
-      nome,
-      fonte: 'simulado',
-      abrir: async (page) => {
-        await page.goto(
-          { 'l1-velho': '/', 'l2-velho': '/maquinas/1', 'l3-velho': '/maquinas/1/pontos/B' }[nome],
-        )
-        await page.waitForTimeout(3000)
-      },
-    }),
-  ),
+  ...(['l1-velho', 'l2-velho', 'l3-velho'] as const).map((nome): Tela => ({
+    nome,
+    fonte: 'simulado',
+    abrir: async (page) => {
+      await page.goto(
+        { 'l1-velho': '/', 'l2-velho': '/maquinas/1', 'l3-velho': '/maquinas/1/pontos/B' }[nome],
+      )
+      await page.waitForTimeout(3000)
+    },
+  })),
   // Fonte real sem medição gravada: estado vazio honesto
-  ...(['l1-real', 'l2-real'] as const).map(
-    (nome): Tela => ({
-      nome,
-      fonte: 'real',
-      abrir: async (page) => {
-        await page.goto({ 'l1-real': '/', 'l2-real': '/maquinas/1' }[nome])
-        await page.waitForTimeout(3000)
-      },
-    }),
-  ),
+  ...(['l1-real', 'l2-real'] as const).map((nome): Tela => ({
+    nome,
+    fonte: 'real',
+    abrir: async (page) => {
+      await page.goto({ 'l1-real': '/', 'l2-real': '/maquinas/1' }[nome])
+      await page.waitForTimeout(3000)
+    },
+  })),
   {
     nome: 'l3-aovivo',
     fonte: 'simulado',

@@ -469,7 +469,11 @@ function desenharReferencia(
   limite(referencia.alarme, cores.alarme)
 }
 
-/** Ensaios do período: faixa no topo da área, com o código. */
+/**
+ * Ensaios do período: faixa no topo da área. O código só aparece inteiro, quando cabe; ensaios
+ * colados (a menos de 6 px um do outro) viram um grupo com "N ensaios", para não formar um bloco de
+ * riscos parecido com a hachura do simulado.
+ */
 function desenharFaixas(u: uPlot, faixas: readonly FaixaDoGrafico[], cores: CoresDoCanvas) {
   if (faixas.length === 0) return
   const { left, top, width, height } = u.bbox
@@ -482,16 +486,39 @@ function desenharFaixas(u: uPlot, faixas: readonly FaixaDoGrafico[], cores: Core
   ctx.font = `${12 * escala}px "IBM Plex Mono", monospace`
   ctx.textBaseline = 'middle'
   const alturaDaFaixa = 16 * escala
-  for (const faixa of faixas) {
-    const x0 = Math.max(left, u.valToPos(faixa.inicioS, 'x', true))
-    const x1 = Math.min(left + width, u.valToPos(faixa.fimS, 'x', true))
-    if (x1 <= left || x0 >= left + width || x1 - x0 < 1) continue
+
+  // posições na tela, em ordem, e agrupamento dos que se encostam
+  const visiveis = faixas
+    .map((f) => ({
+      x0: Math.max(left, u.valToPos(f.inicioS, 'x', true)),
+      x1: Math.min(left + width, u.valToPos(f.fimS, 'x', true)),
+      rotulo: f.rotulo,
+    }))
+    .filter((f) => f.x1 > left && f.x0 < left + width && f.x1 - f.x0 >= 1)
+    .sort((a, b) => a.x0 - b.x0)
+  const grupos: { x0: number; x1: number; rotulos: string[] }[] = []
+  for (const f of visiveis) {
+    const ultimo = grupos.at(-1)
+    if (ultimo && f.x0 - ultimo.x1 < 6 * escala) {
+      ultimo.x1 = Math.max(ultimo.x1, f.x1)
+      ultimo.rotulos.push(f.rotulo)
+    } else {
+      grupos.push({ x0: f.x0, x1: f.x1, rotulos: [f.rotulo] })
+    }
+  }
+
+  for (const { x0, x1, rotulos } of grupos) {
     ctx.fillStyle = cores.modulo
     ctx.fillRect(x0, top, x1 - x0, alturaDaFaixa)
     ctx.strokeStyle = cores.linhaForte
     ctx.lineWidth = escala
-    ctx.strokeRect(Math.round(x0) + 0.5, top + 0.5, Math.round(x1 - x0) - 1, alturaDaFaixa)
-    // limites do ensaio até a base do gráfico
+    ctx.strokeRect(
+      Math.round(x0) + 0.5,
+      top + 0.5,
+      Math.max(1, Math.round(x1 - x0) - 1),
+      alturaDaFaixa,
+    )
+    // limites do grupo até a base do gráfico
     ctx.beginPath()
     ctx.setLineDash([2 * escala, 3 * escala])
     ctx.moveTo(Math.round(x0) + 0.5, top + alturaDaFaixa)
@@ -502,11 +529,8 @@ function desenharFaixas(u: uPlot, faixas: readonly FaixaDoGrafico[], cores: Core
     ctx.setLineDash([])
     ctx.fillStyle = cores.texto
     ctx.textAlign = 'left'
-    const espaco = x1 - x0 - 8 * escala
-    if (espaco > 24 * escala) {
-      let texto = faixa.rotulo
-      while (texto.length > 3 && ctx.measureText(texto).width > espaco)
-        texto = `${texto.slice(0, -2)}…`
+    const texto = rotulos.length === 1 ? (rotulos[0] ?? '') : `${String(rotulos.length)} ensaios`
+    if (ctx.measureText(texto).width <= x1 - x0 - 8 * escala) {
       ctx.fillText(texto, x0 + 4 * escala, top + alturaDaFaixa / 2)
     }
   }

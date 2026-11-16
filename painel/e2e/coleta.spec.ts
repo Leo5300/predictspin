@@ -165,6 +165,8 @@ test.describe('no celular', () => {
     const descartar = page
       .getByRole('button', { name: /Segure para descartar/ })
       .filter({ visible: true })
+    // no celular o descarte fica no fim da página, longe da zona do polegar: rola até ele
+    await descartar.scrollIntoViewIfNeeded()
     const caixa = await descartar.boundingBox()
     if (!caixa) throw new Error('botão sem caixa')
     await page.mouse.move(caixa.x + caixa.width / 2, caixa.y + caixa.height / 2)

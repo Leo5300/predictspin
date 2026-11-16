@@ -36,6 +36,8 @@ const buttonVariants = cva(
         default: '',
         sm: 'px-2 text-12',
         icon: 'w-8 px-0 pointer-coarse:w-11 max-md:w-11',
+        // controles da coleta no celular: 56 px em qualquer tela (item 17 da direção)
+        toque: 'min-h-14 px-4 text-15 pointer-coarse:min-h-14 max-md:min-h-14',
       },
     },
     defaultVariants: {

@@ -362,9 +362,26 @@ function DetalheDoEnsaio({ ensaio }: { ensaio: Ensaio }) {
                 {ensaio.observacao}
               </p>
             ) : null}
-            <Button className="self-start" onClick={() => setCorrigindo(true)}>
-              Corrigir receita
-            </Button>
+            {/* ações do ensaio juntas, na coluna da receita: corrigir e, segurando, descartar */}
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => setCorrigindo(true)}>Corrigir receita</Button>
+              {!ensaio.descartado ? (
+                <SegurarParaConfirmar
+                  className="self-start"
+                  aoConfirmar={() => {
+                    descartarEnsaio(ensaio.id)
+                      .then(() => {
+                        toast(`Ensaio ${ensaio.codigo} descartado (marcado, não apagado).`)
+                        void cliente.invalidateQueries({ queryKey: ['ensaios-lista'] })
+                        void cliente.invalidateQueries({ queryKey: ['cobertura'] })
+                      })
+                      .catch((e: unknown) => toast(mensagemDoErro(e)))
+                  }}
+                >
+                  Segure para descartar
+                </SegurarParaConfirmar>
+              ) : null}
+            </div>
           </>
         )}
       </div>
@@ -392,22 +409,6 @@ function DetalheDoEnsaio({ ensaio }: { ensaio: Ensaio }) {
       <div className="flex flex-col gap-2">
         <span className="rotulo">Histórico de correções</span>
         <Historico alteracoes={alteracoes.data} carregando={alteracoes.isPending} />
-        {!ensaio.descartado ? (
-          <SegurarParaConfirmar
-            className="mt-2 self-start"
-            aoConfirmar={() => {
-              descartarEnsaio(ensaio.id)
-                .then(() => {
-                  toast(`Ensaio ${ensaio.codigo} descartado (marcado, não apagado).`)
-                  void cliente.invalidateQueries({ queryKey: ['ensaios-lista'] })
-                  void cliente.invalidateQueries({ queryKey: ['cobertura'] })
-                })
-                .catch((e: unknown) => toast(mensagemDoErro(e)))
-            }}
-          >
-            Segure para descartar
-          </SegurarParaConfirmar>
-        ) : null}
       </div>
     </div>
   )

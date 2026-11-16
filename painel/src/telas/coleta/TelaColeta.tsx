@@ -115,7 +115,8 @@ function EntradaDaColeta({ maquinaId }: { maquinaId: number }) {
                 <ResumoCurtoDaReceita receita={sessaoDaMaquina.receita} />
                 <Button
                   variant="default"
-                  className="min-h-14 w-full text-15"
+                  size="toque"
+                  className="w-full"
                   onClick={() => preparar(proximaDaSessaoAtual, true)}
                 >
                   Preparar {proximaDaSessaoAtual.etapa} a {proximaDaSessaoAtual.rotacao} rpm
@@ -176,7 +177,8 @@ function EntradaDaColeta({ maquinaId }: { maquinaId: number }) {
                 ) : null}
                 <Button
                   variant={sessaoDaMaquina ? 'outline' : 'default'}
-                  className="min-h-14 w-full text-15"
+                  size="toque"
+                  className="w-full"
                   onClick={() => coleta.sugerida && preparar(coleta.sugerida)}
                 >
                   Preparar
@@ -407,7 +409,7 @@ function PlanoEMeta({
                     className={cn(
                       'relevo valor min-h-11 min-w-14 rounded-2 border px-2 text-13',
                       marcada
-                        ? 'border-acao bg-acao text-acao-texto'
+                        ? 'border-texto bg-rebaixo font-semibold text-texto'
                         : 'border-linha-forte bg-modulo text-texto',
                     )}
                   >

@@ -62,6 +62,8 @@ type Props = {
   ensaios?: readonly EnsaioDoMapa[]
   eventos?: readonly EventoDoMapa[]
   simulado?: boolean
+  /** Dado velho: hora da última janela; a leitura em texto diz que vale até ela. */
+  ultimaJanelaVelha?: string | null
   className?: string
 }
 
@@ -91,6 +93,7 @@ export function MapaOrdens({
   ensaios = [],
   eventos = [],
   simulado = false,
+  ultimaJanelaVelha = null,
   className,
 }: Props) {
   const cores = useCoresDoCanvas()
@@ -285,17 +288,20 @@ export function MapaOrdens({
               {ensaiosNoPeriodo.map((e) => {
                 const x0 = posicaoNoTempo(e.inicio)
                 const x1 = e.fim === null ? 1 : posicaoNoTempo(e.fim)
+                // ensaio curto: só a faixa (código e etapa na dica); o texto nunca sai cortado
+                const texto = `${e.etapa} · ${e.codigo}`
+                const cabe = (x1 - x0) * largura >= texto.length * 7.5 + 10
                 return (
                   <span
                     key={e.codigo}
-                    title={`${e.codigo} · ${e.etapa}`}
-                    className="valor absolute inset-y-0 flex items-center truncate border-x border-linha-forte bg-realce px-1 text-12 text-texto"
+                    title={texto}
+                    className="valor absolute inset-y-0 flex items-center overflow-hidden border-x border-linha-forte bg-realce px-1 text-12 whitespace-nowrap text-texto"
                     style={{
                       left: `${x0 * 100}%`,
                       width: `max(${(x1 - x0) * 100}%, 3px)`,
                     }}
                   >
-                    {e.etapa} · {e.codigo}
+                    {cabe ? texto : null}
                   </span>
                 )
               })}
@@ -467,6 +473,13 @@ export function MapaOrdens({
         className="flex flex-col gap-0.5 border border-linha bg-modulo px-2 py-1.5 text-13"
         data-testid="leitura-do-mapa"
       >
+        {ultimaJanelaVelha ? (
+          <span className="text-apoio">
+            Sem janela nova desde{' '}
+            <span className="valor">{formatarHoraMinuto(ultimaJanelaVelha)}</span>: a leitura abaixo
+            vale até lá.
+          </span>
+        ) : null}
         {destaques.length === 0 ? (
           <span className="text-texto">{TEXTO_NORMAL}</span>
         ) : (

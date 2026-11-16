@@ -145,7 +145,7 @@ export function ResumoDaGravacao({ ensaioId, maquinaId }: { ensaioId: number; ma
             </div>
             <div className="flex flex-col gap-2 max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-30 max-lg:border-t max-lg:border-linha-forte max-lg:bg-modulo max-lg:px-4 max-lg:pt-2 max-lg:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               {proxima || coleta.sugerida ? (
-                <Button variant="default" className="min-h-14 text-15" onClick={prepararProxima}>
+                <Button variant="default" size="toque" onClick={prepararProxima}>
                   {proxima
                     ? `Preparar ${proxima.etapa} a ${proxima.rotacao} rpm`
                     : `Preparar a sugerida: ${textoDaCelula(coleta.sugerida)}`}
@@ -186,7 +186,7 @@ export function ResumoDaGravacao({ ensaioId, maquinaId }: { ensaioId: number; ma
           detalhe={
             <>
               <span className="valor text-texto">{formatarPercentual(coleta.percentual)}</span> da
-              grade{valido ? ' · a célula desta gravação está destacada' : ''}
+              grade{valido ? ' · a célula desta gravação tem contorno tracejado' : ''}
             </>
           }
           semRecuo

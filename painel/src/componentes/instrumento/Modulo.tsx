@@ -59,9 +59,9 @@ export function Modulo({
         {explica ? <Explica chave={explica} className="-ml-1.5" /> : null}
         {simulado ? <SeloSim /> : null}
         {detalhe ? (
-          // módulo estreito: o detalhe desce para uma linha própria em vez de virar "f…"
+          // módulo estreito: o detalhe desce para uma linha própria e quebra, em vez de virar "f…"
           <div
-            className="min-w-0 flex-1 truncate text-12 text-apoio @max-[36rem]:order-last @max-[36rem]:basis-full"
+            className="min-w-0 flex-1 truncate text-12 text-apoio @max-[36rem]:order-last @max-[36rem]:basis-full @max-[36rem]:whitespace-normal"
             title={typeof detalhe === 'string' ? detalhe : undefined}
           >
             {detalhe}

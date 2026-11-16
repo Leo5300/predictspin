@@ -296,6 +296,7 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
           periodo={periodoDoMapa}
           codigos={pontosAtivos.map((p) => p.codigo)}
           nominais={maquina.data.rotacoes_nominais_rpm}
+          ultimaJanelaVelha={velho ? (aoVivo.ultima?.janela.medido_em ?? null) : null}
         />
       </Painel>
     </div>
@@ -586,9 +587,18 @@ type PropsDoMapa = {
   periodo: PeriodoMapa['chave']
   codigos: string[]
   nominais: readonly number[]
+  /** Com dado velho: a hora da última janela (a leitura do mapa vale até ela). */
+  ultimaJanelaVelha: string | null
 }
 
-function SecaoDoMapa({ maquinaId, simulado, periodo, codigos, nominais }: PropsDoMapa) {
+function SecaoDoMapa({
+  maquinaId,
+  simulado,
+  periodo,
+  codigos,
+  nominais,
+  ultimaJanelaVelha,
+}: PropsDoMapa) {
   const sessao = useSessao()
   const veEnsaios = sessao.fase === 'autenticada' && podeAbrir(sessao.usuario.papel, 'ensaios')
   const ensaios = useQuery({ ...consultaEnsaios(maquinaId, simulado), enabled: veEnsaios })
@@ -681,6 +691,7 @@ function SecaoDoMapa({ maquinaId, simulado, periodo, codigos, nominais }: PropsD
             etapa: e.etapa,
           }))}
           simulado={simulado}
+          ultimaJanelaVelha={ultimaJanelaVelha}
         />
       )}
     </Modulo>

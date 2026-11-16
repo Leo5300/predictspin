@@ -403,7 +403,7 @@ function Preparo({ maquinaId, busca }: { maquinaId: number; busca: BuscaDoPrepar
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-linha-forte bg-modulo px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
         {passo === 3 ? (
           <div className="flex items-end justify-between gap-3">
-            <Button className="min-h-14" onClick={() => passoAnterior && setPasso(passoAnterior)}>
+            <Button size="toque" onClick={() => passoAnterior && setPasso(passoAnterior)}>
               <ArrowLeft aria-hidden="true" strokeWidth={1.75} />
               Voltar
             </Button>
@@ -418,7 +418,7 @@ function Preparo({ maquinaId, busca }: { maquinaId: number; busca: BuscaDoPrepar
         ) : (
           <div className="flex gap-3">
             {passoAnterior ? (
-              <Button className="min-h-14 flex-1" onClick={() => setPasso(passoAnterior)}>
+              <Button size="toque" className="flex-1" onClick={() => setPasso(passoAnterior)}>
                 <ArrowLeft aria-hidden="true" strokeWidth={1.75} />
                 Voltar
               </Button>
@@ -426,14 +426,15 @@ function Preparo({ maquinaId, busca }: { maquinaId: number; busca: BuscaDoPrepar
               <Link
                 to="/coleta"
                 search={{ maquina: maquinaId }}
-                className={cn(buttonVariants({ variant: 'outline' }), 'min-h-14 flex-1')}
+                className={cn(buttonVariants({ variant: 'outline', size: 'toque' }), 'flex-1')}
               >
                 Cancelar
               </Link>
             )}
             <Button
               variant="default"
-              className="min-h-14 flex-[2] text-15"
+              size="toque"
+              className="flex-[2]"
               onClick={() => proximoPasso && setPasso(proximoPasso)}
             >
               {proximoPasso === 2 ? 'Receita' : 'Checagem'}
@@ -662,7 +663,7 @@ function BotaoSegmento({
         'relevo flex min-h-14 min-w-14 items-center justify-center border px-3 text-15 select-none disabled:opacity-60',
         separado ? 'rounded-2' : 'rounded-0 not-first:-ml-px first:rounded-l-2 last:rounded-r-2',
         marcado
-          ? 'z-[1] border-acao bg-acao text-acao-texto'
+          ? 'z-[1] border-texto bg-rebaixo font-semibold text-texto shadow-[inset_0_1px_0_var(--relevo-sombra),inset_0_-1px_0_var(--relevo-luz)]'
           : 'border-linha-forte bg-modulo text-texto [@media(hover:hover)_and_(pointer:fine)]:hover:bg-realce',
         tracejado && !marcado && 'border-dashed',
       )}
@@ -687,27 +688,27 @@ function OpcaoDeSessao({
 }) {
   return (
     <div className="mt-4 flex flex-col gap-2 border-t border-linha pt-3">
-      <label className="flex min-h-11 items-center gap-3 text-15 text-texto">
+      <label className="flex min-h-14 items-center gap-3 text-15 text-texto">
         <input
           type="checkbox"
           checked={comSessao}
           onChange={(e) => aoMudarSessao(e.target.checked)}
-          className="size-5 accent-[var(--acao)]"
+          className="size-6 shrink-0 accent-[var(--acao)]"
         />
         Gravar a sequência nesta rotação (T1 → T2 → T3)
       </label>
       {comSessao ? (
         <>
-          <label className="ml-8 flex min-h-11 items-center gap-3 text-15 text-texto">
+          <label className="ml-9 flex min-h-14 items-center gap-3 text-15 text-texto">
             <input
               type="checkbox"
               checked={comT0}
               onChange={(e) => aoMudarT0(e.target.checked)}
-              className="size-5 accent-[var(--acao)]"
+              className="size-6 shrink-0 accent-[var(--acao)]"
             />
             Começar pelo T0 (torno desligado)
           </label>
-          <p className="ml-8 text-13 text-apoio">
+          <p className="ml-9 text-13 text-apoio">
             A receita é montada uma vez e reaproveitada; ao encerrar uma etapa, a seguinte já vem
             preparada{rotacao ? ` a ${rotacao} rpm` : ''}. Dá para pular uma etapa ou encerrar a
             sessão. A sessão fica guardada neste navegador.

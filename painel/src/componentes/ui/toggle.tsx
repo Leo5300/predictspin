@@ -13,7 +13,9 @@ const toggleVariants = cva(
     // texto de apoio
     'disabled:pointer-events-none disabled:text-apoio disabled:border-linha',
     'disabled:aria-pressed:bg-realce disabled:aria-pressed:text-texto disabled:aria-pressed:border-linha-forte',
-    'aria-pressed:bg-acao aria-pressed:text-acao-texto aria-pressed:border-acao',
+    // marcado = afundado (fundo rebaixado, borda forte, negrito), nunca o preenchimento da ação
+    // principal: escolha e ação não podem parecer a mesma coisa
+    'aria-pressed:bg-rebaixo aria-pressed:text-texto aria-pressed:border-texto aria-pressed:font-semibold',
     '[@media(hover:hover)_and_(pointer:fine)]:hover:not-aria-pressed:bg-realce',
     "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   ],

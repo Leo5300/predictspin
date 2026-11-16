@@ -1,3 +1,5 @@
+import { Fragment } from 'react'
+
 import { useSegundo } from '@/estado/relogio'
 import {
   comprimentoDaFitaS,
@@ -94,26 +96,30 @@ export function Cronometro({ inicio, fim }: { inicio: string; fim?: string | nul
   return (
     <div className="flex flex-col items-start gap-1" data-testid="cronometro">
       <span
-        className="matriz text-[clamp(3rem,14vw,4.5rem)] leading-none text-texto"
+        className="matriz inline-flex items-center text-[clamp(3rem,14vw,4.5rem)] leading-none text-texto"
         role="timer"
         aria-label={`Tempo gravado: ${formatarCronometro(decorrido)}`}
       >
-        {/* os dois-pontos da Doto parecem "‡": o separador é desenhado (dois pontos quadrados) */}
+        {/* os dois-pontos da Doto parecem "‡": o separador é desenhado (dois pontos quadrados), numa
+            linha só com os algarismos; o ":" de verdade fica no texto, invisível */}
         {formatarCronometro(decorrido)
           .split(':')
           .map((parte, i) => (
-            <span key={i} className="inline-flex items-center">
+            <Fragment key={i}>
               {i > 0 ? (
-                <span
-                  aria-hidden="true"
-                  className="mx-[0.08em] inline-flex h-[0.62em] flex-col justify-between"
-                >
-                  <span className="size-[0.12em] bg-current" />
-                  <span className="size-[0.12em] bg-current" />
-                </span>
+                <>
+                  <span className="sr-only">:</span>
+                  <span
+                    aria-hidden="true"
+                    className="mx-[0.08em] flex h-[0.62em] flex-col justify-between"
+                  >
+                    <span className="size-[0.12em] bg-current" />
+                    <span className="size-[0.12em] bg-current" />
+                  </span>
+                </>
               ) : null}
-              {parte}
-            </span>
+              <span>{parte}</span>
+            </Fragment>
           ))}
       </span>
       <span className="flex w-full max-w-64 items-center gap-2 text-12 text-apoio">

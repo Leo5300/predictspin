@@ -19,6 +19,21 @@ test.afterAll(() => {
 })
 
 async function semViolacoesGraves(page: Page, tela: string) {
+  // contraste medido no estado final: itens que entram com opacidade (a checagem antes de gravar
+  // aparece um a um) seriam lidos no meio da animação. Espera as animações finitas acabarem.
+  await page
+    .waitForFunction(
+      () =>
+        document
+          .getAnimations()
+          .every(
+            (a) =>
+              a.playState !== 'running' || a.effect?.getComputedTiming().iterations === Infinity,
+          ),
+      undefined,
+      { timeout: 5_000 },
+    )
+    .catch(() => undefined)
   const resultado = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze()

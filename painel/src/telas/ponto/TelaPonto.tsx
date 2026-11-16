@@ -817,7 +817,7 @@ function QuadroHistorico({ dados, faixas, quadro, inicioS, fimS, codigo }: Props
         </span>
         <span>linha interrompida = lacuna (sem janela)</span>
         <span>▼ no topo = janela saturada</span>
-        <span>faixa com código = ensaio</span>
+        <span>faixa no topo = ensaio (código quando cabe; colados viram "N ensaios")</span>
         <span>sem referência aprendida: faixa normal indisponível</span>
       </p>
     </div>

@@ -192,7 +192,7 @@ export function Gravacao({ ensaio, maquinaId }: { ensaio: Ensaio; maquinaId: num
   }))
 
   return (
-    <div className="flex flex-col gap-3 pb-44 lg:pb-0" data-testid="gravacao">
+    <div className="flex flex-col gap-3 pb-28 lg:pb-0" data-testid="gravacao">
       {/* faixa de gravação: ponto vermelho (convenção de gravador), etapa e código */}
       <div
         className={cn(
@@ -212,6 +212,11 @@ export function Gravacao({ ensaio, maquinaId }: { ensaio: Ensaio; maquinaId: num
           <span className="valor">{ensaio.rotacao_alvo_rpm}</span> rpm
         </span>
         <CodigoDoEnsaio codigo={ensaio.codigo} />
+      </div>
+
+      {/* no celular o cartão vem logo abaixo da faixa: sempre visível ao gravar (item 17) */}
+      <div className="lg:hidden">
+        <CartaoInstrucao etapa={ensaio.etapa} condicao={ensaio.condicao} />
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start">
@@ -272,7 +277,7 @@ export function Gravacao({ ensaio, maquinaId }: { ensaio: Ensaio; maquinaId: num
                   {MOTIVOS.map((m) => (
                     <Button
                       key={m.valor}
-                      className="min-h-14 text-15"
+                      size="toque"
                       disabled={enviandoEvento}
                       onClick={() => void enviarEvento(m.valor)}
                     >
@@ -298,7 +303,9 @@ export function Gravacao({ ensaio, maquinaId }: { ensaio: Ensaio; maquinaId: num
         </Painel>
 
         <div className="flex flex-col gap-3">
-          <CartaoInstrucao etapa={ensaio.etapa} condicao={ensaio.condicao} />
+          <div className="hidden lg:block">
+            <CartaoInstrucao etapa={ensaio.etapa} condicao={ensaio.condicao} />
+          </div>
           <Painel>
             <Modulo rotulo="Receita usada">
               {linhasDaReceita.length === 0 ? (
@@ -354,15 +361,21 @@ export function Gravacao({ ensaio, maquinaId }: { ensaio: Ensaio; maquinaId: num
               refMarcar={botaoMarcar}
             />
           </div>
+          {/* no celular o descarte fica fora da zona do polegar, no fim da página */}
+          <SegurarParaConfirmar
+            aoConfirmar={() => void descartar()}
+            className="min-h-14 justify-center self-stretch pointer-coarse:min-h-14 max-md:min-h-14 lg:hidden"
+          >
+            Segure para descartar
+          </SegurarParaConfirmar>
         </div>
       </div>
 
-      {/* zona do polegar (celular): marcar evento e encerrar embaixo; descartar segurando */}
+      {/* zona do polegar (celular): marcar evento e encerrar embaixo; o descarte fica longe dela */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-linha-forte bg-modulo px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
         <Controles
           aoMarcar={comecarMarcacao}
           aoEncerrar={() => void encerrar()}
-          aoDescartar={() => void descartar()}
           encerrando={encerrando}
           marcando={marcando !== null}
         />
@@ -381,7 +394,8 @@ function Controles({
 }: {
   aoMarcar: () => void
   aoEncerrar: () => void
-  aoDescartar: () => void
+  /** Sem ele (barra do celular), o descarte não aparece aqui. */
+  aoDescartar?: () => void
   encerrando: boolean
   marcando: boolean
   refMarcar?: React.Ref<HTMLButtonElement>
@@ -391,7 +405,7 @@ function Controles({
       <div className="grid grid-cols-2 gap-2">
         <Button
           ref={refMarcar}
-          className="min-h-14 text-15"
+          size="toque"
           onClick={aoMarcar}
           disabled={marcando}
           aria-keyshortcuts="E"
@@ -399,19 +413,16 @@ function Controles({
           <Flag aria-hidden="true" strokeWidth={1.75} />
           Marcar evento <Kbd>E</Kbd>
         </Button>
-        <Button
-          variant="default"
-          className="min-h-14 text-15"
-          onClick={aoEncerrar}
-          disabled={encerrando}
-        >
+        <Button variant="default" size="toque" onClick={aoEncerrar} disabled={encerrando}>
           <Square aria-hidden="true" strokeWidth={1.75} />
           {encerrando ? 'Encerrando…' : 'Encerrar'}
         </Button>
       </div>
-      <SegurarParaConfirmar aoConfirmar={aoDescartar} className="justify-center self-stretch">
-        Segure para descartar
-      </SegurarParaConfirmar>
+      {aoDescartar ? (
+        <SegurarParaConfirmar aoConfirmar={aoDescartar} className="justify-center self-stretch">
+          Segure para descartar
+        </SegurarParaConfirmar>
+      ) : null}
     </div>
   )
 }
