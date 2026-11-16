@@ -38,6 +38,7 @@ test.describe.configure({ timeout: 150_000 })
 test.skip(!ATIVO, 'prints só com PRINTS=1')
 
 let simulador: Simulador | null = null
+let ensaioDoReplay: number | null = null
 test.beforeAll(async ({ request }) => {
   mkdirSync(PASTA, { recursive: true })
   await definirPlano(request, 1, [450, 900, 1120])
@@ -163,11 +164,21 @@ export const TELAS: Tela[] = [
     nome: 'replay',
     fonte: 'simulado',
     abrir: async (page) => {
-      await page.goto('/coleta/ensaios?maquina=1&estado=encerrados')
-      await page
-        .getByRole('link', { name: /Replay do ensaio/ })
-        .first()
-        .click()
+      // um ensaio com janelas, gravado uma vez para todas as variações (o primeiro da lista pode
+      // ser um ensaio sem janelas criado pelos piores casos)
+      if (!ensaioDoReplay) {
+        await liberarMaquina(page.request)
+        const e = await abrirEnsaioPelaApi(page.request, {
+          etapa: 'T1',
+          condicao: 'normal',
+          rotacao_alvo_rpm: 1120,
+          simulado: true,
+        })
+        await page.waitForTimeout(25_000)
+        await encerrarPelaApi(page.request, e.id)
+        ensaioDoReplay = e.id
+      }
+      await page.goto(`/coleta/ensaios/${String(ensaioDoReplay)}/replay`)
       await page.getByTestId('replay').waitFor()
       await page.getByRole('button', { name: 'Velocidade 4 vezes' }).click()
       await page.getByRole('button', { name: 'Tocar' }).click()
@@ -323,6 +334,30 @@ export const TELAS: Tela[] = [
       await page.waitForTimeout(2500)
     },
   },
+  // Dado velho: rodar com o simulador parado (TELAS=l1-velho,l2-velho,l3-velho PRINTS_SIMULADOR=0)
+  ...(['l1-velho', 'l2-velho', 'l3-velho'] as const).map(
+    (nome): Tela => ({
+      nome,
+      fonte: 'simulado',
+      abrir: async (page) => {
+        await page.goto(
+          { 'l1-velho': '/', 'l2-velho': '/maquinas/1', 'l3-velho': '/maquinas/1/pontos/B' }[nome],
+        )
+        await page.waitForTimeout(3000)
+      },
+    }),
+  ),
+  // Fonte real sem medição gravada: estado vazio honesto
+  ...(['l1-real', 'l2-real'] as const).map(
+    (nome): Tela => ({
+      nome,
+      fonte: 'real',
+      abrir: async (page) => {
+        await page.goto({ 'l1-real': '/', 'l2-real': '/maquinas/1' }[nome])
+        await page.waitForTimeout(3000)
+      },
+    }),
+  ),
   {
     nome: 'l3-aovivo',
     fonte: 'simulado',
