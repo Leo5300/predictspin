@@ -34,7 +34,7 @@ export function BotaoRec({ aoGravar, desabilitado = false, ocupado = false, moti
         type="button"
         onClick={aoGravar}
         disabled={inativo}
-        aria-label={ocupado ? 'Abrindo o ensaio…' : 'Gravar (REC)'}
+        aria-label={ocupado ? 'REC: abrindo o ensaio…' : 'REC: gravar'}
         aria-describedby={motivo ? 'motivo-rec' : undefined}
         aria-keyshortcuts="R"
         data-testid="botao-rec"

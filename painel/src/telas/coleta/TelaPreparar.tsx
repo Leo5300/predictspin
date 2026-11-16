@@ -359,6 +359,7 @@ function Preparo({ maquinaId, busca }: { maquinaId: number; busca: BuscaDoPrepar
             >
               <Modulo
                 rotulo="Receita do corte"
+                explica="receita"
                 detalhe="opcional: o que ficar em branco não aparece e não impede a gravação"
                 simulado={simulado}
               >

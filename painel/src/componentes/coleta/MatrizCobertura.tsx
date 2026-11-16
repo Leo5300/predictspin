@@ -153,7 +153,8 @@ function BotaoDaCelula({
   const validacao = celula.uso === 'validacao'
   const ehSugerida = sugerida === chave
   const ehCarimbada = carimbada === chave
-  const descricao = `${celula.etapa} ${ROTULO_CONDICAO[celula.condicao].toLowerCase()} a ${celula.rotacao} rpm: ${celula.validos} de ${celula.meta}${completa ? ', completa' : `, faltam ${celula.faltam}`}${validacao ? ', validação' : ''}${ehSugerida ? ', próxima sugerida' : ''}. Preparar esta gravação.`
+  // o nome acessível começa pelo texto visível ("2/3"), como pede a regra de rótulo e conteúdo
+  const descricao = `${celula.validos}/${celula.meta}${rotulo ? ` ${rotulo}` : ''}: ${celula.etapa} ${ROTULO_CONDICAO[celula.condicao].toLowerCase()} a ${celula.rotacao} rpm${completa ? ', completa' : `, faltam ${celula.faltam}`}${validacao ? ', validação' : ''}${ehSugerida ? ', próxima sugerida' : ''}. Preparar esta gravação.`
   return (
     <button
       type="button"
@@ -177,15 +178,16 @@ function BotaoDaCelula({
       )}
     >
       {ehSugerida ? (
-        <span aria-hidden="true" className="text-12">
-          ▸
-        </span>
+        // marca de "sugerida" desenhada (não é texto: o nome acessível começa pelo "0/3" visível)
+        <svg viewBox="0 0 8 8" aria-hidden="true" className="size-2 shrink-0 fill-current">
+          <path d="M1 0 7 4 1 8Z" />
+        </svg>
       ) : null}
       {completa ? <Check aria-hidden="true" className="size-3.5" strokeWidth={2.5} /> : null}
       <span className="valor text-13 font-medium">
         {celula.validos}/{celula.meta}
       </span>
-      {rotulo ? <span className="text-12 max-sm:hidden">{rotulo}</span> : null}
+      {rotulo ? <span className="text-12 max-sm:hidden"> {rotulo}</span> : null}
     </button>
   )
 }

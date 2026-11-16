@@ -53,6 +53,10 @@ export function definirSessaoDeColeta(nova: Sessao | null) {
   avisar()
 }
 
+export function obterMetaDaColeta(): number {
+  return meta
+}
+
 export function useMetaDaColeta(): number {
   return useSyncExternalStore(assinar, () => meta)
 }

@@ -27,6 +27,7 @@ import {
   TRACO,
 } from '@/dominio/formato'
 import { Unidade } from '@/componentes/instrumento/Unidade'
+import { Explica } from '@/componentes/ui/explica'
 
 type Props = {
   maquinaId: number
@@ -84,18 +85,16 @@ export function TabelaDeJanelas({
               Medida em
             </TableHead>
             <TableHead className="text-right">
-              RMS <Unidade>g</Unidade>
+              RMS <Unidade>g</Unidade> <Explica chave="rms" />
             </TableHead>
             <TableHead className="text-right">
-              Pico <Unidade>g</Unidade>
+              Pico <Unidade>g</Unidade> <Explica chave="pico" />
             </TableHead>
             <TableHead className="text-right">
-              <abbr title="curtose" className="no-underline">
-                Curt
-              </abbr>
+              Curt <Explica chave="curtose" />
             </TableHead>
             <TableHead className="text-right">
-              1X <Unidade>g</Unidade>
+              1X <Unidade>g</Unidade> <Explica chave="ordens" />
             </TableHead>
             <TableHead className="text-right">
               2X <Unidade>g</Unidade>
@@ -103,8 +102,12 @@ export function TabelaDeJanelas({
             <TableHead className="text-right">
               3X <Unidade>g</Unidade>
             </TableHead>
-            <TableHead className="text-right">RPM</TableHead>
-            <TableHead className="text-right">Amostras</TableHead>
+            <TableHead className="text-right">
+              RPM <Explica chave="rpm" />
+            </TableHead>
+            <TableHead className="text-right">
+              Amostras <Explica chave="amostras" />
+            </TableHead>
             <TableHead className="pl-6">Marcas</TableHead>
             {/* a última coluna fica com a sobra da largura: as outras ficam juntas, sem vão */}
             <TableHead className="w-full">Ensaio</TableHead>

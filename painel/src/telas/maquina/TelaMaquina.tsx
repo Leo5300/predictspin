@@ -30,6 +30,7 @@ import { PlacaEstado, SeloAvaliacao } from '@/componentes/instrumento/Selos'
 import { SeloSim } from '@/componentes/instrumento/SeloSim'
 import { Sparkline } from '@/componentes/instrumento/Sparkline'
 import { Button, buttonVariants } from '@/componentes/ui/button'
+import { Explica } from '@/componentes/ui/explica'
 import { ToggleGroup, ToggleGroupItem } from '@/componentes/ui/toggle-group'
 import { estadoDaMaquina } from '@/dominio/estado'
 import {
@@ -114,7 +115,10 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
               <span className="valor text-13 font-medium">{janela.ensaio_codigo}</span>
             </span>
           ) : null}
-          <SeloAvaliacao avaliacao="sem_referencia" />
+          <span className="flex items-center gap-1">
+            <SeloAvaliacao avaliacao="sem_referencia" />
+            <Explica chave="referencia" />
+          </span>
           <PlacaEstado estado={estado} matriz={false} className="w-44" />
         </div>
       </header>
@@ -190,6 +194,7 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
 
         <Modulo
           rotulo="Rotação"
+          explica="rpm"
           simulado={aoVivo.simulado && !semNenhumDado}
           className="xl:col-span-3"
           acoes={
@@ -204,7 +209,11 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
         </Modulo>
 
         <div className="flex min-w-0 flex-col gap-px bg-linha xl:col-span-4">
-          <Modulo rotulo="Última janela" simulado={aoVivo.simulado && !semNenhumDado}>
+          <Modulo
+            rotulo="Última janela"
+            explica="janela"
+            simulado={aoVivo.simulado && !semNenhumDado}
+          >
             <QualidadeDaJanela janela={janela} velho={velho} frescor={frescor} idadeS={idadeS} />
           </Modulo>
 
@@ -369,6 +378,7 @@ function QualidadeDaJanela({
     >
       <Leitura
         rotulo="Amostras"
+        explica="amostras"
         valor={completude === null ? TRACO : formatarPercentual(completude, 1)}
         tamanho="pequeno"
         velho={velho}
@@ -381,6 +391,7 @@ function QualidadeDaJanela({
       />
       <Leitura
         rotulo="Saturação"
+        explica="saturacao"
         valor={janela.saturou ? 'saturou' : 'não'}
         texto
         tamanho="pequeno"
@@ -488,6 +499,7 @@ function ModuloDoPonto({
           <div className="grid min-w-0 flex-1 grid-cols-3 gap-x-3 gap-y-2">
             <Leitura
               rotulo="RMS"
+              explica="rms"
               valor={formatarG(medida?.rms_g)}
               unidade="g"
               tamanho="destaque"
@@ -496,6 +508,7 @@ function ModuloDoPonto({
             />
             <Leitura
               rotulo="Pico"
+              explica="pico"
               valor={formatarG(medida?.pico_g)}
               unidade="g"
               tamanho="grande"
@@ -503,6 +516,7 @@ function ModuloDoPonto({
             />
             <Leitura
               rotulo="Curt"
+              explica="curtose"
               titulo="curtose"
               valor={formatarCurtose(medida?.curtose)}
               tamanho="grande"
@@ -510,6 +524,7 @@ function ModuloDoPonto({
             />
             <Leitura
               rotulo="1X"
+              explica="ordens"
               valor={formatarG(medida?.o1x)}
               unidade="g"
               tamanho="grande"
@@ -538,7 +553,10 @@ function ModuloDoPonto({
         ) : null}
         <div className="grid grid-cols-1 items-end gap-3 @min-[26rem]:grid-cols-[minmax(0,1fr)_auto]">
           <div>
-            <span className="rotulo">Desvio do RMS</span>
+            <span className="flex items-center gap-1">
+              <span className="rotulo">Desvio do RMS</span>
+              <Explica chave="desvio" />
+            </span>
             <ReguaDesvio valor={medida?.rms_g} referencia={null} velho={velho} className="mt-1" />
           </div>
           {/* sem nenhum valor nos últimos 15 min, nem o rótulo do minigráfico aparece */}
@@ -621,6 +639,7 @@ function SecaoDoMapa({ maquinaId, simulado, periodo, codigos, nominais }: PropsD
   return (
     <Modulo
       rotulo="Mapa de ordens"
+      explica="mapa"
       detalhe="cada célula comparada com o típico da própria linha, na mesma marcha"
       simulado={simulado && temDado}
       className="xl:col-span-12"

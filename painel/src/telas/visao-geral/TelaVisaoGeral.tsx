@@ -28,6 +28,7 @@ import { definirFonte, useFonte } from '@/estado/preferencias'
 import { definirTransporte, definirUltimaObservacao } from '@/estado/transporte'
 import { useFrescorDaMaquina } from '@/hooks/useFrescorDaMaquina'
 import { useTelaEstreita } from '@/hooks/useTelaEstreita'
+import { Explica } from '@/componentes/ui/explica'
 import { cn } from '@/lib/utils'
 
 /** Colunas da linha de máquina quando o módulo é largo; abaixo disso as células se empilham. */
@@ -289,7 +290,10 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
       })}
 
       <Celula rotulo="Avaliação">
-        <SeloAvaliacao avaliacao="sem_referencia" />
+        <span className="flex items-center gap-1">
+          <SeloAvaliacao avaliacao="sem_referencia" />
+          <Explica chave="referencia" />
+        </span>
       </Celula>
 
       <Celula rotulo="Ensaio">

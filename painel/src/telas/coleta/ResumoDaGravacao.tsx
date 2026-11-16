@@ -180,6 +180,7 @@ export function ResumoDaGravacao({ ensaioId, maquinaId }: { ensaioId: number; ma
         </Modulo>
         <Modulo
           rotulo="Cobertura"
+          explica="cobertura"
           simulado={simulado}
           className="lg:col-span-7"
           detalhe={

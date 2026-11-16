@@ -8,6 +8,8 @@ import { FormaDeEstado } from '@/componentes/instrumento/FormaDeEstado'
 import type { Forma } from '@/componentes/instrumento/formasDeEstado'
 import { MarcaDeIdade } from '@/componentes/instrumento/Idade'
 import { Button } from '@/componentes/ui/button'
+import { Explica } from '@/componentes/ui/explica'
+import { Kbd } from '@/componentes/ui/kbd'
 import { ToggleGroup, ToggleGroupItem } from '@/componentes/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/componentes/ui/tooltip'
 import { estadoDaConexao, type EstadoConexao } from '@/dominio/conexao'
@@ -48,7 +50,13 @@ const ROTULO_TRANSPORTE: Record<Transporte, string | null> = {
  * Barra superior fixa: marca (só tipográfica), navegação, relógio, estado da conexão, idade da
  * última janela, fonte dos dados, tema e usuário.
  */
-export function BarraSuperior({ usuario }: { usuario: Usuario }) {
+export function BarraSuperior({
+  usuario,
+  aoAbrirComandos,
+}: {
+  usuario: Usuario
+  aoAbrirComandos: () => void
+}) {
   return (
     <header className="z-40 border-b border-linha-forte bg-modulo">
       {/* desktop: uma linha. Celular: grade com lugares fixos (marca, navegação e sair; conexão e
@@ -81,6 +89,15 @@ export function BarraSuperior({ usuario }: { usuario: Usuario }) {
           <UltimaJanela />
           <Relogio />
         </div>
+        <Button
+          variant="outline"
+          onClick={aoAbrirComandos}
+          aria-keyshortcuts="Control+K"
+          className="max-sm:hidden"
+        >
+          Comandos <Kbd>Ctrl</Kbd>
+          <Kbd>K</Kbd>
+        </Button>
         <SeletorDeFonte className="col-span-2 col-start-1 row-start-4 justify-self-start" />
         <SeletorDeTema className="col-start-3 row-start-4 justify-self-end" />
         <div className="col-start-3 row-start-1 flex items-center gap-2 justify-self-end">
@@ -212,6 +229,7 @@ function UltimaJanela() {
     >
       <span>última janela</span>
       <MarcaDeIdade frescor={frescor} idadeS={idadeS} />
+      {frescor === 'vivo' ? null : <Explica chave="dado_velho" />}
       {/* esvazia até o limite de dado velho; reinicia a cada janela nova */}
       <span
         aria-hidden="true"

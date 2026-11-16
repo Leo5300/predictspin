@@ -11,6 +11,8 @@ const busca = z.object({
   /** Segundo quadro do gráfico: curtose ou ordens 1X–3X. */
   quadro: z.enum(['ordens', 'curtose']).default('ordens').catch('ordens'),
   pagina: z.number().int().min(0).default(0).catch(0),
+  /** Pedido da paleta de comandos: ligar o AO VIVO ao abrir. */
+  vivo: z.boolean().optional().catch(undefined),
 })
 
 export type BuscaDoPonto = z.infer<typeof busca>

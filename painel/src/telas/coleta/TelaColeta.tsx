@@ -191,6 +191,7 @@ function EntradaDaColeta({ maquinaId }: { maquinaId: number }) {
 
         <Modulo
           rotulo="Cobertura"
+          explica="cobertura"
           simulado={simulado}
           className="lg:col-span-8"
           detalhe={

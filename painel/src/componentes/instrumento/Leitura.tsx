@@ -1,6 +1,8 @@
 import { useState } from 'react'
 
+import { Explica } from '@/componentes/ui/explica'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/componentes/ui/tooltip'
+import type { ChaveDoGlossario } from '@/dominio/glossario'
 import { TRACO } from '@/dominio/formato'
 import { cn } from '@/lib/utils'
 
@@ -30,6 +32,8 @@ type Props = {
   tamanho?: Tamanho
   /** Dado velho: o valor fica no tom fraco e sem peso. */
   velho?: boolean
+  /** Termo do glossário: põe o "?" ao lado do rótulo (o balão explica; dispensa a dica). */
+  explica?: ChaveDoGlossario
   className?: string
 }
 
@@ -46,6 +50,7 @@ export function Leitura({
   tamanho = 'medio',
   velho = false,
   texto = false,
+  explica,
   className,
 }: Props) {
   // Conta as trocas de valor para reiniciar o traço de mudança (estado derivado durante o render)
@@ -58,7 +63,12 @@ export function Leitura({
 
   return (
     <div className={cn('flex min-w-0 flex-col', className)} data-velho={velho || undefined}>
-      {titulo ? (
+      {explica ? (
+        <span className="flex items-center gap-1">
+          <span className="rotulo">{rotulo}</span>
+          <Explica chave={explica} />
+        </span>
+      ) : titulo ? (
         <Tooltip>
           <TooltipTrigger
             render={

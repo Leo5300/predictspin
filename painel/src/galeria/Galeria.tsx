@@ -13,6 +13,8 @@ import { MarcaDeIdade } from '@/componentes/instrumento/Idade'
 import { Leitura } from '@/componentes/instrumento/Leitura'
 import { LinhaAlarme, LinhaOrdemServico } from '@/componentes/alarmes/LinhasDeAlarme'
 import { MapaOrdens } from '@/componentes/instrumento/MapaOrdens'
+import { Explica } from '@/componentes/ui/explica'
+import { CHAVES_DO_GLOSSARIO, GLOSSARIO } from '@/dominio/glossario'
 import { MarcadorPonto } from '@/componentes/instrumento/MarcadorPonto'
 import { Modulo, Painel } from '@/componentes/instrumento/Modulo'
 import { ReguaDesvio } from '@/componentes/instrumento/ReguaDesvio'
@@ -384,6 +386,18 @@ export function Galeria() {
               <MapaOrdens intervalos={INTERVALOS_MAPA} linhas={LINHAS_MAPA_COM_REFERENCIA} />
             </Modulo>
           </Painel>
+        </section>
+
+        <section className="flex flex-col gap-2" aria-label="Glossário">
+          <h2 className="text-15 font-semibold">Glossário: todos os termos do "?"</h2>
+          <ul className="grid gap-px border border-linha bg-linha md:grid-cols-3 xl:grid-cols-6">
+            {CHAVES_DO_GLOSSARIO.map((chave) => (
+              <li key={chave} className="flex items-center gap-2 bg-modulo px-3 py-2 text-13">
+                <span className="rotulo">{GLOSSARIO[chave].titulo}</span>
+                <Explica chave={chave} />
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section className="flex flex-col gap-2" aria-label="Alarmes e ordens de serviço">

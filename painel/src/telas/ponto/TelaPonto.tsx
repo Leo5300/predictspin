@@ -24,6 +24,7 @@ import { Modulo, Painel } from '@/componentes/instrumento/Modulo'
 import { SeloAvaliacao } from '@/componentes/instrumento/Selos'
 import { FieldError } from '@/componentes/ui/field'
 import { Button } from '@/componentes/ui/button'
+import { Explica } from '@/componentes/ui/explica'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
 import { ToggleGroup, ToggleGroupItem } from '@/componentes/ui/toggle-group'
@@ -147,6 +148,14 @@ export function TelaPonto({ maquinaId, codigo, busca }: Props) {
   const graficoRef = useRef<HTMLDivElement>(null)
   const graficoVisivel = useEmTela(graficoRef)
   const modoRapido = useModoRapido(maquinaId, aoVivo.modoRapido, graficoVisivel)
+  // a paleta de comandos pede o AO VIVO pela URL (?vivo=true): liga uma vez e limpa o pedido
+  const pedidoDeAoVivo = busca.vivo === true
+  const ligarAoVivo = modoRapido.ligar
+  useEffect(() => {
+    if (!pedidoDeAoVivo) return
+    ligarAoVivo()
+    void navegar({ search: (b) => ({ ...b, vivo: undefined }), replace: true, resetScroll: false })
+  }, [pedidoDeAoVivo, ligarAoVivo, navegar])
 
   const usaBrutos = periodo.fonte === 'brutos' && !periodo.erro
   const usaAgregado = periodo.fonte === 'agregado' && !periodo.erro
@@ -489,7 +498,10 @@ function CabecalhoDoPonto({ ponto, janela, simulado, frescor, idadeS, velho }: P
       acoes={
         <>
           <MarcaDeIdade frescor={frescor} idadeS={idadeS} />
-          <SeloAvaliacao avaliacao="sem_referencia" />
+          <span className="flex items-center gap-1">
+            <SeloAvaliacao avaliacao="sem_referencia" />
+            <Explica chave="referencia" />
+          </span>
         </>
       }
     >
@@ -505,6 +517,7 @@ function CabecalhoDoPonto({ ponto, janela, simulado, frescor, idadeS, velho }: P
           {/* RMS é a decisão: destaque, como na tela da máquina (linha própria no estreito) */}
           <Leitura
             rotulo="RMS"
+            explica="rms"
             valor={formatarG(medida?.rms_g)}
             unidade="g"
             tamanho="destaque"
@@ -513,6 +526,7 @@ function CabecalhoDoPonto({ ponto, janela, simulado, frescor, idadeS, velho }: P
           />
           <Leitura
             rotulo="Pico"
+            explica="pico"
             valor={formatarG(medida?.pico_g)}
             unidade="g"
             tamanho="grande"
@@ -520,6 +534,7 @@ function CabecalhoDoPonto({ ponto, janela, simulado, frescor, idadeS, velho }: P
           />
           <Leitura
             rotulo="Curt"
+            explica="curtose"
             titulo="curtose"
             valor={formatarCurtose(medida?.curtose)}
             tamanho="grande"
@@ -527,6 +542,7 @@ function CabecalhoDoPonto({ ponto, janela, simulado, frescor, idadeS, velho }: P
           />
           <Leitura
             rotulo="1X"
+            explica="ordens"
             valor={formatarG(medida?.o1x)}
             unidade="g"
             tamanho="grande"
@@ -568,16 +584,19 @@ type PropsDoControle = {
 function ControleAoVivo({ ativo, restantesS, ocupado, aoLigar, aoParar }: PropsDoControle) {
   if (!ativo) {
     return (
-      <Button
-        size="sm"
-        variant="sinal"
-        onClick={aoLigar}
-        disabled={ocupado}
-        aria-label="Ligar o modo ao vivo: janelas de 1 s por 2 minutos"
-      >
-        <Radio aria-hidden="true" strokeWidth={1.5} />
-        AO VIVO
-      </Button>
+      <span className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="sinal"
+          onClick={aoLigar}
+          disabled={ocupado}
+          aria-label="Ligar o modo ao vivo: janelas de 1 s por 2 minutos"
+        >
+          <Radio aria-hidden="true" strokeWidth={1.5} />
+          AO VIVO
+        </Button>
+        <Explica chave="ao_vivo" />
+      </span>
     )
   }
   return (
@@ -729,7 +748,7 @@ function QuadroHistorico({ dados, faixas, quadro, inicioS, fimS, codigo }: Props
       <FaixaDoQuadro
         rotulo={
           <>
-            RMS e pico · <Unidade>g</Unidade>
+            RMS e pico · <Unidade>g</Unidade> <Explica chave="g" className="ml-1" />
           </>
         }
       >

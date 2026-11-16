@@ -1,3 +1,4 @@
+import { Explica } from '@/componentes/ui/explica'
 import { cn } from '@/lib/utils'
 
 /**
@@ -33,6 +34,7 @@ export function FaixaSimulado({ className }: { className?: string }) {
       <span className="font-semibold tracking-[0.08em] whitespace-nowrap uppercase">
         Dados simulados
       </span>
+      <Explica chave="sim" className="bg-modulo" />
       <span className="min-w-0 truncate bg-modulo px-1 text-apoio">
         {/* no celular só cabe o que importa */}
         <span className="max-sm:hidden">vêm do dispositivo simulado · </span>não são medição do

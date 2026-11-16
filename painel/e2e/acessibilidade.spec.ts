@@ -1,7 +1,8 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 
-import { entrarPelaTela, usarFonte } from './apoio/sessao'
+import { liberarMaquina } from './apoio/api'
+import { definirPlano, entrarPelaTela, usarFonte } from './apoio/sessao'
 import { ligarSimulador, type Simulador } from './apoio/simulador'
 
 /*
@@ -23,7 +24,13 @@ async function semViolacoesGraves(page: Page, tela: string) {
     .analyze()
   const graves = resultado.violations
     .filter((v) => v.impact === 'serious' || v.impact === 'critical')
-    .map((v) => `${tela}: ${v.id} (${v.nodes.length})`)
+    .map(
+      (v) =>
+        `${tela}: ${v.id} (${v.nodes.length}) ${v.nodes
+          .map((n) => n.target.join(' '))
+          .slice(0, 3)
+          .join(' | ')}`,
+    )
   expect(graves).toEqual([])
 }
 
@@ -67,9 +74,38 @@ for (const tema of ['grafite', 'claro'] as const) {
     await page.getByRole('button', { name: 'Parar' }).click()
     await expect(page.getByRole('button', { name: /Ligar o modo ao vivo/ })).toBeVisible()
 
+    await liberarMaquina(page.request)
+    await definirPlano(page.request, 1, [450, 1120])
     await page.goto('/coleta')
-    await expect(page.getByRole('heading', { name: 'Coleta', level: 1 })).toBeVisible()
+    await expect(page.getByTestId('matriz-cobertura')).toBeVisible()
     await semViolacoesGraves(page, 'coleta')
+
+    await page.goto('/coleta/preparar?maquina=1&etapa=T3&condicao=normal&rotacao=1120')
+    await expect(page.getByTestId('pre-voo').first()).toBeAttached()
+    await page.getByLabel('Material').fill('aço')
+    await semViolacoesGraves(page, 'preparar')
+
+    await page.goto('/coleta/ensaios')
+    await expect(page.getByRole('heading', { name: 'Ensaios gravados', level: 1 })).toBeVisible()
+    await semViolacoesGraves(page, 'ensaios')
+
+    await page.goto('/diagnostico')
+    await expect(page.getByTestId('tabela-usuarios')).toBeVisible()
+    await semViolacoesGraves(page, 'diagnóstico')
+
+    await page.goto('/alarmes')
+    await expect(page.getByText('A regra de alarme ainda não foi implantada na API.')).toBeVisible()
+    // com um balão "?" aberto
+    await page.getByRole('button', { name: 'O que é SIM (simulado)?' }).click()
+    await expect(page.getByTestId('balao-explica')).toBeVisible()
+    await semViolacoesGraves(page, 'alarmes com balão aberto')
+    await page.keyboard.press('Escape')
+
+    // paleta de comandos aberta
+    await page.keyboard.press('Control+k')
+    await expect(page.getByRole('dialog', { name: 'Paleta de comandos' })).toBeVisible()
+    await semViolacoesGraves(page, 'paleta de comandos')
+    await page.keyboard.press('Escape')
 
     await page.goto('/galeria.html')
     await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible()
@@ -161,4 +197,76 @@ test('teclado: login, pular para o conteúdo, abrir a máquina e o ponto, com fo
   }
   await expect(primeiro).toBeFocused()
   await focoVisivel(page)
+})
+
+test('"?": abre e fecha pelo toque e pelo teclado, com nome acessível', async ({ page }) => {
+  await usarFonte(page, 'simulado')
+  await entrarPelaTela(page)
+  await page.goto('/maquinas/1')
+  const botao = page.getByRole('button', { name: 'O que é RMS?' }).first()
+  await expect(botao).toBeVisible()
+  // toque (clique): abre; novo toque: fecha
+  await botao.click()
+  const balao = page.getByTestId('balao-explica')
+  await expect(balao).toContainText('Quanto o ponto vibrou, em média, na janela.')
+  await expect(balao).toContainText('Exemplo: RMS de 0,045 g no ponto A')
+  await botao.click()
+  await expect(balao).toBeHidden()
+  // teclado: Enter abre, Esc fecha; Espaço abre de novo
+  await botao.focus()
+  await page.keyboard.press('Enter')
+  await expect(balao).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(balao).toBeHidden()
+  await botao.focus()
+  await page.keyboard.press(' ')
+  await expect(balao).toBeVisible()
+  // clique fora fecha
+  await page.mouse.click(5, 300)
+  await expect(balao).toBeHidden()
+})
+
+test('"?" no celular: área de toque de pelo menos 44 px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await usarFonte(page, 'simulado')
+  await entrarPelaTela(page)
+  await page.goto('/maquinas/1')
+  const botao = page.getByRole('button', { name: 'O que é RMS?' }).first()
+  await botao.scrollIntoViewIfNeeded()
+  // o alvo é o ícone mais a área invisível em volta (before:-inset-3.5): 16 + 2 × 14 = 44 px
+  const caixa = await botao.evaluate((el) => {
+    const antes = getComputedStyle(el, '::before')
+    const r = el.getBoundingClientRect()
+    return {
+      largura: r.width - 2 * Number.parseFloat(antes.left),
+      altura: r.height - 2 * Number.parseFloat(antes.top),
+    }
+  })
+  expect(caixa.largura).toBeGreaterThanOrEqual(44)
+  expect(caixa.altura).toBeGreaterThanOrEqual(44)
+  await botao.click()
+  await expect(page.getByTestId('balao-explica')).toBeVisible()
+})
+
+test('paleta de comandos: Ctrl+K abre, filtra, navega e Esc fecha', async ({ page }) => {
+  await usarFonte(page, 'simulado')
+  await entrarPelaTela(page)
+  await expect(page.getByRole('button', { name: /Comandos/ })).toBeVisible()
+  await page.keyboard.press('Control+k')
+  const paleta = page.getByRole('dialog', { name: 'Paleta de comandos' })
+  await expect(paleta.getByRole('combobox')).toBeFocused()
+  await page.keyboard.type('diagn')
+  await page.keyboard.press('Enter')
+  await page.waitForURL(/diagnostico/)
+  await expect(paleta).toBeHidden()
+  await page.keyboard.press('Control+k')
+  await expect(paleta).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(paleta).toBeHidden()
+  // tema pela paleta
+  await page.keyboard.press('Control+k')
+  await expect(paleta.getByRole('combobox')).toBeFocused()
+  await page.keyboard.type('tema claro')
+  await page.keyboard.press('Enter')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'claro')
 })

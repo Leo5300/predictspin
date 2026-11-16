@@ -47,6 +47,10 @@ export function useFonte(): Fonte {
   return useSyncExternalStore(assinar, () => fonte)
 }
 
+export function obterFonte(): Fonte {
+  return fonte
+}
+
 export function definirFonte(nova: Fonte) {
   if (nova === fonte) return
   fonte = nova

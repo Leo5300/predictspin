@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 
+import { Explica } from '@/componentes/ui/explica'
+import type { ChaveDoGlossario } from '@/dominio/glossario'
 import { cn } from '@/lib/utils'
 
 import { SeloSim } from './SeloSim'
@@ -20,6 +22,8 @@ export function Painel({ children, className }: PropsDoPainel) {
 type PropsDoModulo = {
   /** Rótulo curto em caixa-alta no cabeçalho. */
   rotulo: string
+  /** Termo do glossário: "?" ao lado do rótulo. */
+  explica?: ChaveDoGlossario
   /** Texto complementar ao lado do rótulo (não repete o rótulo). */
   detalhe?: ReactNode
   /** Controles do módulo, à direita do cabeçalho. */
@@ -35,6 +39,7 @@ type PropsDoModulo = {
 /** Módulo: uma região do painel com rótulo e conteúdo. É um contêiner (@container) para o que vai dentro. */
 export function Modulo({
   rotulo,
+  explica,
   detalhe,
   acoes,
   simulado = false,
@@ -51,6 +56,7 @@ export function Modulo({
       <header className="flex min-h-8 flex-wrap items-center gap-x-3 gap-y-1 border-b border-linha px-3 py-1">
         {/* o rótulo quebra a linha em vez de ser cortado (é o que identifica o módulo) */}
         <h2 className="rotulo min-w-0 [overflow-wrap:anywhere]">{rotulo}</h2>
+        {explica ? <Explica chave={explica} className="-ml-1.5" /> : null}
         {simulado ? <SeloSim /> : null}
         {detalhe ? (
           // módulo estreito: o detalhe desce para uma linha própria em vez de virar "f…"

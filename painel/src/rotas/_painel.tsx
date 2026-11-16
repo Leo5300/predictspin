@@ -3,8 +3,10 @@ import { useEffect } from 'react'
 
 import { useSessao } from '@/api/sessao'
 import { BarraSuperior } from '@/componentes/casca/BarraSuperior'
+import { PaletaDeComandos } from '@/componentes/casca/PaletaDeComandos'
 import { FaixaSimulado } from '@/componentes/instrumento/SeloSim'
 import { useFonte } from '@/estado/preferencias'
+import { useAtalhoDaPaleta } from '@/hooks/useAtalhoDaPaleta'
 import { TelaVerificando } from '@/telas/apoio/TelasDeApoio'
 
 export const Route = createFileRoute('/_painel')({
@@ -17,6 +19,7 @@ function CascaDoPainel() {
   const fonte = useFonte()
   const roteador = useRouter()
   const anonima = sessao.fase === 'anonima'
+  const [paletaAberta, setPaletaAberta] = useAtalhoDaPaleta()
 
   // Uma navegação só, quando a sessão fica anônima. Um <Navigate> aqui se repetia sem fim: enquanto
   // a rota de login carrega, esta casca continua montada e o efeito dele disparava de novo.
@@ -43,9 +46,14 @@ function CascaDoPainel() {
         Pular para o conteúdo
       </a>
       <div className="z-40 sm:sticky sm:top-0">
-        <BarraSuperior usuario={sessao.usuario} />
+        <BarraSuperior usuario={sessao.usuario} aoAbrirComandos={() => setPaletaAberta(true)} />
         {fonte === 'simulado' ? <FaixaSimulado /> : null}
       </div>
+      <PaletaDeComandos
+        aberta={paletaAberta}
+        aoMudar={setPaletaAberta}
+        papel={sessao.usuario.papel}
+      />
       <main id="conteudo" className="min-w-0 flex-1 px-4 py-3 [view-transition-name:conteudo]">
         <Outlet />
       </main>

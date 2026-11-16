@@ -29,6 +29,7 @@ import { Modulo, Painel } from '@/componentes/instrumento/Modulo'
 import { SegurarParaConfirmar } from '@/componentes/instrumento/SegurarParaConfirmar'
 import { SeloSim } from '@/componentes/instrumento/SeloSim'
 import { Button, buttonVariants } from '@/componentes/ui/button'
+import { Explica } from '@/componentes/ui/explica'
 import { Input } from '@/componentes/ui/input'
 import {
   formatarDataHora,
@@ -204,10 +205,10 @@ function Qualidade({ maquinaId }: { maquinaId: number }) {
                   Medida em
                 </th>
                 <th scope="col" className="rotulo px-3 py-1.5 text-right">
-                  Amostras
+                  Amostras <Explica chave="amostras" />
                 </th>
                 <th scope="col" className="rotulo px-3 py-1.5">
-                  Saturação
+                  Saturação <Explica chave="saturacao" />
                 </th>
                 <th scope="col" className="rotulo px-3 py-1.5">
                   Modo
