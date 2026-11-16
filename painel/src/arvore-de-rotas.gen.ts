@@ -16,6 +16,7 @@ import { Route as PainelColetaIndexRouteImport } from './rotas/_painel/coleta.in
 import { Route as PainelColetaPrepararRouteImport } from './rotas/_painel/coleta.preparar'
 import { Route as PainelColetaEnsaiosIndexRouteImport } from './rotas/_painel/coleta.ensaios.index'
 import { Route as PainelMaquinasMaquinaIdIndexRouteImport } from './rotas/_painel/maquinas.$maquinaId.index'
+import { Route as PainelColetaEnsaiosEnsaioIdReplayRouteImport } from './rotas/_painel/coleta.ensaios.$ensaioId.replay'
 import { Route as PainelMaquinasMaquinaIdPontosCodigoRouteImport } from './rotas/_painel/maquinas.$maquinaId.pontos.$codigo'
 
 const PainelRoute = PainelRouteImport.update({
@@ -54,6 +55,12 @@ const PainelMaquinasMaquinaIdIndexRoute =
     path: '/maquinas/$maquinaId/',
     getParentRoute: () => PainelRoute,
   } as any)
+const PainelColetaEnsaiosEnsaioIdReplayRoute =
+  PainelColetaEnsaiosEnsaioIdReplayRouteImport.update({
+    id: '/coleta/ensaios/$ensaioId/replay',
+    path: '/coleta/ensaios/$ensaioId/replay',
+    getParentRoute: () => PainelRoute,
+  } as any)
 const PainelMaquinasMaquinaIdPontosCodigoRoute =
   PainelMaquinasMaquinaIdPontosCodigoRouteImport.update({
     id: '/maquinas/$maquinaId/pontos/$codigo',
@@ -68,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/coleta/': typeof PainelColetaIndexRoute
   '/coleta/ensaios/': typeof PainelColetaEnsaiosIndexRoute
   '/maquinas/$maquinaId/': typeof PainelMaquinasMaquinaIdIndexRoute
+  '/coleta/ensaios/$ensaioId/replay': typeof PainelColetaEnsaiosEnsaioIdReplayRoute
   '/maquinas/$maquinaId/pontos/$codigo': typeof PainelMaquinasMaquinaIdPontosCodigoRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +85,7 @@ export interface FileRoutesByTo {
   '/coleta': typeof PainelColetaIndexRoute
   '/coleta/ensaios': typeof PainelColetaEnsaiosIndexRoute
   '/maquinas/$maquinaId': typeof PainelMaquinasMaquinaIdIndexRoute
+  '/coleta/ensaios/$ensaioId/replay': typeof PainelColetaEnsaiosEnsaioIdReplayRoute
   '/maquinas/$maquinaId/pontos/$codigo': typeof PainelMaquinasMaquinaIdPontosCodigoRoute
 }
 export interface FileRoutesById {
@@ -88,6 +97,7 @@ export interface FileRoutesById {
   '/_painel/coleta/': typeof PainelColetaIndexRoute
   '/_painel/coleta/ensaios/': typeof PainelColetaEnsaiosIndexRoute
   '/_painel/maquinas/$maquinaId/': typeof PainelMaquinasMaquinaIdIndexRoute
+  '/_painel/coleta/ensaios/$ensaioId/replay': typeof PainelColetaEnsaiosEnsaioIdReplayRoute
   '/_painel/maquinas/$maquinaId/pontos/$codigo': typeof PainelMaquinasMaquinaIdPontosCodigoRoute
 }
 export interface FileRouteTypes {
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/coleta/'
     | '/coleta/ensaios/'
     | '/maquinas/$maquinaId/'
+    | '/coleta/ensaios/$ensaioId/replay'
     | '/maquinas/$maquinaId/pontos/$codigo'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/coleta'
     | '/coleta/ensaios'
     | '/maquinas/$maquinaId'
+    | '/coleta/ensaios/$ensaioId/replay'
     | '/maquinas/$maquinaId/pontos/$codigo'
   id:
     | '__root__'
@@ -118,6 +130,7 @@ export interface FileRouteTypes {
     | '/_painel/coleta/'
     | '/_painel/coleta/ensaios/'
     | '/_painel/maquinas/$maquinaId/'
+    | '/_painel/coleta/ensaios/$ensaioId/replay'
     | '/_painel/maquinas/$maquinaId/pontos/$codigo'
   fileRoutesById: FileRoutesById
 }
@@ -177,6 +190,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelMaquinasMaquinaIdIndexRouteImport
       parentRoute: typeof PainelRoute
     }
+    '/_painel/coleta/ensaios/$ensaioId/replay': {
+      id: '/_painel/coleta/ensaios/$ensaioId/replay'
+      path: '/coleta/ensaios/$ensaioId/replay'
+      fullPath: '/coleta/ensaios/$ensaioId/replay'
+      preLoaderRoute: typeof PainelColetaEnsaiosEnsaioIdReplayRouteImport
+      parentRoute: typeof PainelRoute
+    }
     '/_painel/maquinas/$maquinaId/pontos/$codigo': {
       id: '/_painel/maquinas/$maquinaId/pontos/$codigo'
       path: '/maquinas/$maquinaId/pontos/$codigo'
@@ -193,6 +213,7 @@ interface PainelRouteChildren {
   PainelColetaIndexRoute: typeof PainelColetaIndexRoute
   PainelColetaEnsaiosIndexRoute: typeof PainelColetaEnsaiosIndexRoute
   PainelMaquinasMaquinaIdIndexRoute: typeof PainelMaquinasMaquinaIdIndexRoute
+  PainelColetaEnsaiosEnsaioIdReplayRoute: typeof PainelColetaEnsaiosEnsaioIdReplayRoute
   PainelMaquinasMaquinaIdPontosCodigoRoute: typeof PainelMaquinasMaquinaIdPontosCodigoRoute
 }
 
@@ -202,6 +223,8 @@ const PainelRouteChildren: PainelRouteChildren = {
   PainelColetaIndexRoute: PainelColetaIndexRoute,
   PainelColetaEnsaiosIndexRoute: PainelColetaEnsaiosIndexRoute,
   PainelMaquinasMaquinaIdIndexRoute: PainelMaquinasMaquinaIdIndexRoute,
+  PainelColetaEnsaiosEnsaioIdReplayRoute:
+    PainelColetaEnsaiosEnsaioIdReplayRoute,
   PainelMaquinasMaquinaIdPontosCodigoRoute:
     PainelMaquinasMaquinaIdPontosCodigoRoute,
 }

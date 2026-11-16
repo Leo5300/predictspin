@@ -14,6 +14,11 @@ type Props = {
   nominais: readonly number[]
   /** Dado velho: ponteiro e número no tom fraco. */
   velho?: boolean
+  /**
+   * Gravado (replay): a marcha mais próxima é destacada em texto forte, não na cor de sinal, que é só
+   * do dado ao vivo.
+   */
+  gravado?: boolean
   className?: string
 }
 
@@ -43,7 +48,7 @@ function ponto(fracao: number, raio: number): { x: number; y: number } {
  * o ponteiro fica na rotação medida e a marcha nominal mais próxima é destacada na cor de sinal.
  * O número em matriz de pontos fica embaixo, sem separador de milhar.
  */
-export function Tacometro({ rpm, nominais, velho = false, className }: Props) {
+export function Tacometro({ rpm, nominais, velho = false, gravado = false, className }: Props) {
   const [minimo, maximo] = limitesDaEscala(nominais)
   const temRotacao = rpm !== null && rpm !== undefined && Number.isFinite(rpm)
   const marcha = marchaMaisProxima(rpm, nominais)
@@ -97,7 +102,9 @@ export function Tacometro({ rpm, nominais, velho = false, className }: Props) {
                   y1={externo.y}
                   x2={interno.x}
                   y2={interno.y}
-                  stroke={destaque ? 'var(--sinal)' : 'var(--texto-apoio)'}
+                  stroke={
+                    destaque ? (gravado ? 'var(--texto)' : 'var(--sinal)') : 'var(--texto-apoio)'
+                  }
                   strokeWidth={destaque ? 3 : 1.25}
                 />
                 <text
@@ -108,7 +115,9 @@ export function Tacometro({ rpm, nominais, velho = false, className }: Props) {
                   className="valor"
                   fontSize={destaque ? 12.5 : 10.5}
                   fontWeight={destaque ? 600 : 400}
-                  fill={destaque ? 'var(--sinal)' : 'var(--texto-apoio)'}
+                  fill={
+                    destaque ? (gravado ? 'var(--texto)' : 'var(--sinal)') : 'var(--texto-apoio)'
+                  }
                 >
                   {nominal}
                 </text>

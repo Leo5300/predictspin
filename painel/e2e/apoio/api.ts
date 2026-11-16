@@ -67,3 +67,15 @@ export async function itemDoCatalogo(
   expect(r.status()).toBe(201)
   return corpo.id as number
 }
+
+export async function marcarEventoPelaApi(
+  request: APIRequestContext,
+  ensaioId: number,
+  motivo: 'pancada' | 'cavaco' | 'maquina_vizinha' | 'outro',
+) {
+  const r = await request.post(`${URL_API}/api/v1/ensaios/${ensaioId}/eventos`, {
+    headers: await cabecalho(request),
+    data: { motivo },
+  })
+  expect(r.status()).toBe(201)
+}

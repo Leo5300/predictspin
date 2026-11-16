@@ -376,6 +376,18 @@
   line-height: 1;
 }
 
+/* Trama vertical: marca de REPLAY (ensaio gravado sendo reproduzido). Padrão neutro próprio, diferente
+   da hachura diagonal de simulado; nem âmbar nem vermelho. */
+@utility trama-replay {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--linha-forte) 0,
+    var(--linha-forte) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+}
+
 /* Hachura diagonal: marca de dado simulado */
 @utility hachura {
   background-image: repeating-linear-gradient(

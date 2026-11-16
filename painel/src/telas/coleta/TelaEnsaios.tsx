@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -21,7 +21,7 @@ import { EstadoCarregando, EstadoErro, EstadoVazio } from '@/componentes/instrum
 import { Modulo, Painel } from '@/componentes/instrumento/Modulo'
 import { SegurarParaConfirmar } from '@/componentes/instrumento/SegurarParaConfirmar'
 import { SeloSim } from '@/componentes/instrumento/SeloSim'
-import { Button } from '@/componentes/ui/button'
+import { Button, buttonVariants } from '@/componentes/ui/button'
 import { CONDICOES, ETAPAS, ROTULO_CONDICAO, type Condicao, type Etapa } from '@/dominio/coleta'
 import { formatarDataHora, formatarNumero } from '@/dominio/formato'
 import {
@@ -321,7 +321,14 @@ function LinhaDoEnsaio({
             </span>
           ) : null}
         </button>
-        {/* REPLAY */}
+        <Link
+          to="/coleta/ensaios/$ensaioId/replay"
+          params={{ ensaioId: ensaio.id }}
+          className={buttonVariants({ variant: 'outline' })}
+          aria-label={`Replay do ensaio ${ensaio.codigo}`}
+        >
+          <Play aria-hidden="true" strokeWidth={1.5} /> Replay
+        </Link>
       </div>
       {aberto ? <DetalheDoEnsaio ensaio={ensaio} /> : null}
     </li>

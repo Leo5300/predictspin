@@ -95,6 +95,19 @@ async function gravando(page: Page) {
 
 export const TELAS: Tela[] = [
   {
+    nome: 'replay',
+    fonte: 'simulado',
+    abrir: async (page) => {
+      await page.goto('/coleta/ensaios?maquina=1&estado=encerrados')
+      await page.getByRole('link', { name: /Replay do ensaio/ }).first().click()
+      await page.getByTestId('replay').waitFor()
+      await page.getByRole('button', { name: 'Velocidade 4 vezes' }).click()
+      await page.getByRole('button', { name: 'Tocar' }).click()
+      await page.waitForTimeout(2500)
+      await page.getByRole('button', { name: 'Pausar' }).click()
+    },
+  },
+  {
     nome: 'coleta-gravando',
     fonte: 'simulado',
     inteira: false,

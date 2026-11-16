@@ -7,7 +7,8 @@ import { useSyncExternalStore } from 'react'
 
 import type { Observacao } from '@/dominio/idade'
 
-export type Transporte = 'eventos' | 'consulta' | 'inativo'
+/** 'replay': a tela reproduz um ensaio gravado; nada nela é dado ao vivo. */
+export type Transporte = 'eventos' | 'consulta' | 'inativo' | 'replay'
 
 type Estado = {
   transporte: Transporte

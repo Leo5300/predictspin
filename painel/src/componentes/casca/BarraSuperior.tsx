@@ -41,6 +41,7 @@ const ROTULO_TRANSPORTE: Record<Transporte, string | null> = {
   eventos: 'eventos ao vivo',
   consulta: 'consulta a cada 5 s',
   inativo: null,
+  replay: null,
 }
 
 /**
@@ -178,6 +179,18 @@ function UltimaJanela() {
   const limiarS = useLimiarVelhoS()
   const { frescor, idadeS } = useFrescor(observacao, limiarS)
   if (transporte === 'inativo') return null
+  if (transporte === 'replay') {
+    // replay: a barra não fala em "última janela"; o que está na tela foi gravado antes
+    return (
+      <span
+        className="trama-replay border border-linha-forte px-1.5 text-12 font-semibold tracking-[0.12em] text-texto"
+        data-testid="ultima-janela"
+        data-frescor="replay"
+      >
+        <span className="bg-modulo px-0.5">REPLAY</span>
+      </span>
+    )
+  }
   const restanteS = observacao ? Math.max(0, limiarS - observacao.idadeNaObservacaoS) : 0
   return (
     <span
