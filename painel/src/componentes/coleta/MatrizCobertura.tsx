@@ -59,8 +59,10 @@ export function MatrizCobertura({
     if (!elemento) return
     const medir = () => setTransborda(elemento.scrollWidth > elemento.clientWidth + 1)
     medir()
+    // a tabela muda de largura quando as fontes terminam de carregar: observa as duas
     const observador = new ResizeObserver(medir)
     observador.observe(elemento)
+    if (elemento.firstElementChild) observador.observe(elemento.firstElementChild)
     return () => observador.disconnect()
   }, [colunas])
 

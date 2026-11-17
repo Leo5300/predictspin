@@ -196,9 +196,13 @@ export function CampoCatalogo({ tipo, rotulo, valor, aoMudar, erro }: PropsCatal
         onFocus={(e) => {
           setAberto(true)
           // celular: a lista de sugestões abre embaixo do campo e a barra fixa (Voltar, Checagem)
-          // ocupa o fim da tela; o campo sobe para o topo, e a lista fica à vista
+          // ocupa o fim da tela; o campo sobe até logo abaixo do cartão "o que fazer agora" (preso
+          // no topo), e a lista fica à vista sem esconder o cartão
           if (window.matchMedia('(width < 64rem)').matches) {
-            e.currentTarget.scrollIntoView({ block: 'start' })
+            const cartao = document.querySelector('[data-cartao-fixo]')
+            const topo = cartao ? Math.max(0, cartao.getBoundingClientRect().bottom) : 0
+            const rotulo = e.currentTarget.parentElement ?? e.currentTarget
+            window.scrollBy({ top: rotulo.getBoundingClientRect().top - topo - 8 })
           }
         }}
         onChange={(e) => {

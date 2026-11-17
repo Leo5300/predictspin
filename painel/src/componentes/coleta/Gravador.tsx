@@ -243,22 +243,33 @@ export function Fita({ inicio, fim, janelas, eventos, eventoPendente, simulado }
 export function CartaoInstrucao({
   etapa,
   condicao,
+  fixo = false,
   className,
 }: {
   etapa: Etapa
   condicao: Condicao
+  /**
+   * Celular: preso no topo da tela ao rolar (a barra superior rola com a página), para estar sempre
+   * à vista ao preparar e ao gravar (item 17 da direção).
+   */
+  fixo?: boolean
   className?: string
 }) {
   const { principal, sempre } = instrucoes(etapa, condicao)
   return (
     <section
       aria-label="O que fazer agora"
-      className={cn('flex flex-col gap-1.5 border border-linha-forte bg-modulo p-3', className)}
+      className={cn(
+        'flex flex-col gap-1.5 border border-linha-forte bg-modulo p-3',
+        fixo && 'max-sm:sticky max-sm:top-0 max-sm:z-20 max-sm:gap-1 max-sm:py-2',
+        className,
+      )}
       data-testid="cartao-instrucao"
+      data-cartao-fixo={fixo || undefined}
     >
       <h2 className="rotulo">O que fazer agora</h2>
-      <p className="text-18 leading-snug font-semibold text-texto">{principal}</p>
-      <p className="text-15 text-apoio">{sempre}</p>
+      <p className="text-18 leading-snug font-semibold text-texto max-sm:text-15">{principal}</p>
+      <p className="text-15 text-apoio max-sm:text-13">{sempre}</p>
     </section>
   )
 }

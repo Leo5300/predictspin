@@ -218,9 +218,7 @@ export function Gravacao({ ensaio, maquinaId }: { ensaio: Ensaio; maquinaId: num
       </div>
 
       {/* no celular o cartão vem logo abaixo da faixa: sempre visível ao gravar (item 17) */}
-      <div className="lg:hidden">
-        <CartaoInstrucao etapa={ensaio.etapa} condicao={ensaio.condicao} />
-      </div>
+      <CartaoInstrucao etapa={ensaio.etapa} condicao={ensaio.condicao} fixo className="lg:hidden" />
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start">
         <Painel>
@@ -489,10 +487,10 @@ function PainelDeEvento({
             value={nota}
             maxLength={500}
             onChange={(e) => aoMudarNota(e.target.value)}
-            className="min-h-11 rounded-2 border border-linha-forte bg-rebaixo px-2.5 text-15"
+            className="min-h-14 rounded-2 border border-linha-forte bg-rebaixo px-2.5 text-15"
           />
         </label>
-        <Button variant="ghost" className="min-h-11" onClick={aoCancelar}>
+        <Button size="toque" onClick={aoCancelar}>
           Cancelar <Kbd>Esc</Kbd>
         </Button>
       </div>

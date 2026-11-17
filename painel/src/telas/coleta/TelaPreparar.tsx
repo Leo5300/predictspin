@@ -304,7 +304,7 @@ function Preparo({ maquinaId, busca }: { maquinaId: number; busca: BuscaDoPrepar
       ) : null}
 
       {/* o cartão fica sempre à vista ao preparar: no celular, acima de cada passo */}
-      <CartaoInstrucao etapa={etapa} condicao={condicaoEfetiva} className="lg:hidden" />
+      <CartaoInstrucao etapa={etapa} condicao={condicaoEfetiva} fixo className="lg:hidden" />
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start">
         <Painel className="xl:grid-cols-2 xl:items-stretch">
@@ -741,13 +741,15 @@ function CampoRepeticao({
         id={id}
         inputMode="numeric"
         value={valor}
-        placeholder={String(sugerida)}
+        placeholder={`em branco = ${String(sugerida)}`}
         onChange={(e) => aoMudar(e.target.value.replace(/\D/g, ''))}
         aria-describedby={`${id}-ajuda`}
         className="valor min-h-11 w-full rounded-2 border border-linha-forte bg-rebaixo px-2.5 text-15"
       />
       <span id={`${id}-ajuda`} className="text-12 text-apoio">
-        sugerida: {sugerida}
+        {valor === ''
+          ? `em branco, vale a próxima: ${String(sugerida)}`
+          : `a próxima seria ${String(sugerida)}`}
       </span>
     </div>
   )

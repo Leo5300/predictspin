@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { CircleStop, Download, Radio } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -6,6 +6,9 @@ import { toast } from 'sonner'
 import { transicaoDoPonto } from '@/lib/transicao'
 
 import {
+  anexarJanela,
+  buscarJanelasDoPeriodo,
+  chaves,
   consultaEnsaios,
   consultaJanelasDoPeriodo,
   consultaMaquina,
@@ -148,6 +151,38 @@ export function TelaPonto({ maquinaId, codigo, busca }: Props) {
   const graficoRef = useRef<HTMLDivElement>(null)
   const graficoVisivel = useEmTela(graficoRef)
   const modoRapido = useModoRapido(maquinaId, aoVivo.modoRapido, graficoVisivel)
+  // AO VIVO: as janelas recentes vêm de uma consulta e depois só dos eventos; um evento perdido
+  // (numa reconexão) viraria uma lacuna falsa no gráfico. A cada 15 s as janelas do último minuto e
+  // meio são conferidas com a API e as que faltavam entram; nada sai (a mescla não substitui).
+  const cliente = useQueryClient()
+  const conferirRecentes = modoRapido.ativo
+  const simuladoAoVivo = aoVivo.simulado
+  useEffect(() => {
+    if (!conferirRecentes) return
+    const controle = new AbortController()
+    const id = window.setInterval(() => {
+      const agora = Date.now()
+      buscarJanelasDoPeriodo(
+        maquinaId,
+        simuladoAoVivo,
+        agora - 90_000,
+        agora + 5_000,
+        controle.signal,
+      )
+        .then((faltantes) => {
+          cliente.setQueryData<Janela[]>(
+            chaves.janelasRecentes(maquinaId, simuladoAoVivo),
+            (atual) =>
+              faltantes.reduce<Janela[]>((lista, j) => anexarJanela(lista, j), atual ?? []),
+          )
+        })
+        .catch(() => undefined)
+    }, 15_000)
+    return () => {
+      window.clearInterval(id)
+      controle.abort()
+    }
+  }, [cliente, conferirRecentes, maquinaId, simuladoAoVivo])
   // a paleta de comandos pede o AO VIVO pela URL (?vivo=true): liga uma vez e limpa o pedido
   const pedidoDeAoVivo = busca.vivo === true
   const ligarAoVivo = modoRapido.ligar
@@ -810,10 +845,10 @@ function QuadroHistorico({ dados, faixas, quadro, inicioS, fimS, codigo }: Props
         />
       </FaixaDoQuadro>
       <p className="flex flex-wrap gap-x-4 gap-y-0.5 border-t border-linha px-3 py-1.5 text-12 text-apoio">
+        {/* sem número aqui: gráfico e tabela são consultados em momentos diferentes e, com dado
+            chegando, as contagens se cruzariam; a contagem do período fica na tabela */}
         <span>
-          <span className="valor text-texto">{formatarNumero(dados.janelas)}</span>{' '}
-          {dados.janelas === 1 ? 'janela normal' : 'janelas normais'} no gráfico (as rápidas, de 1
-          s, ficam fora da tendência)
+          só janelas normais (5 s) no gráfico; as rápidas, de 1 s, ficam fora da tendência
         </span>
         <span>linha interrompida = lacuna (sem janela)</span>
         <span>▼ no topo = janela saturada</span>
@@ -931,7 +966,7 @@ function QuadroAoVivo({ recentes, codigo }: { recentes: Janela[]; codigo: string
           <span className="valor text-texto" data-testid="janelas-rapidas">
             {rapidas}
           </span>{' '}
-          janelas rápidas (1 s) na tela
+          {rapidas === 1 ? 'janela rápida (1 s) na tela' : 'janelas rápidas (1 s) na tela'}
         </span>
         <span>| na base = janela rápida (sem marca: janela normal, de 5 s)</span>
         <span>linha interrompida = lacuna (sem janela)</span>

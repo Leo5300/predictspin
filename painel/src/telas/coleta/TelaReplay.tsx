@@ -223,7 +223,7 @@ function Reprodutor({ ensaio, janelas: janelasDaApi, eventos, nominais, pontos }
 
       {/* controles */}
       <Painel>
-        <Modulo rotulo="Linha do tempo" simulado={ensaio.simulado}>
+        <Modulo rotulo="Linha do tempo" simulado={ensaio.simulado} gravado>
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-3">
               <Button
@@ -283,12 +283,12 @@ function Reprodutor({ ensaio, janelas: janelasDaApi, eventos, nominais, pontos }
 
       {/* os mesmos instrumentos da tela da máquina */}
       <Painel className="xl:grid-cols-12">
-        <Modulo rotulo="Rotação" simulado={ensaio.simulado} className="xl:col-span-4">
+        <Modulo rotulo="Rotação" simulado={ensaio.simulado} gravado className="xl:col-span-4">
           <Tacometro rpm={atual?.rotacao_rpm} nominais={nominais} gravado />
         </Modulo>
         <div className="flex min-w-0 flex-col gap-px bg-linha xl:col-span-8 [&>section]:flex-1">
           {lacuna ? (
-            <Modulo rotulo="Janela">
+            <Modulo rotulo="Janela" gravado>
               <p className="border border-dashed border-linha-forte px-2 py-1 text-13 text-texto">
                 Lacuna: nenhuma janela neste trecho da gravação.
               </p>
@@ -302,6 +302,7 @@ function Reprodutor({ ensaio, janelas: janelasDaApi, eventos, nominais, pontos }
                 rotulo={`Ponto ${p.codigo}`}
                 detalhe={p.papel}
                 simulado={ensaio.simulado}
+                gravado
               >
                 <div className="flex items-start gap-3">
                   <MarcadorPonto codigo={p.codigo} className="mt-1" />
@@ -327,6 +328,7 @@ function Reprodutor({ ensaio, janelas: janelasDaApi, eventos, nominais, pontos }
           rotulo="RMS dos pontos"
           detalhe="desenhado até o cursor do replay"
           simulado={ensaio.simulado}
+          gravado
           className="xl:col-span-12"
           semRecuo
         >

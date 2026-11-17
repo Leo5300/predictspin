@@ -654,12 +654,22 @@ function Legenda({
       {temReferencia ? (
         <>
           <span className="flex items-center gap-1.5">
-            <span className="size-3 border border-atencao-sobre bg-atencao" aria-hidden="true" />
-            acima do limite de atenção
+            <span
+              className="flex size-3 items-center justify-center border border-atencao-sobre bg-atencao text-[7px] leading-none text-fundo"
+              aria-hidden="true"
+            >
+              ▲
+            </span>
+            acima do limite de atenção (▲)
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="size-3 bg-alarme" aria-hidden="true" />
-            acima do limite de alarme
+            <span
+              className="flex size-3 items-center justify-center bg-alarme text-[7px] leading-none text-fundo"
+              aria-hidden="true"
+            >
+              ◆
+            </span>
+            acima do limite de alarme (◆)
           </span>
         </>
       ) : (
@@ -708,6 +718,33 @@ function desenhar(ctx: CanvasRenderingContext2D, d: Desenho) {
       else if (referencia && classe.valor >= referencia.atencao) ctx.fillStyle = d.cores.atencao
       else ctx.fillStyle = tomDaCelula(classe.tipo === 'acima' ? classe.intensidade : 0, d.cores)
       ctx.fillRect(x0, y, larguraDaCelula, ALTURA_DA_LINHA - 1)
+      // forma além da cor (2 de 3 canais), as mesmas do resto do painel: triângulo = atenção,
+      // losango = alarme; só quando a célula tem largura para a forma
+      const estado =
+        referencia && classe.valor >= referencia.alarme
+          ? 'alarme'
+          : referencia && classe.valor >= referencia.atencao
+            ? 'atencao'
+            : null
+      if (estado && larguraDaCelula >= 7) {
+        const cx = x0 + larguraDaCelula / 2
+        const cy = y + (ALTURA_DA_LINHA - 1) / 2
+        const r = Math.min(4, (larguraDaCelula - 2) / 2)
+        ctx.fillStyle = d.cores.fundo
+        ctx.beginPath()
+        if (estado === 'atencao') {
+          ctx.moveTo(cx, cy - r)
+          ctx.lineTo(cx + r, cy + r)
+          ctx.lineTo(cx - r, cy + r)
+        } else {
+          ctx.moveTo(cx, cy - r)
+          ctx.lineTo(cx + r, cy)
+          ctx.lineTo(cx, cy + r)
+          ctx.lineTo(cx - r, cy)
+        }
+        ctx.closePath()
+        ctx.fill()
+      }
       if (classe.tipo === 'abaixo') {
         ctx.fillStyle = corDosPontos
         for (let px = x0 + 1; px < x0 + larguraDaCelula; px += 3) {

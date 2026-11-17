@@ -203,7 +203,7 @@ function Qualidade({ maquinaId }: { maquinaId: number }) {
       ) : lista.length === 0 ? (
         <EstadoVazio titulo={`Nenhuma janela ${simulado ? 'simulada' : 'real'} recebida.`} />
       ) : (
-        <div className="max-h-96 overflow-auto">
+        <div className="overflow-x-auto">
           <table className="w-full text-13">
             <thead className="sticky top-0 bg-modulo">
               <tr className="border-b border-linha text-left">
@@ -528,8 +528,10 @@ function Usuarios() {
         semRecuo
         detalhe={
           usuarios.data
-            ? `${String(usuarios.data.length - inativos)} ativos${
-                inativos > 0 && !mostrarInativos ? ` · ${String(inativos)} desativados ocultos` : ''
+            ? `${String(usuarios.data.length - inativos)} ${usuarios.data.length - inativos === 1 ? 'ativo' : 'ativos'}${
+                inativos > 0 && !mostrarInativos
+                  ? ` · ${String(inativos)} ${inativos === 1 ? 'desativado oculto' : 'desativados ocultos'}`
+                  : ''
               }`
             : undefined
         }

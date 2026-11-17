@@ -20,6 +20,25 @@ export function SeloSim({ className }: { className?: string }) {
   )
 }
 
+/**
+ * Selo de dado gravado (replay), na trama vertical própria do replay: em qualquer altura da tela, o
+ * valor diz que é reprodução, não dado ao vivo (item 16 da direção).
+ */
+export function SeloGravado({ className }: { className?: string }) {
+  return (
+    <span
+      title="Dado gravado: reprodução de um ensaio, não é ao vivo"
+      className={cn(
+        'trama-replay inline-flex h-4 shrink-0 items-center border border-texto px-1 text-12 leading-none font-semibold tracking-wider text-texto',
+        className,
+      )}
+    >
+      <span className="bg-modulo px-0.5">GRAVADO</span>
+      <span className="sr-only"> (reprodução de ensaio, não é ao vivo)</span>
+    </span>
+  )
+}
+
 /** Faixa permanente que acompanha a tela inteira quando a fonte escolhida é Simulado. */
 export function FaixaSimulado({ className }: { className?: string }) {
   return (

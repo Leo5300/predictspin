@@ -4,7 +4,7 @@ import { Explica } from '@/componentes/ui/explica'
 import type { ChaveDoGlossario } from '@/dominio/glossario'
 import { cn } from '@/lib/utils'
 
-import { SeloSim } from './SeloSim'
+import { SeloGravado, SeloSim } from './SeloSim'
 
 type PropsDoPainel = {
   children: ReactNode
@@ -30,6 +30,8 @@ type PropsDoModulo = {
   acoes?: ReactNode
   /** Dado simulado: o cabeçalho ganha o selo SIM (a hachura fica na faixa do topo e no mapa). */
   simulado?: boolean
+  /** Dado gravado (replay): o cabeçalho ganha o selo GRAVADO. */
+  gravado?: boolean
   /** Sem recuo interno (gráficos e tabelas que encostam nas bordas). */
   semRecuo?: boolean
   className?: string
@@ -43,6 +45,7 @@ export function Modulo({
   detalhe,
   acoes,
   simulado = false,
+  gravado = false,
   semRecuo = false,
   className,
   children,
@@ -58,6 +61,7 @@ export function Modulo({
         <h2 className="rotulo min-w-0 [overflow-wrap:anywhere]">{rotulo}</h2>
         {explica ? <Explica chave={explica} className="-ml-1.5" /> : null}
         {simulado ? <SeloSim /> : null}
+        {gravado ? <SeloGravado /> : null}
         {detalhe ? (
           // módulo estreito: o detalhe desce para uma linha própria e quebra, em vez de virar "f…"
           <div

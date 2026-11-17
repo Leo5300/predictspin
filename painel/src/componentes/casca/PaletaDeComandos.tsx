@@ -174,7 +174,9 @@ export function PaletaDeComandos({
                         )
                       }
                     >
-                      Ponto <span className="valor">{c}</span>
+                      <span>
+                        Ponto <span className="valor">{c}</span>
+                      </span>
                     </Command.Item>
                   ))}
                   {codigosDosPontos.map((c) => (
@@ -192,7 +194,9 @@ export function PaletaDeComandos({
                         )
                       }
                     >
-                      AO VIVO no ponto <span className="valor">{c}</span>
+                      <span>
+                        AO VIVO no ponto <span className="valor">{c}</span>
+                      </span>
                     </Command.Item>
                   ))}
                   {coleta ? (
