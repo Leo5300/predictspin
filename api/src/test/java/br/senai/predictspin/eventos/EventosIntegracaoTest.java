@@ -1,6 +1,7 @@
 package br.senai.predictspin.eventos;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -9,10 +10,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.ServerSocket;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -20,10 +23,12 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -39,6 +44,10 @@ import br.senai.predictspin.IntegracaoBase;
  * cabeçalhos e o que acontece quando o cliente some, e isso o MockMvc não exercita.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+// Prazo de cada teste: um fluxo que não abre ou um evento que não chega faz o teste falhar com mensagem
+// clara, nunca ficar parado (já ficou, 3 vezes, na máquina de desenvolvimento). Fica acima do prazo de
+// cada espera (ESPERA, 10 s) e de cada pedido HTTP.
+@Timeout(value = 90, unit = TimeUnit.SECONDS)
 @TestPropertySource(properties = {
         "predictspin.eventos.max-por-usuario=2",
         "predictspin.eventos.max-total=3",
@@ -54,6 +63,22 @@ class EventosIntegracaoTest extends IntegracaoBase {
     private EventosService eventos;
 
     private final HttpClient http = HttpClient.newHttpClient();
+
+    /**
+     * Envia o pedido com prazo. O cliente HTTP do JDK, sem prazo, espera para sempre os cabeçalhos de
+     * uma resposta que não vem; aqui o teste falha dizendo qual pedido ficou sem resposta.
+     */
+    private <T> HttpResponse<T> enviar(HttpRequest.Builder pedido, HttpResponse.BodyHandler<T> corpo)
+            throws IOException, InterruptedException {
+        HttpRequest requisicao = pedido.timeout(ESPERA).build();
+        try {
+            return http.send(requisicao, corpo);
+        } catch (HttpTimeoutException e) {
+            throw new AssertionError("O servidor não respondeu em " + ESPERA.toSeconds() + " s a "
+                    + requisicao.method() + " " + requisicao.uri().getPath() + " (conexões de eventos abertas: "
+                    + eventos.conexoes() + ")", e);
+        }
+    }
     private final List<Fluxo> abertos = new ArrayList<>();
     private final Instant base = Instant.now().truncatedTo(ChronoUnit.SECONDS).minus(5, ChronoUnit.MINUTES);
 
@@ -76,7 +101,7 @@ class EventosIntegracaoTest extends IntegracaoBase {
             if (token != null) {
                 pedido.header("Authorization", "Bearer " + token);
             }
-            resposta = http.send(pedido.build(), HttpResponse.BodyHandlers.ofInputStream());
+            resposta = enviar(pedido, HttpResponse.BodyHandlers.ofInputStream());
             abertos.add(this);
             if (resposta.statusCode() == 200) {
                 Thread leitor = new Thread(this::ler, "cliente-sse-de-teste");
@@ -283,13 +308,35 @@ class EventosIntegracaoTest extends IntegracaoBase {
 
     @Test
     void maquinaInexistenteResponde404EmJson() throws Exception {
-        HttpRequest pedido = HttpRequest.newBuilder(
+        HttpRequest.Builder pedido = HttpRequest.newBuilder(
                         URI.create("http://localhost:" + porta + "/api/v1/maquinas/999999/eventos"))
                 .header("Accept", "text/event-stream")
-                .header("Authorization", "Bearer " + tokenAdmin())
-                .build();
-        HttpResponse<String> resposta = http.send(pedido, HttpResponse.BodyHandlers.ofString());
+                .header("Authorization", "Bearer " + tokenAdmin());
+        HttpResponse<String> resposta = enviar(pedido, HttpResponse.BodyHandlers.ofString());
         assertThat(resposta.statusCode()).isEqualTo(404);
         assertThat(json.readTree(resposta.body()).get("mensagem").asText()).contains("não encontrada");
+    }
+
+    @Test
+    void servidorQueNaoRespondeFazOTesteFalharComMensagemClaraEmVezDeFicarParado() throws Exception {
+        try (ServerSocket mudo = new ServerSocket(0)) {
+            Thread aceita = new Thread(() -> {
+                try {
+                    mudo.accept();
+                    Thread.sleep(30_000);
+                } catch (IOException | InterruptedException e) {
+                    // o teste terminou
+                }
+            }, "servidor-mudo-de-teste");
+            aceita.setDaemon(true);
+            aceita.start();
+            HttpRequest.Builder pedido = HttpRequest.newBuilder(
+                    URI.create("http://localhost:" + mudo.getLocalPort() + "/api/v1/maquinas/1/eventos"));
+
+            assertThatThrownBy(() -> enviar(pedido, HttpResponse.BodyHandlers.ofString()))
+                    .isInstanceOf(AssertionError.class)
+                    .hasMessageContaining("O servidor não respondeu em 10 s")
+                    .hasMessageContaining("/api/v1/maquinas/1/eventos");
+        }
     }
 }
