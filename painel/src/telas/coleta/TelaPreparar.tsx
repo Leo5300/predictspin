@@ -741,7 +741,6 @@ function CampoRepeticao({
         id={id}
         inputMode="numeric"
         value={valor}
-        placeholder={`em branco = ${String(sugerida)}`}
         onChange={(e) => aoMudar(e.target.value.replace(/\D/g, ''))}
         aria-describedby={`${id}-ajuda`}
         className="valor min-h-11 w-full rounded-2 border border-linha-forte bg-rebaixo px-2.5 text-15"

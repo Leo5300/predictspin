@@ -363,7 +363,7 @@ export function Gravacao({ ensaio, maquinaId }: { ensaio: Ensaio; maquinaId: num
         {marcando !== null ? (
           <div className="flex flex-col gap-2">
             <p className="text-13 text-texto">
-              <span className="font-semibold">Marcar evento</span>
+              <span className="rotulo text-texto">Marcar evento</span>
               <span className="text-apoio"> · o instante já foi guardado: o do toque</span>
             </p>
             <PainelDeEvento
