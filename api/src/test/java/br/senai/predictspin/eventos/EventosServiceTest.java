@@ -266,11 +266,18 @@ class EventosServiceTest {
         EmissorDeTeste rapido = assinar(11, false, null);
         esperar(() -> recebeu(rapido, "event:modo_rapido"));
 
+        // A fila de cada assinante tem 2 lugares. O rápido só continua assinante se a thread de envio dele
+        // esvaziar a fila a tempo; publicar as 8 de uma vez dependia de ela ganhar a corrida contra a
+        // difusão, e num executor lento o próprio rápido estourava a fila e era descartado como lento.
+        // Por isso cada publicação espera o rápido receber a anterior. O tempo medido é só o de quem
+        // publica, e o lento, travado desde a primeira, continua enchendo a fila sem segurar ninguém.
         List<Long> duracoes = new ArrayList<>();
         for (int i = 0; i < 8; i++) {
             long inicio = System.nanoTime();
             servico.publicarModoRapido(new ModoRapidoResposta(MAQUINA, true, Instant.parse("2026-11-12T12:02:00Z")));
             duracoes.add(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - inicio));
+            long esperadas = i + 1;
+            esperar(() -> rapido.enviados.stream().filter(e -> e.contains("\"ativo\":true")).count() == esperadas);
         }
 
         esperar(() -> servico.conexoes() == 1);
