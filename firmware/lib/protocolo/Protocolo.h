@@ -21,24 +21,32 @@ bool lerIso(const char* texto, uint64_t* epochUs);
 static const int MAX_PONTOS = 3;
 
 struct MedidaPonto {
-  bool presente;
   float rmsG, picoG, curtose, o1x, o2x, o3x;
+  float velRmsMmS;      // velocidade RMS em mm/s; negativa = sem velocidade nesta janela
+  uint32_t calibracao;  // carimbo da calibração usada (0 = nominal; ver lib/calibracao)
 };
 
-// O que vai para a API (e para a fila). POD de tamanho fixo: é gravado como está no LittleFS.
+// O que vai para a API (e para a fila). POD de tamanho fixo, sem preenchimento: é gravado como está
+// no LittleFS. Com 120 bytes, um lote de 32 janelas (8 + 32 x 120 = 3848 bytes) cabe num bloco de 4 KB.
 struct DadosJanela {
-  uint8_t versao;          // formato do registro na fila
-  uint8_t modoRapido;      // 1 = janela de 1 s
-  uint8_t saturou;
-  uint8_t reservado;
   uint64_t inicioUs;       // medido_em: início da janela, µs desde 1970 (UTC)
   float rotacaoRpm;
   uint32_t amostras;       // menor contagem entre os sensores presentes
   uint32_t amostrasEsperadas;
+  uint8_t versao;          // formato do registro na fila
+  uint8_t modoRapido;      // 1 = janela de 1 s
+  uint8_t saturou;
+  uint8_t presentes;       // bit i ligado = ponto i (A, B, C) presente
   MedidaPonto pontos[MAX_PONTOS];  // A, B, C
+
+  bool presente(int i) const { return (presentes >> i) & 1u; }
+  void marcarPresente(int i) { presentes = (uint8_t)(presentes | (1u << i)); }
 };
 
-static const uint8_t VERSAO_DADOS_JANELA = 1;
+static_assert(sizeof(DadosJanela) == 120, "DadosJanela mudou de tamanho: confira o lote da fila no LittleFS");
+
+// 2: velocidade, calibração e presença em bits (11/2026). Lote de outra versão é descartado na leitura.
+static const uint8_t VERSAO_DADOS_JANELA = 2;
 extern const char* const CODIGOS_PONTOS[MAX_PONTOS];
 
 // JSON do POST /api/v1/telemetria (docs/payload.md). Devolve o tamanho, ou 0 se não coube.

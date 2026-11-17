@@ -119,12 +119,21 @@ size_t montarJson(const DadosJanela& j, const char* dispositivo, char* buf, size
   usado = (size_t)n;
   bool primeiro = true;
   for (int i = 0; i < MAX_PONTOS; i++) {
+    if (!j.presente(i)) continue;
     const MedidaPonto& p = j.pontos[i];
-    if (!p.presente) continue;
     n = snprintf(buf + usado, tamanho - usado,
-                 "%s\"%s\":{\"rms_g\":%.5f,\"pico_g\":%.5f,\"curtose\":%.4f,\"o1x\":%.5f,\"o2x\":%.5f,\"o3x\":%.5f}",
+                 "%s\"%s\":{\"rms_g\":%.5f,\"pico_g\":%.5f,\"curtose\":%.4f,\"o1x\":%.5f,\"o2x\":%.5f,\"o3x\":%.5f",
                  primeiro ? "" : ",", CODIGOS_PONTOS[i], (double)finito(p.rmsG), (double)finito(p.picoG),
                  (double)finito(p.curtose), (double)finito(p.o1x), (double)finito(p.o2x), (double)finito(p.o3x));
+    if (n < 0 || usado + (size_t)n >= tamanho) return 0;
+    usado += (size_t)n;
+    // velocidade só quando calculada (a primeira janela depois da partida ou de uma falta fica sem)
+    if (isfinite(p.velRmsMmS) && p.velRmsMmS >= 0.0f) {
+      n = snprintf(buf + usado, tamanho - usado, ",\"vel_rms_mm_s\":%.4f", (double)p.velRmsMmS);
+      if (n < 0 || usado + (size_t)n >= tamanho) return 0;
+      usado += (size_t)n;
+    }
+    n = snprintf(buf + usado, tamanho - usado, "}");
     if (n < 0 || usado + (size_t)n >= tamanho) return 0;
     usado += (size_t)n;
     primeiro = false;

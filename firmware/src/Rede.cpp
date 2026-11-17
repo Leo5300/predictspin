@@ -102,7 +102,7 @@ ps::AlertaLocal alertas[3] = {
     ps::AlertaLocal(cfg::JANELAS_APRENDIZADO, cfg::FATOR_ALERTA, cfg::PERSISTENCIA_ALARME)};
 
 char url[160];
-char corpo[900];
+char corpo[1200];
 uint32_t falhasSeguidas = 0;
 uint32_t proximaTentativaMs = 0;
 uint32_t ultimaTentativaWifiMs = 0;
@@ -135,13 +135,14 @@ void atualizarPainel(const JanelaPronta* j) {
   if (j) {
     estado::painel.rpm = j->dados.rotacaoRpm;
     estado::painel.janelaS = j->dados.modoRapido ? cfg::JANELA_RAPIDA_S : cfg::JANELA_NORMAL_S;
+    estado::painel.ultimaPresentes = j->dados.presentes;
     for (int s = 0; s < 3; s++) {
       estado::painel.ultima[s] = j->dados.pontos[s];
       estado::painel.alertas[s] = alertas[s].estado();
     }
     uint8_t progresso = cfg::JANELAS_APRENDIZADO;
     for (int s = 0; s < 3; s++) {
-      if (j->dados.pontos[s].presente && alertas[s].progresso() < progresso) progresso = alertas[s].progresso();
+      if (j->dados.presente(s) && alertas[s].progresso() < progresso) progresso = alertas[s].progresso();
     }
     estado::painel.progressoAprendizado = progresso;
   }
@@ -157,8 +158,9 @@ void imprimirJanela(const JanelaPronta& j) {
   for (int s = 0; s < 3; s++) {
     const ps::MedidaPonto& p = j.dados.pontos[s];
     linha += String(" | ") + ps::CODIGOS_PONTOS[s];
-    if (p.presente) {
+    if (j.dados.presente(s)) {
       linha += " rms=" + String(p.rmsG, 4) + " pico=" + String(p.picoG, 4);
+      linha += p.velRmsMmS >= 0.0f ? " vel=" + String(p.velRmsMmS, 3) : String(" vel=-");
     } else {
       linha += " ---";
     }
@@ -186,10 +188,10 @@ void tratarJanela(const JanelaPronta& j) {
     for (auto& a : alertas) a.reaprender();
   }
   for (int s = 0; s < 3; s++) {
-    if (j.dados.pontos[s].presente) alertas[s].atualizar(j.dados.pontos[s].rmsG);
+    if (j.dados.presente(s)) alertas[s].atualizar(j.dados.pontos[s].rmsG);
   }
   bool algumPonto = false;
-  for (int s = 0; s < 3; s++) algumPonto = algumPonto || j.dados.pontos[s].presente;
+  for (int s = 0; s < 3; s++) algumPonto = algumPonto || j.dados.presente(s);
   if (!algumPonto) {
     // nenhum sensor OK: a API recusaria a janela sem pontos; só a linha da serial sai
   } else if (j.horaValida) {

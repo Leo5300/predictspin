@@ -10,6 +10,7 @@
 #include "Estado.h"
 #include "Protocolo.h"
 #include "Rotacao.h"
+#include "Velocidade.h"
 
 namespace aquisicao {
 
@@ -18,6 +19,11 @@ namespace {
 Adxl345 sensores[3];
 bool presente[3] = {false, false, false};
 ps::AcumuladorPonto acumuladores[3];
+// Velocidade por ponto: o estado dos filtros continua de uma janela para a outra
+ps::Velocidade velocidades[3];
+// A janela anterior chegou completa (98% das amostras): só então a velocidade da atual vale
+bool velocidadeAcomodada[3] = {false, false, false};
+uint32_t previstasJanela[3] = {0, 0, 0};
 ps::Rotacao rotacao(cfg::ROTACAO_PERIODO_MINIMO_US, cfg::ROTACAO_SEM_PULSO_US);
 
 // Média e taxa medidas na janela anterior de cada sensor (deslocamento e Hann da próxima)
@@ -93,6 +99,9 @@ void comecarJanela(uint32_t agoraMcu) {
     if (!presente[s]) continue;
     uint32_t comprimento = (uint32_t)(taxaMedida[s] * duracaoJanelaS + 0.5);
     acumuladores[s].iniciar(mediaAnterior[s], taxaMedida[s], comprimento, rpmBase / 60.0);
+    previstasJanela[s] = comprimento;
+    velocidades[s].configurar(taxaMedida[s], cfg::VELOCIDADE_CORTE_HZ);
+    velocidades[s].comecarJanela();
   }
 }
 
@@ -121,13 +130,19 @@ void fecharJanela(uint32_t agoraMcu) {
     if (!presente[s]) continue;
     ps::ResultadoPonto r = acumuladores[s].concluir(escala[s]);
     ps::MedidaPonto& m = j.dados.pontos[s];
-    m.presente = true;
+    j.dados.marcarPresente(s);
     m.rmsG = r.rmsG;
     m.picoG = r.picoG;
     m.curtose = r.curtose;
     m.o1x = ordensOk ? r.o1x : 0.0f;
     m.o2x = ordensOk ? r.o2x : 0.0f;
     m.o3x = ordensOk ? r.o3x : 0.0f;
+    m.calibracao = carimbo[s];
+    // velocidade: só se esta janela e a anterior chegaram completas (integrador acomodado)
+    bool completa = ps::janelaCompleta(r.amostras, previstasJanela[s]);
+    m.velRmsMmS = (completa && velocidadeAcomodada[s]) ? (float)velocidades[s].rmsMmS(escala[s]) : -1.0f;
+    velocidadeAcomodada[s] = completa;
+    if (!completa) velocidades[s].reiniciar();  // falta de amostras: o filtro recomeça
     saturou = saturou || r.saturou;
     if (r.amostras < menor) menor = r.amostras;
     diag.amostrasSensor[s] = r.amostras;
@@ -179,8 +194,10 @@ void processarAmostra(int s, const int16_t xyz[3]) {
     temMedia[s] = true;
     uint32_t comprimento = (uint32_t)(taxaMedida[s] * duracaoJanelaS + 0.5);
     acumuladores[s].iniciar(mediaAnterior[s], taxaMedida[s], comprimento, rpmBase / 60.0);
+    previstasJanela[s] = comprimento;
   }
   acumuladores[s].amostra(valor);
+  velocidades[s].amostra(valor);
 }
 
 const char* nomeEstado(EstadoSensor e) {

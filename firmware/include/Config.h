@@ -40,6 +40,10 @@ constexpr float ESCALA_G = 0.0039f;            // 3,9 mg/LSB em resolução tota
 constexpr int16_t LIMITE_SATURACAO = 4090;     // |bruto| >= 4090 em qualquer eixo marca a janela
 constexpr uint32_t PAUSA_FIFO_US = 5;          // datasheet: >= 5 us entre leituras da FIFO do mesmo sensor
 
+// Velocidade RMS (mm/s): corte do passa-alta e do integrador com vazamento. Banda declarada: 10 Hz
+// até cerca de 800 Hz (filtro do sensor a ODR 1600), menor que a da ISO 20816 (10 a 1000 Hz).
+constexpr double VELOCIDADE_CORTE_HZ = 10.0;
+
 // Eixo de análise de cada ponto: 0 = X, 1 = Y, 2 = Z. Padrão Z, perpendicular à face do ímã.
 constexpr uint8_t EIXO_PONTO[3] = {2, 2, 2};
 

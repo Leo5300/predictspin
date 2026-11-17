@@ -45,6 +45,7 @@ struct Painel {
   uint32_t descartadas;      // 400/403
   float rpm;
   ps::MedidaPonto ultima[3];
+  uint8_t ultimaPresentes;   // bits dos pontos presentes na última janela
   ps::EstadoAlerta alertas[3];
   uint8_t progressoAprendizado;
   uint32_t janelaS;          // duração da janela atual

@@ -120,6 +120,7 @@ Calculadas em fluxo, amostra a amostra, sem guardar a janela
 | `pico_g` | maior \|x − média\| na janela |
 | `curtose` | momento central de 4ª ordem / variância²; 3 para sinal gaussiano, 1,5 para senoide pura; 0 se o sinal for constante |
 | `o1x`, `o2x`, `o3x` | amplitude de pico em 1X, 2X e 3X da rotação, por Goertzel com janela de Hann |
+| `vel_rms_mm_s` | velocidade RMS em mm/s, de 10 Hz até cerca de 800 Hz (ver [Velocidade](#velocidade-rms-em-mms)) |
 | saturação | qualquer eixo com \|bruto\| ≥ 4090 marca a janela (`saturou`) |
 | escala | por ponto: 1/ganho calibrado (ver [Calibração](#calibração-por-sensor)); sem calibração, o nominal de 3,9 mg/LSB (`ESCALA_G`) |
 
@@ -142,6 +143,51 @@ A janela de Hann tem o comprimento das amostras esperadas na taxa medida do sens
 vazamento do DC residual e das ordens vizinhas. A amplitude é normalizada pela soma dos pesos.
 Testes nativos conferem as três ordens de um sinal sintético com 1%, 2% e 5% de tolerância, mesmo
 com frequência fora de bin inteiro e com 1 g de DC.
+
+## Velocidade RMS em mm/s
+
+A ISO 20816 avalia severidade por **velocidade** RMS, não por aceleração. O firmware calcula a
+velocidade de cada ponto em fluxo, sem guardar a janela
+([`lib/sinal/Velocidade.cpp`](../firmware/lib/sinal/Velocidade.cpp)):
+
+1. aceleração do eixo de análise, em LSB, convertida no fim pela escala do ponto (g por LSB) e por
+   9806,65 mm/s² por g;
+2. **passa-alta de 1ª ordem em 10 Hz** (transformação bilinear com o corte pré-distorcido): tira a
+   gravidade e o offset antes de integrar;
+3. **integrador com vazamento em 10 Hz**, pela regra de Al-Alaoui
+   (v[n] = b v[n−1] + T (7 u[n] + u[n−1]) / 8, b = e^(−2π·10·T)): o vazamento impede a deriva;
+4. RMS da velocidade na janela.
+
+O estado dos dois filtros continua de uma janela para a outra; a taxa usada é a medida do sensor.
+**A primeira janela depois da partida, ou depois de uma janela com menos de 98% das amostras
+previstas, vai sem `vel_rms_mm_s`**, para o integrador acomodar; numa falta de amostras o filtro
+recomeça do zero.
+
+**Banda declarada: 10 Hz até cerca de 800 Hz**, limite do filtro do próprio sensor a ODR 1600.
+É menor que a da norma (10 a 1000 Hz). O conjunto passa-alta + integrador segue o modelo
+s / (s + ωc)²: em 10 Hz o ganho é a metade; acima de ~30 Hz é a integral da aceleração.
+
+Resposta a uma senoide de 1 g de pico, **calculada** com as equações do filtro em sinal sintético
+(simulação em Python, sem sensor; os testes nativos conferem 5, 25, 100 e 400 Hz no código C++):
+
+| Frequência | Ideal a/(ω√2) | Modelo s/(s+ωc)² | Filtro do firmware | Filtro / modelo |
+|---|---|---|---|---|
+| 5 Hz | 220,7 mm/s | 44,1 mm/s | 45,0 mm/s | +2,0% |
+| 10 Hz | 110,4 mm/s | 55,2 mm/s | 56,3 mm/s | +2,0% |
+| 25 Hz | 44,15 mm/s | 38,06 mm/s | 38,81 mm/s | +2,0% |
+| 100 Hz | 11,04 mm/s | 10,93 mm/s | 11,12 mm/s | +1,8% |
+| 400 Hz | 2,759 mm/s | 2,757 mm/s | 2,761 mm/s | +0,1% |
+| 700 Hz | 1,577 mm/s | 1,576 mm/s | 1,714 mm/s | +8,8% |
+
+A escolha da regra de integração pesou aqui: com a regra retangular o erro em 400 Hz seria +13%, e
+com a trapezoidal, −20%. Perto de 800 Hz (Nyquist) nenhuma regra serve, e o filtro do sensor já
+atenua essa região.
+
+**Sem comparação com a ISO 20816.** O código e a documentação não comparam a velocidade com as
+zonas da norma, de propósito: o sensor é MEMS, a fixação é por ímã, a banda é menor que a da norma
+e não há calibração rastreável (a calibração do firmware é de duas posições contra a gravidade, não
+contra um padrão). O número serve para comparar o mesmo ponto ao longo do tempo e entre condições
+do ensaio, não para classificar a máquina pela norma.
 
 ## Calibração por sensor
 
@@ -215,7 +261,7 @@ faixa refletiva da flange passa. A rotação vem do período entre bordas
 | `medido_em` | início da janela, ISO-8601 UTC com microssegundos |
 | HTTPS | `WiFiClientSecure` com o pacote de certificados raiz (`data/cert/x509_crt_bundle.bin`), **com verificação**. Conexão reaproveitada (`setReuse`) |
 | Cabeçalhos | `X-Dispositivo-Id` e `X-Dispositivo-Chave` de `segredos.h` |
-| Campos novos | `modo`, `amostras` e `amostras_esperadas` em toda janela |
+| Campos novos | `modo`, `amostras` e `amostras_esperadas` em toda janela; `vel_rms_mm_s` por ponto quando calculada |
 
 **Pacote de certificados.** O Arduino-ESP32 2.0.17 traz o verificador (`setCACertBundle`), mas
 não o pacote. O arquivo foi gerado pelo
@@ -248,8 +294,12 @@ em ordem:
 **Capacidade real:** 120 lotes de 32 janelas mais 64 na RAM = **3904 janelas**, ou seja
 **5 h 25 min** a uma janela a cada 5 s. A exigência era aguentar pelo menos 30 min sem rede.
 
-- **Espaço no flash:** cada lote tem 3.592 bytes (cabeçalho de 8 + 32 x 112), num bloco de 4 KB
-  do LittleFS. Os 120 lotes usam cerca de 480 KB da partição de 917.504 bytes (`huge_app.csv`).
+- **Espaço no flash:** cada lote tem 3.848 bytes (cabeçalho de 8 + 32 x 120), num bloco de 4 KB
+  do LittleFS. Os 120 lotes usam cerca de 480 KB da partição de 917.504 bytes (`huge_app.csv`). O
+  registro de 120 bytes não tem preenchimento (a presença dos pontos vai em bits) e um teste nativo
+  garante que ele não cresce além do que cabe no bloco.
+- **Versão do registro:** 2 desde a velocidade e a calibração (11/2026). Lote gravado por um
+  firmware anterior é descartado na leitura, como lote corrompido.
 - **Fila cheia:** o lote mais antigo é descartado e contado (`fila_perdidas`).
 - **Reinício:** o que estava só na RAM (até 64 janelas) se perde.
 
@@ -399,6 +449,8 @@ o do WinLibs (`winget install BrechtSanders.WinLibs.POSIX.UCRT`).
   checagens, os comandos e o arquivo testados no computador; a medida de 2 s e a gravação no
   LittleFS não rodaram no ESP32.
 - **Calibração:** só o eixo de análise; perde-se com `uploadfs` ou apagando o flash.
+- **Velocidade:** banda de 10 a ~800 Hz, menor que a da ISO 20816; abaixo de 10 Hz a atenuação é
+  forte (1X de rotações abaixo de 600 rpm sai muito reduzido). Sem comparação com zonas da norma.
 - **Osciladores dos sensores:**
   - se um ADXL345 estiver mais de 2% abaixo de 1600 Hz, todas as janelas dele saem marcadas como
     amostras incompletas na exportação;

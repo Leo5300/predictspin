@@ -98,7 +98,7 @@ void desenharTela(const Painel& p) {
       case ps::EstadoAlerta::ATENCAO: est = "ATENCAO"; break;
       case ps::EstadoAlerta::ALARME: est = "ALARME"; break;
     }
-    if (p.ultima[s].presente) {
+    if ((p.ultimaPresentes >> s) & 1u) {
       snprintf(l, sizeof(l), "%s %.4fg %.3fg %s", ps::CODIGOS_PONTOS[s], p.ultima[s].rmsG, p.ultima[s].picoG, est);
     } else {
       snprintf(l, sizeof(l), "%s ---", ps::CODIGOS_PONTOS[s]);

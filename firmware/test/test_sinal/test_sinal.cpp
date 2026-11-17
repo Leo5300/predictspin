@@ -4,6 +4,7 @@
 #include <unity.h>
 
 #include "Caracteristicas.h"
+#include "Velocidade.h"
 
 using namespace ps;
 
@@ -137,6 +138,95 @@ void test_ordens_validas_so_com_rotacao_estavel() {
   TEST_ASSERT_FALSE(ordensValidas(800.0f, 805.0f, 0.08f, 0.05f));  // oscilou dentro da janela
 }
 
+// ---------------------------------------------------------------- velocidade
+
+// 1 g = 256 LSB nestes testes (escala 1/256 g por LSB)
+static const double LSB_POR_G = 256.0;
+
+// Senoide de 1 g de pico a f Hz sobre a gravidade (+1 g de DC). A primeira janela de 5 s acomoda o
+// filtro, como no firmware; o RMS é o da segunda.
+static double velocidadeDeSenoide(double f, double picoG = 1.0) {
+  Velocidade v;
+  v.configurar(TAXA, 10.0);
+  v.reiniciar();
+  const uint32_t n = 8000;
+  uint32_t i = 0;
+  for (int janela = 0; janela < 2; janela++) {
+    v.comecarJanela();
+    for (uint32_t k = 0; k < n; k++, i++) {
+      double x = LSB_POR_G + picoG * LSB_POR_G * sin(2 * PI * f * i / TAXA + 0.3);
+      v.amostra((int16_t)lround(x));
+    }
+  }
+  return v.rmsMmS(1.0 / LSB_POR_G);
+}
+
+// Modelo contínuo do filtro, s / (s + wc)^2 com wc = 10 Hz: velocidade RMS de uma senoide de 1 g de pico
+static double velocidadeDoModelo(double f) {
+  double w = 2 * PI * f, wc = 2 * PI * 10.0;
+  return MM_S2_POR_G / (w * sqrt(2.0)) * (w * w / (w * w + wc * wc));
+}
+
+void test_velocidade_a_100_hz_e_a_conta_da_norma() {
+  // a / (w raiz(2)) = 9806,65 / (2 pi 100 raiz(2)) = 11,04 mm/s
+  TEST_ASSERT_FLOAT_WITHIN(0.01, 11.04, MM_S2_POR_G / (2 * PI * 100.0 * sqrt(2.0)));
+  TEST_ASSERT_FLOAT_WITHIN(0.05 * 11.04, 11.04, velocidadeDeSenoide(100.0));
+}
+
+void test_velocidade_a_25_hz_segue_a_resposta_do_filtro() {
+  // Ideal 44,15 mm/s; o filtro passa w^2 / (w^2 + wc^2) = 0,862 em 25 Hz: 38,06 mm/s. Tolerância de
+  // 3%: a discretização (vazamento casado e pré-distorção) fica 2% acima do modelo contínuo.
+  double esperado = velocidadeDoModelo(25.0);
+  TEST_ASSERT_FLOAT_WITHIN(0.01, 38.06, esperado);
+  TEST_ASSERT_FLOAT_WITHIN(0.03 * esperado, esperado, velocidadeDeSenoide(25.0));
+}
+
+void test_velocidade_a_400_hz_segue_a_resposta_do_filtro() {
+  // Ideal 2,759 mm/s; o filtro passa 0,9994 em 400 Hz: 2,757 mm/s. Tolerância de 3%: a regra de
+  // Al-Alaoui fica a menos de 1% do modelo em 400 Hz (a retangular erraria +13%).
+  double esperado = velocidadeDoModelo(400.0);
+  TEST_ASSERT_FLOAT_WITHIN(0.001, 2.757, esperado);
+  TEST_ASSERT_FLOAT_WITHIN(0.03 * esperado, esperado, velocidadeDeSenoide(400.0));
+}
+
+void test_velocidade_abaixo_da_banda_sai_atenuada() {
+  // 5 Hz: o ideal seria 220,7 mm/s; o filtro passa só 20% (0,25 / 1,25)
+  double ideal = MM_S2_POR_G / (2 * PI * 5.0 * sqrt(2.0));
+  double medido = velocidadeDeSenoide(5.0);
+  TEST_ASSERT_LESS_THAN_FLOAT(0.25 * ideal, medido);
+  TEST_ASSERT_FLOAT_WITHIN(0.03 * velocidadeDoModelo(5.0), velocidadeDoModelo(5.0), medido);
+}
+
+void test_gravidade_constante_nao_vira_velocidade() {
+  Velocidade v;
+  v.configurar(TAXA, 10.0);
+  v.reiniciar();
+  v.comecarJanela();
+  for (int i = 0; i < 16000; i++) v.amostra((int16_t)LSB_POR_G);  // 1 g parado
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, (float)v.rmsMmS(1.0 / LSB_POR_G));
+  TEST_ASSERT_EQUAL_UINT32(16000, v.amostras());
+}
+
+void test_velocidade_escala_com_o_ganho_e_janela_vazia() {
+  Velocidade v;
+  v.configurar(TAXA, 10.0);
+  v.reiniciar();
+  v.comecarJanela();
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, (float)v.rmsMmS(1.0 / 273.5));  // sem amostras
+  for (uint32_t i = 0; i < 16000; i++) v.amostra((int16_t)lround(256.0 * sin(2 * PI * 100.0 * i / TAXA)));
+  // as mesmas amostras em LSB com o ganho calibrado de 273,5 em vez de 256: 6,4% menos velocidade
+  double razao = v.rmsMmS(1.0 / 273.5) / v.rmsMmS(1.0 / 256.0);
+  TEST_ASSERT_FLOAT_WITHIN(1e-6, 256.0 / 273.5, razao);
+}
+
+void test_janela_completa_para_a_velocidade() {
+  TEST_ASSERT_TRUE(janelaCompleta(8000, 8000));
+  TEST_ASSERT_TRUE(janelaCompleta(7840, 8000));   // 98%
+  TEST_ASSERT_FALSE(janelaCompleta(7839, 8000));
+  TEST_ASSERT_FALSE(janelaCompleta(0, 8000));
+  TEST_ASSERT_FALSE(janelaCompleta(10, 0));
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_goertzel_acha_as_tres_ordens);
@@ -150,5 +240,12 @@ int main(int, char**) {
   RUN_TEST(test_janela_vazia_nao_quebra);
   RUN_TEST(test_saturacao_e_marcada);
   RUN_TEST(test_ordens_validas_so_com_rotacao_estavel);
+  RUN_TEST(test_velocidade_a_100_hz_e_a_conta_da_norma);
+  RUN_TEST(test_velocidade_a_25_hz_segue_a_resposta_do_filtro);
+  RUN_TEST(test_velocidade_a_400_hz_segue_a_resposta_do_filtro);
+  RUN_TEST(test_velocidade_abaixo_da_banda_sai_atenuada);
+  RUN_TEST(test_gravidade_constante_nao_vira_velocidade);
+  RUN_TEST(test_velocidade_escala_com_o_ganho_e_janela_vazia);
+  RUN_TEST(test_janela_completa_para_a_velocidade);
   return UNITY_END();
 }

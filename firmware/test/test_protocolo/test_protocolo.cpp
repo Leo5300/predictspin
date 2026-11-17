@@ -63,7 +63,8 @@ static DadosJanela janelaSoComA() {
   j.rotacaoRpm = 812.44f;
   j.amostras = 7990;
   j.amostrasEsperadas = 8000;
-  j.pontos[0] = {true, 0.031f, 0.112f, 3.2f, 0.012f, 0.004f, 0.002f};
+  j.marcarPresente(0);
+  j.pontos[0] = {0.031f, 0.112f, 3.2f, 0.012f, 0.004f, 0.002f, -1.0f, 0};
   return j;
 }
 
@@ -83,8 +84,10 @@ void test_json_so_com_o_ponto_a() {
 void test_json_com_tres_pontos_modo_rapido_e_saturacao() {
   char buf[600];
   DadosJanela j = janelaSoComA();
-  j.pontos[1] = {true, 0.5f, 1.5f, 3.0f, 0.1f, 0.05f, 0.01f};
-  j.pontos[2] = {true, 0.2f, 0.6f, 2.9f, 0.05f, 0.02f, 0.0f};
+  j.marcarPresente(1);
+  j.marcarPresente(2);
+  j.pontos[1] = {0.5f, 1.5f, 3.0f, 0.1f, 0.05f, 0.01f, 2.5f, 0};
+  j.pontos[2] = {0.2f, 0.6f, 2.9f, 0.05f, 0.02f, 0.0f, 0.75f, 0};
   j.modoRapido = 1;
   j.saturou = 1;
   j.amostrasEsperadas = 1600;
@@ -93,8 +96,41 @@ void test_json_com_tres_pontos_modo_rapido_e_saturacao() {
   TEST_ASSERT_NOT_NULL(strstr(buf, "\"saturou\":true"));
   TEST_ASSERT_NOT_NULL(strstr(buf, "\"A\":{"));
   TEST_ASSERT_NOT_NULL(strstr(buf, ",\"B\":{\"rms_g\":0.50000"));
+  TEST_ASSERT_NOT_NULL(strstr(buf, "\"vel_rms_mm_s\":2.5000}"));
   TEST_ASSERT_NOT_NULL(strstr(buf, ",\"C\":{"));
   TEST_ASSERT_EQUAL_CHAR('}', buf[strlen(buf) - 1]);
+}
+
+void test_json_leva_a_velocidade_so_quando_calculada() {
+  char buf[600];
+  DadosJanela j = janelaSoComA();
+  j.pontos[0].velRmsMmS = 1.23456f;
+  montarJson(j, "ps-torno-01", buf, sizeof(buf));
+  TEST_ASSERT_NOT_NULL(strstr(buf, "\"o3x\":0.00200,\"vel_rms_mm_s\":1.2346}"));
+  j.pontos[0].velRmsMmS = 0.0f;  // zero é valor (sinal parado), não ausência
+  montarJson(j, "ps-torno-01", buf, sizeof(buf));
+  TEST_ASSERT_NOT_NULL(strstr(buf, "\"vel_rms_mm_s\":0.0000}"));
+  j.pontos[0].velRmsMmS = -1.0f;  // primeira janela: sem o campo
+  montarJson(j, "ps-torno-01", buf, sizeof(buf));
+  TEST_ASSERT_NULL(strstr(buf, "vel_rms_mm_s"));
+  j.pontos[0].velRmsMmS = NAN;
+  montarJson(j, "ps-torno-01", buf, sizeof(buf));
+  TEST_ASSERT_NULL(strstr(buf, "vel_rms_mm_s"));
+  TEST_ASSERT_NULL(strstr(buf, "nan"));
+}
+
+void test_presenca_dos_pontos_em_bits() {
+  DadosJanela j;
+  memset(&j, 0, sizeof(j));
+  TEST_ASSERT_FALSE(j.presente(0));
+  j.marcarPresente(2);
+  TEST_ASSERT_FALSE(j.presente(0));
+  TEST_ASSERT_FALSE(j.presente(1));
+  TEST_ASSERT_TRUE(j.presente(2));
+  TEST_ASSERT_EQUAL_HEX8(0x04, j.presentes);
+  // o registro da fila não pode crescer: 32 janelas + cabeçalho num bloco de 4 KB do LittleFS
+  TEST_ASSERT_EQUAL_size_t(120, sizeof(DadosJanela));
+  TEST_ASSERT_LESS_OR_EQUAL(4096, 8 + 32 * (int)sizeof(DadosJanela));
 }
 
 void test_json_sem_espaco_devolve_zero() {
@@ -206,6 +242,8 @@ int main(int, char**) {
   RUN_TEST(test_ida_e_volta_iso);
   RUN_TEST(test_json_so_com_o_ponto_a);
   RUN_TEST(test_json_com_tres_pontos_modo_rapido_e_saturacao);
+  RUN_TEST(test_json_leva_a_velocidade_so_quando_calculada);
+  RUN_TEST(test_presenca_dos_pontos_em_bits);
   RUN_TEST(test_json_sem_espaco_devolve_zero);
   RUN_TEST(test_json_troca_nan_por_zero);
   RUN_TEST(test_le_modo_rapido_ate_da_resposta);
