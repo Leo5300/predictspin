@@ -1,7 +1,8 @@
 # Arquitetura — v3
 
 Data: 10/11/2026, atualizada em 11/11/2026 (firmware de 3 sensores e modo rápido) e em 12/11/2026
-(consultas do painel, eventos ao vivo e plano de coleta) · Versão 3 ·
+(consultas do painel, eventos ao vivo e plano de coleta) e em 16/11/2026 (catálogos, receita do
+ensaio, eventos marcados e painel web completo) · Versão 3 ·
 telemetria agrupada em janela (ver [`der.md`](der.md)), autenticação de dispositivo por cabeçalho e
 coleta rotulada por ensaio. A v2 (18/09/2026) corrigiu ESP32-S3
 (inexistente no acervo) e sensores descartados (MLX90614, INMP441, BME280).
@@ -75,7 +76,9 @@ br.senai.predictspin
 ├── config         OpenAPI, CORS, Jackson, Flyway
 ├── seguranca      JWT, BCrypt, autenticação de dispositivo, rate limiting
 ├── maquina        local, máquina, ponto de medição, componente, dispositivo
-├── telemetria     ingestão, consulta (janelas completas, série agregada), baseline, ensaio
+├── telemetria     ingestão, consulta (janelas completas, série agregada), baseline, ensaio,
+│                  receita (correção com histórico), eventos marcados, exportação CSV
+├── catalogo       materiais e ferramentas (nome normalizado único, desativar sem apagar)
 ├── eventos        eventos ao vivo para o painel (SSE)
 ├── alerta         avaliação contra baseline, classificação, severidade acumulada
 └── ordemservico   abertura automática, atribuição, ciclo de vida
@@ -184,6 +187,7 @@ com o JWT no cabeçalho `Authorization`; token na URL é recusado (401). O parâ
 | `janela` | `JanelaResposta` (o item das listagens de janelas) | janela nova gravada; reenvio (200) não gera evento |
 | `ensaio` | `EnsaioEvento` (`acao`: `aberto`, `encerrado` ou `descartado`; `ensaio`: `EnsaioResposta`) | só para ADMIN e TECNICO |
 | `modo_rapido` | `ModoRapidoResposta` | modo rápido ligado ou desligado; é também o primeiro evento de toda conexão, com o estado atual |
+| `evento_marcado` | `EventoMarcadoResposta` | o técnico marcou um evento (pancada, cavaco, máquina vizinha, outro) no ensaio aberto; só para ADMIN e TECNICO |
 
 ```mermaid
 sequenceDiagram
@@ -223,11 +227,56 @@ Regras do fluxo:
 O efeito dos clientes de eventos sobre a ingestão foi medido; os números estão em
 [`teste-de-carga.md`](teste-de-carga.md#eventos-ao-vivo-e-ingestão-12112026).
 
+## Coleta: catálogos, receita e eventos marcados
+
+A migração `V5` (detalhes em [`der.md`](der.md)) acrescenta ao ensaio a **receita** do corte e dois
+catálogos, sem mudar contrato existente (o texto livre `material` de `NovoEnsaioRequisicao` continua
+aceito):
+
+- **Catálogos** (`/api/v1/materiais`, `/api/v1/ferramentas`): o nome é guardado também normalizado
+  (sem acento, caixa e pontuação) e único; criar um nome que já existe devolve 409 com o item
+  existente, e o painel oferece "é esse?". ADMIN e TECNICO listam e criam; só ADMIN renomeia e
+  desativa (o item desativado continua nos ensaios antigos).
+- **Receita do ensaio:** material e ferramenta do catálogo, avanço, profundidade de corte, diâmetro da
+  peça e fluido. `PATCH /ensaios/{id}/receita` corrige só a receita e a observação; cada campo mudado
+  vira uma linha de histórico (`GET /ensaios/{id}/alteracoes`) com quem e quando. Etapa, condição,
+  rotação e tempos não mudam (400 explica).
+- **Eventos marcados** (`POST /ensaios/{id}/eventos`): só com o ensaio aberto, no instante do toque
+  (até 2 min no futuro por diferença de relógio; antes do início, 400). Na exportação CSV, a janela
+  que contém o instante e a seguinte saem com `evento_marcado` e ficam fora do treino. As colunas
+  novas do CSV entram no fim, para não quebrar quem já lê o arquivo.
+
+## Painel web
+
+SPA estática (Vite, React 19, TypeScript estrito) que conversa só com a API pública `/api/v1`, com
+cliente gerado do `openapi.json`. Leitura (L1 visão geral, L2 máquina, L3 ponto) pela norma ISA-101;
+coleta pelo celular (sessão encadeada T0 → T1 → T2 → T3 guardada no navegador, cada gravação é um
+ensaio na API); replay de ensaio gravado; diagnóstico. Tempo real pelo fluxo SSE acima, lido com
+`fetch` (o `EventSource` não manda `Authorization`), com volta à consulta periódica quando o fluxo
+cai. Alarmes e referência passam por dois adaptadores que hoje dizem "indisponível": quando a API
+tiver a regra, só eles mudam. Detalhes, decisões e revisão em [`painel.md`](painel.md).
+
+## Arquitetura segundo a ISO 13374
+
+| Bloco da ISO 13374 | No PredictSpin | Onde | Situação |
+|---|---|---|---|
+| DA · Aquisição de dados | leitura sincronizada dos 3 acelerômetros e do sensor de rotação | firmware (ESP32) | 1 sensor medido em bancada (firmware antigo); firmware de 3 sensores compilado e com testes nativos, não testado em hardware |
+| DM · Manipulação de dados | RMS, pico, curtose e ordens 1X–3X por janela | firmware (borda) | no simulador; no firmware compilado, não testado em hardware |
+| SD · Detecção de estado | comparação com a referência por ponto e rotação (NORMAL, ATENÇÃO, ALARME) | API | próximo prompt |
+| HA · Avaliação de saúde | detecção de anomalia e classificação da condição; componente provável | API | próximo prompt |
+| PA · Avaliação de prognóstico | tendência e severidade acumulada | API | preparado e desabilitado; trabalho futuro |
+| AG · Geração de recomendação | ordem de serviço com ação recomendada | API, painel e app | contrato definido; implementação no próximo prompt |
+
+A apresentação (ISO 13374-4) é o painel, desenhado pela ISA-101; a integração vertical do trabalho é
+esse caminho do bloco DA ao AG.
+
 ## Ambiente
 
 Docker Compose para banco e API no desenvolvimento. A publicação é feita no Render a partir do
-`render.yaml` da raiz (serviço web em Docker e PostgreSQL gerenciado); o passo a passo está em
+`render.yaml` da raiz (serviço web em Docker, PostgreSQL gerenciado e o painel como site estático,
+com a política de segurança gerada no build); o passo a passo está em
 [`deploy-render.md`](deploy-render.md). A cada push e pull request o GitHub Actions compila a API,
-roda os testes com a meta de cobertura e os testes de `analise/`. Manifests Kubernetes para a
+roda os testes com a meta de cobertura, os testes de `analise/` e, no job `painel`, lint, tipos,
+testes e build do painel. Manifests Kubernetes para a
 demonstração de implantação reproduzível ainda não existem no repositório. Variáveis sensíveis por
 ambiente, nunca no repositório.

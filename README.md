@@ -65,20 +65,20 @@ Detalhes de cada camada, fluxo de ingestão e decisões estruturais estão em
 
 ## Status atual
 
-Situação em 14/11/2026.
+Situação em 16/11/2026.
 
 | Parte | Situação |
 |---|---|
-| API (`api/`) | Pronta para a coleta e para o firmware de 3 sensores: login, usuários e papéis, máquinas, ingestão de telemetria (com `modo`, `amostras` e `amostras_esperadas` opcionais), modo rápido, consultas, ensaios rotulados, cobertura da coleta e exportação CSV com treino e validação separados; para o painel, documento OpenAPI fiel ao JSON, `GET /auth/eu`, janelas completas, série agregada, eventos ao vivo (SSE) e plano de coleta. 216 testes automatizados. |
-| Banco | PostgreSQL 16 com o modelo criado pelo Flyway (`V1`), carga inicial (`V2`: máquina `TORNO-01`, pontos A, B e C, canais) e `V3` (condições `desbalanceamento` e `sensor_solto`, modo e amostras da janela, modo rápido da máquina) e `V4` (plano de coleta da máquina). |
+| API (`api/`) | Pronta para a coleta e para o firmware de 3 sensores: login, usuários e papéis, máquinas, ingestão de telemetria (com `modo`, `amostras` e `amostras_esperadas` opcionais), modo rápido, consultas, ensaios rotulados, cobertura da coleta e exportação CSV com treino e validação separados; para o painel, documento OpenAPI fiel ao JSON, `GET /auth/eu`, janelas completas, série agregada, eventos ao vivo (SSE) e plano de coleta; catálogos de material e ferramenta, receita do corte no ensaio (correção com histórico) e eventos marcados durante a gravação (migração `V5`). 229 testes automatizados. |
+| Banco | PostgreSQL 16 com o modelo criado pelo Flyway (`V1`), carga inicial (`V2`: máquina `TORNO-01`, pontos A, B e C, canais) e `V3` (condições `desbalanceamento` e `sensor_solto`, modo e amostras da janela, modo rápido da máquina) `V4` (plano de coleta da máquina) e `V5` (catálogos, receita do ensaio, histórico de correções e eventos marcados). |
 | Alerta e ordem de serviço | Tabelas e entidades existem; **ainda não há regra nem rota**. |
 | Classificação da condição | **Não iniciada.** |
 | Firmware (`firmware/`) | Reescrito para 3 ADXL345 e o FC-51: aquisição no núcleo 1 (FIFO a 1600 Hz), características em fluxo, envio HTTPS à API com fila em RAM e LittleFS, modo rápido, tela, LEDs e sinal bruto binário pela serial. Compila e passa em 44 testes nativos; **não foi testado em hardware**. Roteiro de bancada em [`docs/teste-bancada-firmware.md`](docs/teste-bancada-firmware.md). |
 | Análise (`analise/`) | Captura da serial (`captura.py`, binário de 3 sensores e texto antigo de 1), espectro com janela de Hann e ordens (`espectro.py`) e simulador de telemetria (`simulador.py`, que obedece ao modo rápido). |
-| Painel web (`painel/`) | **Parte A pronta (leitura):** login, visão geral, tela da máquina (tacômetro, esquema do torno, pontos, mapa de ordens) e tela do ponto (tendência, janelas, exportação CSV), ao vivo por eventos (SSE) com volta à consulta, e modo AO VIVO (janelas de 1 s). Testado localmente com dados simulados; **não publicado**. Coleta de ensaios, replay, diagnóstico e alarmes são a Parte B ([`docs/painel.md`](docs/painel.md)). |
+| Painel web (`painel/`) | **Partes A e B prontas:** leitura (visão geral, máquina com mapa de ordens comparado ao típico de cada linha, ponto com tendência e AO VIVO), coleta de ensaios pelo celular (receita com catálogos, checagem antes de gravar, REC, fita, eventos marcados, sessão T0 → T1 → T2 → T3, matriz de cobertura, exportação CSV), replay de ensaio gravado, diagnóstico (dispositivos, qualidade, catálogos, usuários), alarmes e OS com estado vazio honesto, paleta de comandos (Ctrl+K) e explicações "?". Testado localmente com dados simulados, sem celular real; site estático descrito no `render.yaml`, **não publicado** ([`docs/painel.md`](docs/painel.md)). |
 | Aplicativo (`mobile/`) | **Não iniciado.** |
-| Integração contínua | Workflow em `.github/workflows/ci.yml` (API e `analise/`); o resultado no GitHub não foi conferido nesta atualização. Os testes nativos do firmware não estão no CI. |
-| Publicação no Render | `render.yaml` e roteiro escritos; segundo o responsável, a API está publicada (não conferido nesta atualização). |
+| Integração contínua | Workflow em `.github/workflows/ci.yml` (API, `analise/` e painel: lint, tipos, testes e build); o resultado no GitHub não foi conferido nesta atualização. Os testes nativos do firmware e os de ponta a ponta do painel não estão no CI. |
+| Publicação no Render | `render.yaml` (API, banco e painel como site estático) e roteiro escritos; segundo o responsável, a API está publicada (não conferido nesta atualização). O painel ainda não foi publicado. |
 
 Todos os dados de vibração que passaram pela API local até agora são **simulados**. O envio do
 ESP32 real ainda não foi feito.
@@ -170,7 +170,12 @@ visual e o funcionamento dos eventos estão em [`docs/painel.md`](docs/painel.md
 | `/` | visão geral: uma linha por máquina |
 | `/maquinas/:id` | máquina: tacômetro, esquema do torno, pontos A, B, C e mapa de ordens |
 | `/maquinas/:id/pontos/:codigo` | ponto: leituras, tendência, AO VIVO e janelas do período |
-| `/coleta` | reservada à Parte B (só ADMIN e TECNICO) |
+| `/coleta` | coleta: próxima gravação sugerida, matriz de cobertura, gravação (REC, fita, eventos) e resumo (ADMIN e TECNICO) |
+| `/coleta/preparar` | preparar a gravação: etapa, condição, rotação, sessão encadeada, receita e checagem antes de gravar |
+| `/coleta/ensaios` | ensaios gravados: filtros, receita, eventos, correção com histórico, descarte e CSV |
+| `/coleta/ensaios/:id/replay` | replay de um ensaio gravado |
+| `/diagnostico` | diagnóstico: dispositivos, qualidade das janelas, catálogos, usuários (ADMIN) e versão |
+| `/alarmes` | alarmes e ordens de serviço (hoje diz que a regra de alarme ainda não existe na API) |
 
 ## Variáveis de ambiente
 
@@ -266,8 +271,9 @@ cd api
 .\mvnw.cmd -B verify
 ```
 
-Resultado em 14/11/2026: **216 testes, nenhuma falha**. Cobertura de linhas medida pelo JaCoCo:
-**99,4 %** nas classes de regra (`*Service`) e **94,3 %** no projeto inteiro. O build falha se a
+Resultado em 16/11/2026 (Java 21, depois da migração `V5`): **229 testes, nenhuma falha**. Cobertura de
+linhas medida pelo JaCoCo (`target/site/jacoco/jacoco.csv`): **98,2 %** nas classes de regra
+(`*Service`) e **94,7 %** no projeto inteiro. O build falha se a
 cobertura das classes de regra ficar abaixo de 70 %. O relatório fica em
 `api/target/site/jacoco/index.html`.
 
@@ -281,9 +287,17 @@ npx playwright install chromium     # uma vez
 npm run test:e2e
 ```
 
-Resultado em 14/11/2026: ESLint e TypeScript sem avisos; **72 testes no Vitest** (6 arquivos) e
-**18 cenários no Playwright**, nenhuma falha. Inclui axe (zero violações graves ou críticas nos dois
-temas), teclado e os piores casos (textos e valores no limite do banco e do contrato).
+Resultado em 16/11/2026 (Node 24.14.0, Vite 8.3.8, Vitest 5.1.0): ESLint e TypeScript sem avisos;
+**132 testes no Vitest** (15 arquivos), com **97,7 %** das linhas de `src/dominio/` cobertas (provedor
+v8, instalado só para a medição, fora do `package.json`); **38 cenários no Playwright**, nenhuma falha.
+Inclui o fluxo completo da coleta no celular (390×844, toque emulado), replay, diagnóstico, axe (zero
+violações graves ou críticas em todas as telas, nos dois temas), teclado, paleta de comandos e os
+piores casos (textos e valores no limite, 100 itens de catálogo, 100 ensaios, plano de 18 rotações,
+API fora, ensaio sem janelas, gravação de 10 minutos). `npm audit --omit=dev`: nenhuma
+vulnerabilidade. Build de produção: 196 kB (gzip) de JavaScript inicial, rotas carregadas sob demanda,
+nenhuma violação da política de segurança; medido com `scripts/medir-producao.mjs`. Revisão de design
+em cinco rodadas (quatro por revisores independentes), até não sobrar defeito de direção; números,
+prints e achados em [`docs/evidencias/painel/`](docs/evidencias/painel) e [`docs/painel.md`](docs/painel.md).
 
 **Análise (simulador, captura e espectro).**
 
@@ -320,8 +334,8 @@ cd api
 Esta verificação **ainda não tem resultado**: a tentativa feita sem `NVD_API_KEY` falhou ao baixar
 a base do NVD. A chave é gratuita (<https://nvd.nist.gov/developers/request-an-api-key>).
 
-**Integração contínua.** O workflow roda os testes da API e de `analise/` a cada `push` e
-`pull request`.
+**Integração contínua.** O workflow roda os testes da API, de `analise/` e do painel (lint, tipos,
+Vitest e build) a cada `push` e `pull request`.
 
 ## Simulador
 

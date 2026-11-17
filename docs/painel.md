@@ -1,8 +1,10 @@
 # Painel web (centro de controle)
 
-O painel é a interface web de leitura do PredictSpin: mostra as máquinas, os pontos de medição e as
-janelas de vibração que chegam à API, ao vivo. Esta é a Parte A (leitura e modo AO VIVO). A Parte B
-(coleta de ensaios, replay, diagnóstico e alarmes) parte do que está descrito no fim deste documento.
+O painel é a interface web do PredictSpin. A Parte A é a leitura: máquinas, pontos de medição e as
+janelas de vibração que chegam à API, ao vivo. A Parte B acrescenta a coleta de ensaios pelo celular
+(receita, gravação, eventos marcados, sessão encadeada, cobertura do protocolo e exportação), o replay
+de ensaios gravados, o diagnóstico (dispositivos, qualidade, catálogos, usuários), a tela de alarmes
+e ordens de serviço com estado vazio honesto, a paleta de comandos (Ctrl+K) e as explicações "?".
 
 - Código: [`painel/`](../painel)
 - Contrato: [`painel/openapi.json`](../painel/openapi.json), exportado da API
@@ -39,10 +41,11 @@ ele, o painel usa `http://localhost:8080`. A API precisa liberar a origem do pai
 | `npm run dev` | servidor de desenvolvimento na porta 5173 (inclui a galeria em `/galeria.html`) |
 | `npm run build` | tipos e build de produção em `dist/` (a galeria fica de fora) |
 | `npm run lint` / `npm run typecheck` | ESLint sem avisos e TypeScript estrito |
-| `npm test` | Vitest (domínio, componentes de instrumento e a prova de que a galeria não entra no build) |
+| `npm test` | Vitest (domínio, componentes de instrumento, glossário e a prova de que a galeria não entra no build) |
 | `npm run test:e2e` | Playwright contra o compose local; os testes ligam o próprio simulador |
 | `npm run api:gerar` | exporta o contrato da API local e regera os tipos do cliente |
 | `npm run api:conferir` | falha se o `openapi.json` versionado difere do que a API local publica |
+| `node scripts/medir-producao.mjs` | com o build servido por `npx vite preview --port 5173`: carga inicial, rotas sob demanda e violações da Content-Security-Policy |
 
 Os testes de ponta a ponta leem as credenciais do `.env` da raiz e **ignoram** variáveis de ambiente
 do computador (que podem apontar para a API publicada). O simulador que eles ligam roda sempre com
@@ -52,22 +55,32 @@ do computador (que podem apontar para a API publicada). O simulador que eles lig
 
 ```
 painel
-├── e2e/                    Playwright: login, papéis, leitura, AO VIVO, eventos, acessibilidade, piores casos
-│   └── apoio/              ambiente local, sessão e o simulador ligado pelos testes
-├── scripts/                exportar o contrato, lançador do Vitest, teste "galeria fora do build"
+├── e2e/                    Playwright: login, papéis, leitura, AO VIVO, eventos, coleta, replay,
+│   │                       diagnóstico, acessibilidade (axe), piores casos, prints de revisão
+│   └── apoio/              ambiente local, sessão, API e o simulador ligado pelos testes
+├── scripts/                exportar o contrato, lançador do Vitest, teste "galeria fora do build",
+│                           medição do build de produção
 ├── src/
-│   ├── api/                cliente gerado (esquema.d.ts), sessão, saúde, eventos (SSE), consultas
+│   ├── api/                cliente gerado (esquema.d.ts), sessão, saúde, eventos (SSE), consultas,
+│   │   │                   coleta, diagnóstico
+│   │   └── adaptadores/    alarmes e referência (o único lugar que muda quando a API tiver a regra)
 │   ├── dominio/            regras puras e testadas: formatação pt-BR, idade e limiares, estado,
-│   │                       escalas do mapa, lacunas, leitor de eventos, modo rápido, tacômetro
-│   ├── estado/             preferências (tema, fonte), relógio, transporte (eventos/consulta)
-│   ├── hooks/              máquina ao vivo, modo rápido, frescor, página visível
+│   │                       escalas e típico do mapa, lacunas, leitor de eventos, modo rápido,
+│   │                       tacômetro, coleta (grade, sugestão), receita, nomes, sessão, pré-voo,
+│   │                       fita, instruções, replay, glossário
+│   ├── estado/             preferências (tema, fonte), relógio, transporte, meta da coleta
+│   ├── hooks/              máquina ao vivo, modo rápido, frescor, coleta, tela acesa, paleta
 │   ├── componentes/
-│   │   ├── ui/             base shadcn (Base UI) restilizada: botão, campo, alternador, dica, tabela
+│   │   ├── ui/             base shadcn (Base UI) restilizada: botão, campo, alternador, dica, tabela,
+│   │   │                   balão "?" (explica)
 │   │   ├── instrumento/    Leitura, Tacometro, EsquemaTorno, MapaOrdens, GraficoTendencia,
 │   │   │                   Sparkline, ReguaDesvio, Selos, MarcadorPonto, Idade, Estados...
-│   │   └── casca/          barra superior
+│   │   ├── coleta/         REC, cronômetro, fita, cartão "o que fazer agora", matriz, campos da receita
+│   │   ├── alarmes/        linhas de alarme e de ordem de serviço (ISA-18.2; só na galeria por ora)
+│   │   └── casca/          barra superior, paleta de comandos
 │   ├── rotas/              rotas por arquivo (TanStack Router)
-│   ├── telas/              login, visão geral (L1), máquina (L2), ponto (L3), coleta, apoio
+│   ├── telas/              login, visão geral (L1), máquina (L2), ponto (L3), coleta (entrada,
+│   │                       preparar, gravação, resumo, ensaios, replay), diagnóstico, alarmes, apoio
 │   ├── galeria/            galeria de componentes (só desenvolvimento)
 │   └── index.css           tokens e utilidades (Tailwind 4, CSS-first)
 ├── galeria.html            entrada da galeria (só no servidor de desenvolvimento)
@@ -82,7 +95,12 @@ Rotas do painel:
 | `/` | L1, visão geral: uma linha por máquina | ADMIN, TECNICO, OPERADOR |
 | `/maquinas/:id` | L2, máquina: tacômetro, esquema, pontos, mapa de ordens (`?mapa=30min\|2h\|8h`) | ADMIN, TECNICO, OPERADOR |
 | `/maquinas/:id/pontos/:codigo` | L3, ponto: leituras, tendência, AO VIVO, janelas (`?periodo=&de=&ate=&quadro=&pagina=`) | ADMIN, TECNICO, OPERADOR |
-| `/coleta` | reservada à Parte B (hoje diz que ainda não existe) | ADMIN, TECNICO |
+| `/coleta` | coleta: próxima sugerida, matriz de cobertura, gravação em andamento e resumo | ADMIN, TECNICO |
+| `/coleta/preparar` | etapa, condição e rotação; sessão encadeada; receita; checagem antes de gravar | ADMIN, TECNICO |
+| `/coleta/ensaios` | ensaios gravados: filtros, correção da receita com histórico, eventos, descarte, CSV | ADMIN, TECNICO |
+| `/coleta/ensaios/:id/replay` | replay de um ensaio gravado (1×, 4×, 16×) | ADMIN, TECNICO |
+| `/diagnostico` | dispositivos, qualidade, "Sobre"; atalho para ensaios e catálogos (ADMIN e TECNICO); usuários (só ADMIN) | ADMIN, TECNICO, OPERADOR |
+| `/alarmes` | alarmes e ordens de serviço: diz que a regra de alarme ainda não existe na API | ADMIN, TECNICO, OPERADOR |
 
 ## Decisões
 
@@ -99,13 +117,31 @@ Rotas do painel:
 | Fonte Real por padrão | O painel nunca começa mostrando dado simulado como se fosse o normal. |
 | Idade do dado pelo relógio monotônico | `performance.now()` não anda para trás nem salta com ajuste do relógio do computador. |
 | Sparklines e séries contínuas | Linha interrompida quer dizer lacuna (sem janela). Tracejado e pontilhado se confundiam com lacuna (o ajuste de direção apontou isso no ponto C). O estilo de linha por ponto (item 4 da direção) fica para um gráfico que compare pontos; hoje cada gráfico mostra um ponto só. |
-| Escala do mapa do mínimo ao máximo de cada linha | Do zero ao máximo, um sinal estável deixava todas as células no topo da rampa (quase brancas). |
+| Mapa de ordens comparado com o típico de cada linha (Parte B) | Do mínimo ao máximo, a variação normal virava xadrez; do zero ao máximo, a máquina saudável era um tapete, mas nada dizia o que fugiu. Agora cada célula é comparada com a mediana da linha na mesma marcha: ±15 % é o mesmo tom, acima disso o contraste cresce sem degraus, abaixo vira pontilhado; intervalo incompleto (borda de lacuna) fica neutro; a leitura em texto diz qual ponto, qual medida e desde quando. |
+| Vermelho do REC | Convenção de gravador e única exceção ao "vermelho só para alarme": só o botão REC e o ponto que pulsa enquanto grava. Nunca aparece fora da Coleta. |
+| Sessão de coleta só no navegador | A sessão (T0 opcional, T1 → T2 → T3 na mesma rotação, com a mesma receita) existe para o painel; na API cada gravação é um ensaio. Fica no `localStorage` e volta ao recarregar. |
+| Meta da cobertura no navegador | A API recebe a meta por consulta (padrão 3) e não a guarda; o painel guarda a escolhida neste navegador. |
+| Grade de cobertura do painel | A API cruza todas as etapas com todas as condições; no protocolo a condição só muda o corte e o T0 é a 0 rpm. O painel monta T0 × normal × 0 rpm, T1 e T2 × normal × plano, T3 × 6 condições × plano, pedindo à API as rotações 0 + plano. |
+| Próxima sugerida | A célula com menos ensaios válidos em relação à meta; no empate, a ordem T0 → T1 → T2 → T3, rotações crescentes, normal antes das outras e sensor solto por último (`dominio/coleta.ts`). |
+| Faixas da receita | Avanço 0,01 a 2 mm/volta (só no painel: a API aceita ≥ 0 e não foi apertada, para não mudar o contrato), profundidade 0,05 a 10 mm e diâmetro 1 a 500 mm (também na API). Aviso, sem bloquear, para avanço abaixo de 0,03 ou acima de 0,6 mm/volta, profundidade acima de 5 mm e diâmetro abaixo de 5 ou acima de 300 mm. |
+| Similaridade de nomes no painel | Pares de letras (Dice), distância de edição e "um nome contido no outro" (só se cobrir metade do maior); vale o maior. A partir de 0,55 o item aparece como "parecido". A lista é pequena; a unicidade é garantida pela API (409 devolve o existente). |
+| Avisos no topo no celular | No celular a parte de baixo é a zona do polegar (REC, Encerrar, Marcar evento); um aviso ali cobria os controles. |
+| Replay com padrão próprio | Faixa "REPLAY" com trama vertical (nem a hachura diagonal do simulado, nem âmbar ou vermelho); a barra superior troca a idade da última janela por REPLAY; o tacômetro do replay destaca a marcha em texto forte, não na cor de sinal. |
+| Adaptadores de alarme e referência | As telas só falam com `api/adaptadores/alarmes.ts` e `referencia.ts`, que hoje devolvem "indisponível" sem chamar rota. Ligar a API futura é trocar esses arquivos. |
+| Exemplos do glossário | Os números dos exemplos do "?" são texto explicativo fixo, sempre começando por "Exemplo:"; não são medição e não ferem a regra de nenhum valor inventado (todo número medido exibido vem da API). |
+| Content-Security-Policy no build | O endereço da API vem de `VITE_API_URL`; o `render.yaml` não monta cabeçalho com variável, então o build escreve a política numa `<meta>` do `index.html`, com `connect-src` só para a própria origem e a da API. |
 | Rotação sem separador de milhar ("1180") | Pedido do ajuste; a fonte de matriz de pontos lê como mostrador. |
 | `ultimo_contato` combinado com a última janela | A API grava o contato com resolução de 10 s (para não travar a linha do dispositivo a cada janela); a janela recebida é um contato mais recente. |
 | Lançador próprio do Vitest (`scripts/vitest.mjs`) | No Windows, `c:` e `C:` na pasta de trabalho carregavam o Vitest duas vezes ("failed to find the current suite"); o lançador normaliza a letra da unidade. |
 | Erros de formulário e de pedido sem vermelho | Vermelho e âmbar são só desvio e alarme da máquina (ISA-101). Campo inválido, senha errada ou falha ao ligar o AO VIVO aparecem com ícone, borda tracejada e texto. |
 | Troca de tela pelo roteador (`document.startViewTransition`) | O `<ViewTransition>` do React só anima atualizações dentro de transição, e a navegação do roteador é síncrona: medido no navegador, ele nunca disparava. O roteador anima só quando o caminho muda (período, página e mapa trocam seco). |
 | Galeria fora do build | Exemplos com dados inventados só existem em testes e na galeria; um teste roda o build de produção e procura a marca da galeria. |
+| Marcado = afundado | Alternadores, chips e células de meta atingida marcados ficam afundados (fundo rebaixado, borda forte, negrito). O preenchimento da ação principal é só da ação: a revisão B2 viu escolha e ação iguais. |
+| Matriz de pontos só na rotação viva | Com dado velho ou no replay, o número do tacômetro sai em Plex Mono: o mostrador "aceso" é a convenção do vivo (item 9; revisões B2 a B4). |
+| Coleta no celular: cartão preso no topo, motivos na barra | O cartão "o que fazer agora" fica preso no topo ao preparar e ao gravar; os motivos do evento aparecem na barra de baixo, no lugar de Marcar evento e Encerrar, e o descarte fica fora da zona do polegar (item 17; revisões B2 a B4). |
+| Botão de toque de 56 px | Tamanho `toque` no botão base: o `min-h-11` do celular vencia qualquer `min-h-14` passado por classe. |
+| Selo GRAVADO no replay | Cada módulo do replay leva o selo, na trama vertical do replay, como o SIM no simulado. |
+| AO VIVO conferido com a API | A cada 15 s as janelas do último minuto e meio são buscadas e mescladas às recebidas por evento; um evento perdido não vira lacuna falsa. |
 
 ## Direção visual
 
@@ -445,22 +481,200 @@ Ferramentas na última versão do código: lint e tipos sem avisos, 72 testes no
 Playwright (com axe nos dois temas e os piores casos), detector de antipadrões sem achados nas telas
 de leitura, break-ui sem rolagem lateral em nenhum caso.
 
-### Evidências
+### Evidências da Parte A
 
-As 16 prints finais, comprimidas (1.039 kB no total), estão em
-[`docs/evidencias/painel/`](evidencias/painel):
+As 16 prints da Parte A foram substituídas pelas 24 da Parte B (abaixo); continuam no histórico do Git
+(commit `639c28d`).
+
+### Revisão da Parte B
+
+Mesmo método da Parte A, agora com todas as telas: login, paleta de comandos, balão "?", L1, L2 e L3
+(vivo, velho e fonte Real vazia), L3 AO VIVO, coleta (entrada, preparar, receita, checagem, gravando,
+evento, resumo, ensaios), replay, diagnóstico, alarmes e galeria (geral, mapa de ordens, alarmes);
+1920×1080 e 390×844; grafite e claro. Prints em `painel/prints/` (fora do Git), geradas por
+`e2e/prints.spec.ts` (108 por rodada).
+
+Cinco rodadas: a B1 feita por quem construiu; da B2 à B5, cada uma por um revisor novo, que não
+participou da construção e recebeu só as prints, a direção e a lista "não fazer". A regra era parar
+quando uma rodada não achasse defeito de direção: B2, B3 e B4 acharam (itens 17 e 9); a B5 não.
+
+#### Rodada B1 (feita por quem construiu)
+
+| Achado | Onde | Correção |
+|---|---|---|
+| Nomes do catálogo espremidos ao lado dos botões (uma palavra por linha) | Diagnóstico 390 | nome em cima, ações embaixo |
+| Tabela de usuários quebrando o e-mail letra a letra | Diagnóstico 390 | linhas empilhadas no celular |
+| Último contato cortado; modo "normal 5 s" em duas linhas | Diagnóstico 390 | linhas empilhadas; modo sem quebra |
+| Atraso de envio negativo (−5 s) | Diagnóstico | coluna "recebido − medido" |
+| "Aço 4" sugerido como parecido com "aço 4340 temperado" | Receita (break-ui) | "contido" só conta se cobre metade do nome |
+| "Nenhuma janela chegou ainda" com 120 janelas na fita | Gravação de 10 min (break-ui) | texto conforme o caso |
+| Dois-pontos da Doto lido como "‡" no cronômetro | Gravação | separador desenhado |
+| "T0 Normal · 0 rpm" na sugestão | Coleta | "Torno desligado · 0 rpm" |
+| Aviso (toast) cobrindo a zona do polegar | Gravação 390 | avisos no topo no celular |
+
+Ferramentas da rodada B1:
+
+- Detector de antipadrões (com `npx`, telemetria desligada, fora do `package.json`), 10 telas × 1920
+  e 390, pela porta de depuração de um Chromium já logado: placeholder com contraste 4,3:1 em dois
+  campos simples do preparar, palavra sozinha na última linha, selo de idade sem folga e três títulos
+  desequilibrados na galeria. Corrigidos (placeholder no tom de apoio em todo campo,
+  `text-wrap: pretty` em parágrafos, `balance` em títulos). Depois: nenhum achado, exceto
+  `repeating-stripes-gradient` em todas as telas, que é a hachura de dado simulado exigida pela
+  direção (item 5).
+- break-ui: `e2e/piores-casos-coleta.spec.ts` (nomes longos, 100 itens de catálogo, 100 ensaios,
+  plano de 18 rotações, API fora, ensaio sem janelas, gravação de 10 minutos), além de
+  `e2e/piores-casos.spec.ts` da Parte A.
+- Build de produção servido localmente: a página quebrava ("Cannot read properties of null (reading
+  'useContext')"), com o React duplicado no pacote quando o build roda de `c:\` minúsculo no Windows.
+  Corrigido no `vite.config.ts` (veja [Publicação](#publicação)); a política de segurança passou sem
+  violação em 7 telas depois de liberar fontes `data:` e tirar o `eval` do Zod.
+
+#### Rodada B2 (revisor independente)
+
+Feita por um revisor que não participou da construção e recebeu só as 108 prints, a direção e a
+lista "não fazer". Veredito: **3 graves, 13 médios, 16 leves**, com defeito de direção (itens 17 e 9).
+
+| Gravidade | Achado | Correção |
+|---|---|---|
+| grave | "Marcar evento", "Encerrar", descarte e motivos do evento com cerca de 44 px no celular | causa: o botão base tem `max-md:min-h-11`, que vencia o `min-h-14`; tamanho de botão `toque` (56 px em qualquer tela) em todos os controles da coleta |
+| grave | Cartão "O que fazer agora" atrás da barra fixa durante a gravação | no celular, o cartão vem logo abaixo da faixa GRAVANDO; a barra fixa ficou só com Marcar evento e Encerrar |
+| grave | Tacômetro do replay em matriz de pontos | no replay o número sai em Plex Mono (a matriz é só da rotação ao vivo da L2) |
+| médio | Cronômetro com o "0" mais alto que ":11" | algarismos e separador numa linha só; o ":" de verdade fica no texto, invisível (o teste de 10 minutos tinha acusado "1014") |
+| médio | Marcha mais próxima em ciano no tacômetro | texto forte (traço maior e negrito), sem a cor de sinal |
+| médio | Matriz de cobertura cortada no celular, sem aviso | células de 56 px cabem com 3 rotações; com mais, aparece "Deslize a matriz para o lado" |
+| médio | Faixas de ensaio vazias ou com "TORN…", bloco de riscos no celular | ensaios colados viram um grupo "N ensaios"; código só inteiro, quando cabe; legenda reescrita |
+| médio | Opção escolhida com o mesmo preenchimento da ação principal (grafite) | marcado = afundado (fundo rebaixado, borda forte, negrito) em todos os alternadores e nos chips do preparar |
+| médio | Resumo diz "célula destacada" e nada a distingue | contorno tracejado próprio na célula da gravação |
+| médio | "Segure para descartar" na zona do polegar | no celular, o descarte saiu da barra fixa para o fim da página |
+| médio | Aviso "Receita corrigida" transparente sobre a lista | efeito da captura (aviso fixo, a meio caminho de sumir, numa print de página inteira); a captura espera os avisos irem embora |
+| médio | Dados de teste no Diagnóstico ("Latão e2e…", "operador.e2e…") | aceito: é o que o banco local tem depois das suítes; a tela mostra o que a API devolve |
+| médio | Tacômetro velho parecido com o vivo (1920) | aceito: número e ponteiro estão no tom fraco, como todos os valores velhos da tela, e cada módulo diz "sem dados há X"; a impressão vem dos pontos da fonte de matriz |
+| médio | Replay parecido com a tela ao vivo | faixa REPLAY permanente com trama própria, "REPLAY" no lugar da idade na barra superior e o tacômetro agora em Plex Mono |
+| médio | Alarme não reconhecido com o símbolo apagado (galeria) | aceito: é o pisca lento do estado não reconhecido, capturado na fase apagada |
+| médio | Cabeçalho alto no celular (cerca de 175 px) | aceito: navegação, fonte Real/Simulado e faixa SIM são exigidas; o espaço da gravação foi recuperado tirando o descarte da barra fixa |
+| leve | Letras "T" amontoadas na faixa de ensaio do mapa | rótulo só quando cabe inteiro (código na dica) |
+| leve | Subtítulos de módulo cortados com reticências no celular | o detalhe desce para a própria linha e quebra |
+| leve | Mapa dizendo "Normal" com o dado velho | primeira linha: "Sem janela nova desde HH:MM: a leitura abaixo vale até lá" |
+| leve | Caixa de marcar da sessão com 18 px | linha de 56 px e caixa de 24 px |
+| leve | Descarte embaixo do histórico de correções | junto de "Corrigir receita" |
+| aceito | Balão sobre o texto; rótulos próximos no tacômetro; "sem dados há X" em cada módulo; login e tabelas com área livre em 1920; comando do `captura.py` à vista | decisões já registradas na Parte A ou pedidas (o comando de captura é exigido no fluxo de gravação) |
+
+#### Rodada B3 (outro revisor independente)
+
+Revisor novo, mesmas entradas, prints refeitas depois das correções da B2. Veredito: **1 grave, 10
+médios, 13 leves**; o teste final ("parece gerado automaticamente?") passou, sem cor fora de estado,
+sombra, gradiente ou rolagem lateral. O grave ainda era do item 17.
+
+| Gravidade | Achado | Correção |
+|---|---|---|
+| grave | Ao marcar evento no celular, os motivos ficavam abaixo da gravação e era preciso rolar: o cartão "o que fazer agora" e o cronômetro saíam da tela | no celular os motivos aparecem na própria barra de baixo, no lugar de Marcar evento e Encerrar |
+| médio | Célula com meta atingida preenchida como o botão "Preparar" | afundada, com borda forte e ✓; vazia em texto de apoio |
+| médio | Lista de sugestões da receita atrás da barra fixa no celular | o campo sobe ao receber foco |
+| médio | Balão "?" cobrindo o valor que explica | abre acima do termo |
+| médio | Replay no celular sem nada dizendo "reprodução" depois de rolar | faixa REPLAY presa no topo |
+| médio | Tacômetro velho com contraste parecido com o vivo (claro) | com dado velho o número sai em Plex Mono no tom fraco; a matriz de pontos ficou só para a rotação viva |
+| médio | Trecho sem dado no começo do mapa parecido com "pontilhado = abaixo" | contorno tracejado de lacuna, o símbolo da legenda |
+| médio | Usuários de teste desativados com o peso dos ativos, sem filtro | ocultos até "mostrar desativados", em tom de apoio |
+| médio | Texto de exemplo do campo de catálogo parecido com o valor digitado | aceito: tom de apoio (contraste AA) contra o texto forte do valor |
+| médio | Números da gravação "em Plex Sans" | falso positivo: os números usam a classe `valor` (Plex Mono, `tabular-nums`), a mesma da rotação da L1, cuja fonte calculada foi conferida no navegador na Parte A |
+| médio | "Corte com a receita indicada" com a receita em branco | aceito: texto do protocolo, fixo por pedido; a receita é opcional |
+| leve | Selo DESCARTADO riscado | sem risco; código do ensaio descartado em tom de apoio |
+| leve | Paleta sem como fechar no toque | botão "Fechar" no celular |
+| leve | Passos do preparar alinhados à direita no celular | linha própria, à esquerda |
+| leve | "Treinar" colado no fim da página | folga embaixo |
+| aceito | Rótulos próximos no tacômetro, rótulo do esquema sobre o carro, área livre em 1920, cabeçalho do celular, tamanhos das leituras da L2, pisca do alarme na galeria, barra fixa no meio de prints de página inteira (efeito da captura), dois-pontos do cronômetro com o recuo da fonte, sparklines no tom normal com dado velho (o valor e a marca dizem a idade) | decisões já registradas ou efeitos da captura |
+
+#### Rodada B4 (terceiro revisor independente)
+
+Veredito: **1 grave, 8 médios, 15 leves**. Sem cor de marca, gradiente, sombra, emoji, fonte proibida
+nem âmbar ou vermelho fora da galeria e do REC. O grave voltou a ser o item 17, agora causado pela
+correção da B3: o campo de catálogo subia para o topo e empurrava o cartão para fora da tela.
+
+| Gravidade | Achado | Correção |
+|---|---|---|
+| grave | Cartão "o que fazer agora" fora da vista na Receita do preparar (celular) | cartão preso no topo no celular, ao preparar e ao gravar; o campo sobe só até logo abaixo dele |
+| médio | "163 janelas normais no gráfico" contra "1–15 de 162 janelas (normais e rápidas)" | gráfico e tabela são consultados em momentos diferentes e, com dado chegando, se cruzavam: o número saiu da legenda do gráfico; a contagem do período fica na tabela |
+| médio | AO VIVO com lacuna onde a tabela tem janelas rápidas | causa: janelas recentes vinham de uma consulta e depois só dos eventos; um evento perdido virava lacuna. A cada 15 s as janelas do último minuto e meio são conferidas com a API e mescladas (a primeira versão substituía a lista e o teste do AO VIVO acusou janelas sumindo) |
+| médio | Replay com o mesmo peso da tela ao vivo | selo GRAVADO, na trama vertical do replay, em cada módulo, além da faixa presa no topo |
+| médio | Aviso de rolagem da matriz em um tema e não no outro | a medição acontecia antes de as fontes carregarem: a tabela também é observada |
+| médio | Última linha da tabela de qualidade cortada | tabela sem altura máxima (são 20 janelas) |
+| médio | "21" da Repetição parecido com valor preenchido | era o exemplo (a sugestão): agora "em branco = 21" e a linha de ajuda explica |
+| médio | Cancelar da folha de evento com 44 px, sem borda | 56 px, com borda |
+| médio | Células de atenção e alarme do mapa (galeria) só pela cor | triângulo (atenção) e losango (alarme) desenhados na célula, as mesmas formas do resto do painel; legenda com as formas |
+| leve | "1 janelas rápidas", "1 ativos" | concordância |
+| leve | Espaço largo em "Ponto   A" na paleta | corrigido |
+| leve | Números da L1 e da gravação "em Plex Sans" | falso positivo, conferido no navegador nesta rodada: fonte calculada `"IBM Plex Mono", monospace`, `tabular-nums` |
+| aceito | Rótulos próximos no tacômetro e no fim das linhas do replay, colunas que "andam" na lista de ensaios, coluna larga da matriz em 1920, balão sem seta, comando do `captura.py`, cabeçalho do celular, textos de legenda, pisca do alarme na galeria, ponteiro velho ("possível": já está no tom fraco) | decisões já registradas, conteúdo real ou efeito da captura |
+
+#### Rodada B5 (quarto revisor independente): sem defeito de direção
+
+Veredito: **0 graves, 2 médios, 14 leves**, e o revisor concluiu que não há defeito de direção; com
+isso a revisão parou. Nenhum âmbar ou vermelho de alarme fora da galeria e do REC, nenhum gradiente,
+sombra genérica, emoji ou fonte fora da família IBM Plex.
+
+| Gravidade | Achado | O que foi feito |
+|---|---|---|
+| médio | Texto de exemplo "em branco = 25" cortado no campo Repetição (1920) | o exemplo saiu; a linha de ajuda diz o que vale em branco |
+| médio (possível) | Valores do replay com o peso dos valores vivos | aceito: o valor gravado é o mesmo dado, no mesmo estado normal; o que o distingue é a faixa REPLAY (presa no topo no celular), o selo GRAVADO em cada módulo e "REPLAY" no lugar da idade na barra superior |
+| leve | Título da folha de evento fora da caixa-alta | rótulo em caixa-alta, como no desktop |
+| leve (possível) | "987.7 mi rpm" na galeria | falso positivo: `formatarNumero(987654321,123, 0)` escreve "987.654.321", ponto de milhar do pt-BR |
+| leve (possível) | Ação principal clara no tema grafite | intencional: no tema escuro, "grafite" é o tom mais claro da escala neutra; a ação principal é preenchida e nenhuma outra coisa usa esse preenchimento |
+| aceito | Coluna da matriz encostada na borda (com aviso de rolagem), Encerrar fora da tela com a folha de evento aberta (Cancelar volta), REC 10 px acima da barra, "sem dados há X" em cada módulo, título da L1 menor, área livre em 1920, rótulos do tacômetro, unidade "mm/volta", cabeçalho do celular, pisca do alarme e largura da ação recomendada na galeria | decisões já registradas, conteúdo real ou efeito da captura |
+
+Ferramentas na versão final: detector de antipadrões só com a hachura de simulado nas 10 telas (1920 e
+390); Vitest 132 testes; Playwright 38 cenários com axe em todas as telas nos dois temas; build de
+produção sem violação da política de segurança.
+
+### Evidências da Parte B
+
+As 24 prints finais (rodada B5), comprimidas (1.145 kB no total), estão em
+[`docs/evidencias/painel/`](evidencias/painel), com o relatório de testes e medidas em
+[`LEIA.md`](evidencias/painel/LEIA.md):
 
 | Arquivo | O que mostra |
 |---|---|
-| `login-grafite-1920.png` | login |
-| `l1-vivo-grafite-1920.png`, `l1-velho-claro-1920.png`, `l1-real-vazio-claro-390.png` | visão geral viva, velha e com a fonte Real vazia |
-| `l2-vivo-grafite-1920.png`, `l2-vivo-claro-1920.png`, `l2-velho-grafite-1920.png`, `l2-vivo-grafite-390.png`, `l2-real-vazio-claro-1920.png` | tela da máquina nos dois temas, velha, no celular e Real vazia |
-| `l3-vivo-grafite-1920.png`, `l3-vivo-claro-390.png`, `l3-velho-claro-1920.png` | tela do ponto |
-| `l3-aovivo-grafite-1920.png`, `l3-aovivo-claro-390.png` | modo AO VIVO |
-| `galeria-grafite-1920.png`, `galeria-claro-1920.png` | galeria de componentes (âmbar e vermelho ao lado da cor de sinal) |
+| `login-grafite-1920.png`, `paleta-grafite-1920.png` | login e paleta de comandos |
+| `l1-vivo-grafite-1920.png`, `l1-velho-claro-1920.png`, `l1-real-claro-390.png` | visão geral viva, velha e com a fonte Real vazia |
+| `l2-vivo-grafite-1920.png`, `l2-vivo-claro-1920.png`, `l2-velho-grafite-1920.png`, `l2-vivo-grafite-390.png` | tela da máquina com o mapa de ordens comparado ao típico |
+| `l3-vivo-grafite-1920.png`, `l3-aovivo-grafite-1920.png`, `l3-aovivo-claro-390.png` | tela do ponto e modo AO VIVO |
+| `coleta-entrada-grafite-390.png`, `coleta-preparar-claro-390.png`, `coleta-receita-grafite-390.png`, `coleta-checagem-grafite-390.png` | coleta no celular: sugestão e matriz, gravação, receita, checagem |
+| `coleta-gravando-grafite-390.png`, `coleta-evento-claro-390.png` | gravando (REC, cronômetro, fita, cartão) e marcando evento |
+| `coleta-resumo-grafite-1920.png`, `coleta-ensaios-claro-1920.png` | resumo da gravação e ensaios gravados |
+| `replay-grafite-1920.png` | replay de ensaio gravado |
+| `diagnostico-grafite-1920.png`, `alarmes-claro-1920.png` | diagnóstico e alarmes (estado vazio honesto) |
+| `galeria-mapa-grafite-1920.png` | casos do mapa de ordens (normal, troca de marcha, B fugindo, abaixo, lacuna, saturação, referência) |
 
-As outras prints (44 por rodada, nos dois temas, nas duas larguras e nos estados vivo, velho, simulado
-e Real vazio) ficam fora do Git, em `painel/prints/`.
+## Como gravar uma sessão de coleta (passo a passo)
+
+Para quem está em pé ao lado do torno, com o celular na mão. Só o técnico liga e opera o torno; a
+proteção da placa fica fechada.
+
+1. **Escolha a fonte.** No topo, **Real** grava medição do ESP32; **Simulado** grava o simulador (tudo
+   fica hachurado com o selo SIM e o ensaio nasce simulado). Para o artigo, só Real.
+2. **Abra a Coleta.** No topo aparece a **próxima gravação sugerida** (a célula que tem menos gravações
+   em relação à meta). Toque em **Preparar**, ou toque em qualquer célula da matriz para escolher outra.
+3. **Gravação (passo 1).** Confira a etapa (T0 desligado, T1 em vazio, T2 aproximação sem contato, T3
+   corte), a condição (só muda no T3) e a rotação. Para gravar T1, T2 e T3 seguidos na mesma rotação,
+   marque **Gravar a sequência nesta rotação** (e, se quiser, **começar pelo T0**).
+4. **Receita (passo 2, fora do T0).** Preencha só o que souber: material, ferramenta, avanço,
+   profundidade, diâmetro, fluido. O que ficar em branco não atrapalha. Ao digitar um nome, o painel
+   procura no catálogo e pergunta "é esse?" se houver um parecido; só cria um item novo depois da sua
+   confirmação. **Repetir a receita da última gravação** copia tudo de uma vez.
+5. **Checagem (passo 3).** Leia o cartão **O que fazer agora** e faça o que ele diz (no T1, ligue o
+   torno e espere a rotação estabilizar). A lista confere A, B e C chegando, a rotação perto do alvo,
+   saturação, amostras, ensaio aberto e a origem do dado. Só não deixa gravar sem dado chegando ou com
+   outro ensaio aberto; o resto só avisa o que fazer.
+6. **REC.** Toque no botão redondo. O ponto vermelho pulsa, o cronômetro conta e cada janela que
+   chega vira um traço na fita. Deixe pelo menos **60 s** (a marca discreta na fita); não para
+   sozinho. Se algo fora do plano acontecer (pancada na bancada, cavaco enroscado, máquina vizinha),
+   toque em **Marcar evento** na hora e escolha o motivo: vale o instante do toque.
+7. **Encerrar.** Um toque. O resumo mostra duração, janelas, saturadas, eventos, rotação média e a
+   receita; a célula da matriz carimba. Na sessão, o botão grande já é a próxima etapa ("Preparar T2 a
+   450 rpm"): repita os passos 5 a 7. Para jogar fora uma gravação ruim, **segure** o botão de
+   descartar (é marcada, não apagada).
+8. **Depois.** Em **Ensaios gravados** dá para corrigir a receita (cada mudança fica no histórico),
+   rever no **Replay** e **Exportar CSV** para o treino. Recarregar a página no meio de uma gravação
+   não perde nada: a tela volta gravando, e a sessão fica guardada no navegador.
 
 ## Contrato esperado para alarmes, OS e referência
 
@@ -514,46 +728,55 @@ com alarmes por hora (média e pico; a ISA-18.2 recomenda poucos por hora por op
 repetitivos (o mesmo ponto e métrica disparando várias vezes no período), para ajustar atraso e
 histerese.
 
-## Parte B: ponto de partida
+## Publicação
 
-O que a Parte B (coleta de ensaios, replay, diagnóstico e alarmes) já encontra pronto, e o que falta.
+O painel é publicado no Render como site estático (`predictspin-painel` no [`render.yaml`](../render.yaml));
+o passo a passo está em [`deploy-render.md`](deploy-render.md#publicar-o-painel-web). **Nada foi
+publicado nesta parte**: todo o trabalho rodou no compose local.
 
-**Rotas e telas.**
+- **Build:** `cd painel && npm ci && npm run build` (tipos e Vite), pasta publicada `painel/dist`.
+  Só reconstrói quando algo em `painel/**` muda (`buildFilter`).
+- **Rotas:** `rewrite /* → /index.html`; o roteador resolve a rota no navegador.
+- **Cabeçalhos** (render.yaml): `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`,
+  `X-Frame-Options: DENY`; `Cache-Control: public, max-age=31536000, immutable` em `/assets/*`
+  (nome com hash) e `no-cache` no `index.html`.
+- **Content-Security-Policy:** escrita numa `<meta>` pelo build (`vite.config.ts`), porque precisa
+  da origem de `VITE_API_URL` e o Blueprint não monta cabeçalho a partir de variável:
+  `default-src 'self'; script-src 'self' 'sha256-…'` (o script do tema, pelo hash, sem
+  `'unsafe-inline'`); `style-src 'self' 'unsafe-inline'` (posições e tamanhos calculados em `style`);
+  `font-src 'self' data:` (as faces pequenas vêm embutidas no CSS); `img-src 'self' data: blob:`;
+  `connect-src 'self' <origem da API>`; `object-src 'none'; base-uri 'self'; form-action 'self'`.
+  `frame-ancestors` não vale em `<meta>`; o `X-Frame-Options: DENY` cobre. O Zod roda sem `eval`
+  (`lib/zod-sem-eval.ts`). Um teste (`scripts/galeria-fora-do-build.test.mjs`) confere a política no
+  `index.html` gerado, e `scripts/medir-producao.mjs` percorre as telas do build e conta as violações.
+- **CI:** o job `painel` do GitHub Actions roda `npm ci`, lint, tipos, Vitest e build. Os testes de
+  ponta a ponta precisam do compose (API, banco, simulador) e rodam localmente.
+- **Windows:** o `vite.config.ts` fixa a raiz com a letra da unidade maiúscula; com o terminal aberto em
+  `c:\` o empacotador via o mesmo arquivo com dois nomes e o React saía duplicado no build (a página
+  quebrava com "Cannot read properties of null (reading 'useContext')"). No Linux do Render e da CI
+  isso não acontece.
 
-- `/coleta` existe e é protegida por papel (`ExigePapel area="coleta"`, só ADMIN e TECNICO); hoje
-  diz que a tela ainda não foi construída ([`telas/coleta/TelaColeta.tsx`](../painel/src/telas/coleta/TelaColeta.tsx)).
-- O mapa de papéis está em [`dominio/papeis.ts`](../painel/src/dominio/papeis.ts) e espelha a API
-  (`coleta` e `ensaios` só ADMIN e TECNICO).
+## Estado final e limitações
 
-**API já disponível** (todas no cliente gerado):
+**Pronto:** leitura (L1, L2, L3, AO VIVO), coleta completa pelo celular, replay, diagnóstico, catálogos,
+usuários, alarmes e OS com estado vazio honesto, paleta de comandos, explicações "?", publicação
+descrita e verificada no build local.
 
-| Para | Rotas |
-|---|---|
-| Coleta | `POST /maquinas/{id}/ensaios` (abrir), `POST /ensaios/{id}/encerrar`, `POST /ensaios/{id}/descartar`, `PUT /maquinas/{id}/coleta/plano`, `GET /maquinas/{id}/coleta/cobertura` |
-| Replay | `GET /ensaios/{id}`, `GET /ensaios/{id}/janelas` (em ordem crescente, paginadas), `GET /ensaios/{id}/resumo` |
-| Ao vivo durante a coleta | eventos `ensaio` no SSE (só ADMIN e TECNICO) e modo rápido |
-| Exportação | `GET /ensaios/exportar.csv` (treino e validação separados) |
+**Não testado (e por quê):**
 
-**Componentes prontos.**
+- Nada rodou em produção: nenhuma chamada foi feita à API publicada.
+- Nenhum ESP32 real: toda medição veio do simulador, marcada como simulada. A fonte **Real** só foi
+  vista vazia.
+- Nenhum celular real: o fluxo do celular foi testado no Chromium do Playwright com tela de 390×844 e
+  toque emulado. A trava de tela acesa durante a gravação (Wake Lock) não foi verificada num aparelho;
+  onde o navegador não a oferece, a tela segue sem ela.
+- O cenário T3 `avanco_excessivo` do simulador sobe mais o ponto C que o B (a leitura do mapa diz o
+  que vê: o ponto C sobe mais); não é medição.
 
-- `SegurarParaConfirmar`: ação destrutiva sem modal (segurar 1,5 s; funciona pelo teclado). Feito
-  para "descartar ensaio".
-- `GraficoTendencia` já desenha faixas de ensaio (código do ensaio no topo) e referência (faixa normal
-  e linhas de atenção e alarme); `consultaEnsaios` já existe e a L3 mostra as faixas para ADMIN e
-  TECNICO.
-- `ReguaDesvio`, `SeloAvaliacao` (NORMAL, ATENÇÃO, ALARME, SEM REFERÊNCIA), `MarcadorPonto` com forma
-  por estado e `MapaOrdens` com cor de desvio: todos aceitam referência e estão na galeria nos dois
-  temas, com âmbar e vermelho ao lado da cor de sinal.
-- Fonte de matriz de pontos reservada ao cronômetro de gravação (item 9 da direção).
-- `LeitorSse` e `useMaquinaAoVivo` já tratam reconexão, volta à consulta e o evento `ensaio`.
+**Pendências para os próximos prompts:**
 
-**Pendências.**
-
-- A API não tem referência aprendida nem regra de alarme: `Alerta` e `OrdemServico` existem no banco,
-  mas sem rota. Até lá, as telas mostram "SEM REFERÊNCIA" e nenhuma cor de estado.
-- Replay: falta a tela que percorre `GET /ensaios/{id}/janelas` (o gráfico e a tabela da L3 servem
-  de base).
-- Diagnóstico (acionamento × processo) depende da classificação, que ainda não começou.
-- Comparar pontos num mesmo gráfico: quando existir, aplicar o item 4 da direção (tons e estilos de
-  linha por ponto, com a letra no fim da linha).
-- Publicação do painel (site estático) e `CORS_ORIGENS` da API publicada com o domínio dele.
+- Regra de alarme e referência aprendida na API (contrato proposto acima). Até lá, sem cor de estado
+  e "SEM REFERÊNCIA".
+- Treinar modelo: o botão existe na Coleta, desabilitado, com o motivo.
+- Diagnóstico de acionamento × processo depende da classificação, que ainda não começou.
+- Comparar pontos num mesmo gráfico (item 4 da direção: tons e estilos de linha por ponto).
