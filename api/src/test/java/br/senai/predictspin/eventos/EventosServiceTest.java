@@ -286,6 +286,58 @@ class EventosServiceTest {
         esperar(() -> rapido.enviados.stream().filter(e -> e.contains("\"ativo\":true")).count() == 8);
     }
 
+    /**
+     * Quantas mensagens um assinante pode receber de uma vez? Por janela recebida, uma ("janela", que já
+     * leva todos os pontos e canais); alarme não existe como evento. O que acompanha a janela são mudanças
+     * de estado: ensaio aberto/encerrado/descartado, evento marcado e modo rápido, mais a mensagem inicial
+     * da conexão. No mesmo instante dá no máximo 5. Um reenvio de janelas acumuladas pelo dispositivo (o
+     * simulador em roteiro faz isso) publica uma mensagem por janela em seguida. Por isso a fila de produção
+     * é de 64 (application.yml), mais de 12 vezes o pico de coincidência; a de 2 só existe nos testes que
+     * querem o descarte rápido.
+     */
+    @Test
+    void clienteComAtrasoCurtoNumPicoRealNaoEhDescartadoMasOParadoE() throws InterruptedException {
+        parar();
+        emissores.clear();
+        iniciar(new PropriedadesEventos(4, 20, Duration.ofSeconds(30), 64, Duration.ofMinutes(30)));
+        when(janelas.buscar(anyLong())).thenAnswer(i -> Optional.of(janela(i.getArgument(0), false)));
+        EmissorDeTeste atrasado = (EmissorDeTeste) servico.assinar(MAQUINA, 10, true, null, DESLIGADO);
+        atrasado.travado = true;
+        EmissorDeTeste parado = (EmissorDeTeste) servico.assinar(MAQUINA, 11, true, null, DESLIGADO);
+        parado.travado = true;
+        esperar(() -> servico.conexoes() == 2);
+
+        // pico real: os quatro tipos juntos, e mais um reenvio de 8 janelas acumuladas
+        servico.publicarEnsaio(MAQUINA, new EnsaioEvento(EnsaioAlterado.Acao.ABERTO, ensaio(false)));
+        servico.publicarEventoMarcado(MAQUINA, false, new br.senai.predictspin.telemetria.dto.EventoMarcadoResposta(
+                3L, 5L, "TORNO-01-T1-00005", Instant.parse("2026-11-12T12:00:07Z"),
+                br.senai.predictspin.telemetria.MotivoEvento.PANCADA, null, 10L,
+                Instant.parse("2026-11-12T12:00:09Z")));
+        servico.publicarModoRapido(new ModoRapidoResposta(MAQUINA, true, Instant.parse("2026-11-12T12:02:00Z")));
+        for (long id = 1; id <= 8; id++) {
+            servico.publicarJanela(MAQUINA, id);
+        }
+        // o atrasado volta depois de um instante (rede lenta) e recebe tudo, sem ter sido descartado
+        Thread.sleep(300);
+        atrasado.trava.countDown();
+        esperar(() -> atrasado.enviados.size() == 12);
+        assertThat(servico.conexoes()).isEqualTo(2);
+        assertThat(atrasado.completo).isFalse();
+        assertThat(parado.completo).isFalse();
+
+        // o parado continua sem ler: ao estourar a fila de 64 ele é descartado; o atrasado, que agora lê,
+        // continua (cada publicação espera o atrasado receber a anterior)
+        for (long id = 9; id <= 90; id++) {
+            long esperadas = id;
+            servico.publicarJanela(MAQUINA, id);
+            esperar(() -> atrasado.enviados.stream().filter(e -> e.contains("event:janela")).count() == esperadas
+                    || parado.completo);
+        }
+        esperar(() -> servico.conexoes() == 1);
+        assertThat(parado.completo).isTrue();
+        assertThat(atrasado.completo).isFalse();
+    }
+
     @Test
     void aoPararFechaOsFluxosERecusaNovos() {
         EmissorDeTeste emissor = assinar(10, false, null);
