@@ -4,6 +4,8 @@ import org.springframework.lang.Nullable;
 import java.time.Instant;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import br.senai.predictspin.telemetria.ModoJanela;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -30,7 +32,10 @@ public record UltimaJanelaResposta(
 
     @Schema(name = "JanelaPonto", description = "Características de vibração de um ponto na janela")
     public record Ponto(Long pontoId, String papel, String descricao, double rmsG, double picoG, double curtose,
-                        double o1x, double o2x, double o3x) {
+                        double o1x, double o2x, double o3x,
+                        @Schema(description = "Velocidade RMS em mm/s; só aparece quando o dispositivo mandou",
+                                requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+                        @JsonInclude(JsonInclude.Include.NON_NULL) Double velRmsMmS) {
     }
 
     @Schema(name = "JanelaCanal", description = "Leitura de um canal auxiliar na janela")

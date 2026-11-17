@@ -262,6 +262,8 @@ faixa refletiva da flange passa. A rotação vem do período entre bordas
 | HTTPS | `WiFiClientSecure` com o pacote de certificados raiz (`data/cert/x509_crt_bundle.bin`), **com verificação**. Conexão reaproveitada (`setReuse`) |
 | Cabeçalhos | `X-Dispositivo-Id` e `X-Dispositivo-Chave` de `segredos.h` |
 | Campos novos | `modo`, `amostras` e `amostras_esperadas` em toda janela; `vel_rms_mm_s` por ponto quando calculada |
+| Rastreabilidade | em toda janela: `firmware_versao`, `calibracao` (identificador da calibração de cada ponto presente, gravado na janela no momento da medida: uma janela que esperou na fila sai com a calibração com que foi medida, mesmo que o sensor tenha sido recalibrado depois) e `eixos` (de `EIXO_PONTO`) |
+| Versão | `FIRMWARE_DATA` em `Config.h` mais o hash curto do commit, injetado no build por [`ferramentas/versao_git.py`](../firmware/ferramentas/versao_git.py) (`2026-11-17+76951bf`; `-mod` quando há mudança não versionada em `firmware/`; sem git, só a data). Aparece também na primeira linha da serial |
 
 **Pacote de certificados.** O Arduino-ESP32 2.0.17 traz o verificador (`setCACertBundle`), mas
 não o pacote. O arquivo foi gerado pelo

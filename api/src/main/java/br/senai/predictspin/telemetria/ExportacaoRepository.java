@@ -39,6 +39,9 @@ public class ExportacaoRepository {
                        j.modo, j.amostras, j.amostras_esperadas,
                        p.codigo AS ponto, p.papel, t.rms_g, t.pico_g, t.curtose, t.ordem_1x, t.ordem_2x, t.ordem_3x,
                        f.nome AS ferramenta, e.profundidade_corte_mm, e.diametro_peca_mm, e.fluido_corte,
+                       t.vel_rms_mm_s, j.firmware_versao,
+                       CAST(j.calibracao AS json) ->> p.codigo AS calibracao_ponto,
+                       CAST(j.eixos AS json) ->> p.codigo AS eixo_ponto,
                        EXISTS (SELECT 1 FROM ensaio_evento ev
                                WHERE ev.ensaio_id = e.id
                                  AND ev.ocorrido_em >= jm.inicio_anterior

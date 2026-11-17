@@ -46,6 +46,9 @@ public class Telemetria {
     @Column(name = "ordem_3x")
     private double ordem3x;
 
+    @Column(name = "vel_rms_mm_s")
+    private Double velRmsMmS;
+
     protected Telemetria() {
     }
 
@@ -83,5 +86,10 @@ public class Telemetria {
 
     public double getOrdem3x() {
         return ordem3x;
+    }
+
+    /** Velocidade RMS em mm/s; nulo se o dispositivo não mandou. */
+    public Double getVelRmsMmS() {
+        return velRmsMmS;
     }
 }

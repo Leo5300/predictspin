@@ -33,6 +33,9 @@ import br.senai.predictspin.maquina.CanalRepository;
  * ({@code ferramenta}, {@code profundidade_corte_mm}, {@code diametro_peca_mm}, {@code fluido_corte}; o
  * material e o avanço já existiam) e {@code evento_marcado}: {@code true} na janela cujo intervalo
  * contém um evento marcado e na janela seguinte.
+ * <p>
+ * Acrescentadas no FIM pela V6, depois das da V5: {@code vel_rms_mm_s} (vazia quando o dispositivo não
+ * mandou), {@code firmware_versao} e, do ponto da linha, {@code calibracao} (identificador) e {@code eixo}.
  */
 @Service
 public class ExportacaoService {
@@ -44,7 +47,7 @@ public class ExportacaoService {
 
     /** Colunas do fim do arquivo, depois das de canal (acrescentadas sem mudar as anteriores). */
     static final List<String> COLUNAS_DO_FIM = List.of("ferramenta", "profundidade_corte_mm", "diametro_peca_mm",
-            "fluido_corte", "evento_marcado");
+            "fluido_corte", "evento_marcado", "vel_rms_mm_s", "firmware_versao", "calibracao", "eixo");
 
     /** Abaixo desta fração das amostras esperadas, a janela é marcada e fica fora do treino. */
     static final double FRACAO_MINIMA_AMOSTRAS = 0.98;
@@ -120,6 +123,10 @@ public class ExportacaoService {
         v.add(decimal(rs.getBigDecimal("diametro_peca_mm")));
         v.add(nulo(rs.getString("fluido_corte")));
         v.add(String.valueOf(rs.getBoolean("evento_marcado")));
+        v.add(numero(rs, "vel_rms_mm_s"));
+        v.add(texto(rs.getString("firmware_versao")));
+        v.add(texto(rs.getString("calibracao_ponto")));
+        v.add(nulo(rs.getString("eixo_ponto")));
         return String.join(",", v);
     }
 

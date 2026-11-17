@@ -119,6 +119,43 @@ void test_json_leva_a_velocidade_so_quando_calculada() {
   TEST_ASSERT_NULL(strstr(buf, "nan"));
 }
 
+void test_json_com_rastreabilidade_so_dos_pontos_presentes() {
+  char buf[900];
+  DadosJanela j = janelaSoComA();
+  j.marcarPresente(2);
+  j.pontos[2] = {0.2f, 0.6f, 2.9f, 0.05f, 0.02f, 0.0f, 0.75f, 0};
+  // B não está presente: mesmo com identificador e eixo, fica fora dos objetos
+  Rastreio r = {"2026-11-17+76951bf", {"A-20261117T143200Z", "nominal", "nominal"}, {'z', 'z', 'x'}};
+  size_t n = montarJson(j, "ps-torno-01", &r, buf, sizeof(buf));
+  TEST_ASSERT_EQUAL_size_t(strlen(buf), n);
+  TEST_ASSERT_EQUAL_STRING(
+      "{\"dispositivo\":\"ps-torno-01\",\"medido_em\":\"2026-11-11T12:00:00.000000Z\",\"rotacao_rpm\":812.4,"
+      "\"saturou\":false,\"modo\":\"normal\",\"amostras\":7990,\"amostras_esperadas\":8000,"
+      "\"firmware_versao\":\"2026-11-17+76951bf\",\"calibracao\":{\"A\":\"A-20261117T143200Z\",\"C\":\"nominal\"},"
+      "\"eixos\":{\"A\":\"z\",\"C\":\"x\"},\"pontos\":{"
+      "\"A\":{\"rms_g\":0.03100,\"pico_g\":0.11200,\"curtose\":3.2000,\"o1x\":0.01200,\"o2x\":0.00400,"
+      "\"o3x\":0.00200},"
+      "\"C\":{\"rms_g\":0.20000,\"pico_g\":0.60000,\"curtose\":2.9000,\"o1x\":0.05000,\"o2x\":0.02000,"
+      "\"o3x\":0.00000,\"vel_rms_mm_s\":0.7500}}}",
+      buf);
+}
+
+void test_json_rastreabilidade_parcial_e_sem_espaco() {
+  char buf[900];
+  DadosJanela j = janelaSoComA();
+  Rastreio soVersao = {"simulado", {nullptr, nullptr, nullptr}, {0, 0, 0}};
+  montarJson(j, "ps-torno-01", &soVersao, buf, sizeof(buf));
+  TEST_ASSERT_NOT_NULL(strstr(buf, "\"amostras_esperadas\":8000,\"firmware_versao\":\"simulado\",\"pontos\":{"));
+  TEST_ASSERT_NULL(strstr(buf, "calibracao"));
+  TEST_ASSERT_NULL(strstr(buf, "eixos"));
+  Rastreio completo = {"2026-11-17+76951bf", {"A-20261117T143200Z", nullptr, nullptr}, {'z', 0, 0}};
+  // não cabe no meio dos objetos: devolve 0 em vez de JSON cortado
+  for (size_t t = 150; t < 260; t += 7) TEST_ASSERT_EQUAL_size_t(0, montarJson(j, "ps-torno-01", &completo, buf, t));
+  TEST_ASSERT_EQUAL_CHAR('x', letraEixo(0));
+  TEST_ASSERT_EQUAL_CHAR('y', letraEixo(1));
+  TEST_ASSERT_EQUAL_CHAR('z', letraEixo(2));
+}
+
 void test_presenca_dos_pontos_em_bits() {
   DadosJanela j;
   memset(&j, 0, sizeof(j));
@@ -243,6 +280,8 @@ int main(int, char**) {
   RUN_TEST(test_json_so_com_o_ponto_a);
   RUN_TEST(test_json_com_tres_pontos_modo_rapido_e_saturacao);
   RUN_TEST(test_json_leva_a_velocidade_so_quando_calculada);
+  RUN_TEST(test_json_com_rastreabilidade_so_dos_pontos_presentes);
+  RUN_TEST(test_json_rastreabilidade_parcial_e_sem_espaco);
   RUN_TEST(test_presenca_dos_pontos_em_bits);
   RUN_TEST(test_json_sem_espaco_devolve_zero);
   RUN_TEST(test_json_troca_nan_por_zero);

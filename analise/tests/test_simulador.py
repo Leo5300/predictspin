@@ -10,7 +10,7 @@ import pytest
 import simulador as sim
 
 INICIO = datetime(2026, 11, 10, 12, 0, 0, tzinfo=timezone.utc)
-CAMPOS_PONTO = {"rms_g", "pico_g", "curtose", "o1x", "o2x", "o3x"}
+CAMPOS_PONTO = {"rms_g", "pico_g", "curtose", "o1x", "o2x", "o3x", "vel_rms_mm_s"}
 
 
 def gerar(semente=1, **kwargs):
@@ -30,7 +30,7 @@ def media_de(campo, ponto, rotacao=1200, n=200, **kwargs):
 def test_payload_segue_o_contrato_da_api():
     p = gerar()
     assert set(p) == {"dispositivo", "medido_em", "rotacao_rpm", "saturou", "pontos", "canais", "modo", "amostras",
-                      "amostras_esperadas"}
+                      "amostras_esperadas", "firmware_versao", "calibracao", "eixos"}
     assert p["dispositivo"] == "ps-sim-01"
     assert p["medido_em"] == "2026-11-10T12:00:00Z"
     assert isinstance(p["saturou"], bool)
@@ -55,9 +55,45 @@ def test_valores_ficam_dentro_dos_limites_que_a_api_valida(etapa, condicao, modo
                 assert 0 <= medida["rms_g"] <= medida["pico_g"] <= sim.FUNDO_ESCALA_G
                 assert min(medida["o1x"], medida["o2x"], medida["o3x"]) >= 0
                 assert 1.0 < medida["curtose"] < 1_000_000
+                assert medida["vel_rms_mm_s"] >= 0
             assert 0 <= p["canais"]["amb_umid_pct"] <= 100
             assert p["canais"]["corrente_a"] >= 0
             assert p["saturou"] == any(m["pico_g"] >= sim.FUNDO_ESCALA_G for m in p["pontos"].values())
+
+
+def test_rastreabilidade_do_simulador_e_fixa_e_declarada():
+    p = gerar()
+    assert p["firmware_versao"] == "simulado"
+    assert p["calibracao"] == {"A": "simulada", "B": "simulada", "C": "simulada"}
+    assert p["eixos"] == {"A": "z", "B": "z", "C": "z"}
+    # cabe nas regras da API: até 40 caracteres e só letras, números e . _ : + -
+    assert all(re.fullmatch(r"[A-Za-z0-9._:+-]{1,40}", v) for v in p["calibracao"].values())
+
+
+def test_velocidade_estimada_pela_formula_das_ordens():
+    # 1 g de pico só na 1X a 6000 rpm (100 Hz): a / (w raiz(2)) = 11,04 mm/s
+    assert sim.velocidade_estimada_mm_s(1.0, 0.0, 0.0, 6000) == pytest.approx(11.036, abs=1e-3)
+    # 2X e 3X entram na frequência delas: 1 g na 2X a 3000 rpm também é 100 Hz
+    assert sim.velocidade_estimada_mm_s(0.0, 1.0, 0.0, 3000) == pytest.approx(11.036, abs=1e-3)
+    # soma quadrática das três ordens
+    v1 = sim.velocidade_estimada_mm_s(0.02, 0.0, 0.0, 1200)
+    v2 = sim.velocidade_estimada_mm_s(0.0, 0.01, 0.0, 1200)
+    v3 = sim.velocidade_estimada_mm_s(0.0, 0.0, 0.005, 1200)
+    assert sim.velocidade_estimada_mm_s(0.02, 0.01, 0.005, 1200) == pytest.approx((v1 ** 2 + v2 ** 2 + v3 ** 2) ** 0.5)
+    # sem rotação não há ordem nem velocidade estimada
+    assert sim.velocidade_estimada_mm_s(0.1, 0.1, 0.1, 0) == 0.0
+
+
+def test_velocidade_do_payload_sai_das_ordens_do_proprio_ponto():
+    p = gerar()
+    for medida in p["pontos"].values():
+        esperado = sim.velocidade_estimada_mm_s(medida["o1x"], medida["o2x"], medida["o3x"], p["rotacao_rpm"])
+        assert medida["vel_rms_mm_s"] == pytest.approx(esperado, abs=1e-4)
+
+
+def test_maquina_desligada_tem_velocidade_estimada_zero():
+    p = sim.gerar_payload("ps-sim-01", INICIO, 1200, etapa="T0", rng=random.Random(1))
+    assert all(m["vel_rms_mm_s"] == 0.0 for m in p["pontos"].values())
 
 
 def test_canais_sao_opcionais():

@@ -36,14 +36,16 @@ public class SerieRepository {
                 SELECT jb.balde, pm.codigo,
                        avg(t.rms_g) AS rms_media, max(t.rms_g) AS rms_max, max(t.pico_g) AS pico_max,
                        avg(t.curtose) AS curtose_media,
-                       avg(t.ordem_1x) AS o1x_media, avg(t.ordem_2x) AS o2x_media, avg(t.ordem_3x) AS o3x_media
+                       avg(t.ordem_1x) AS o1x_media, avg(t.ordem_2x) AS o2x_media, avg(t.ordem_3x) AS o3x_media,
+                       avg(t.vel_rms_mm_s) AS vel_media, max(t.vel_rms_mm_s) AS vel_max
                 FROM jb
                 JOIN telemetria t ON t.janela_id = jb.id
                 JOIN ponto_medicao pm ON pm.id = t.ponto_medicao_id
                 GROUP BY jb.balde, pm.codigo
             )
             SELECT b.balde, b.janelas, b.rotacao_media, b.saturou, p.codigo,
-                   p.rms_media, p.rms_max, p.pico_max, p.curtose_media, p.o1x_media, p.o2x_media, p.o3x_media
+                   p.rms_media, p.rms_max, p.pico_max, p.curtose_media, p.o1x_media, p.o2x_media, p.o3x_media,
+                   p.vel_media, p.vel_max
             FROM b
             LEFT JOIN p ON p.balde = b.balde
             ORDER BY b.balde, p.codigo
@@ -69,11 +71,20 @@ public class SerieRepository {
                 rs.getInt("balde"), rs.getLong("janelas"), rs.getDouble("rotacao_media"), rs.getBoolean("saturou"),
                 rs.getString("codigo"), rs.getDouble("rms_media"), rs.getDouble("rms_max"), rs.getDouble("pico_max"),
                 rs.getDouble("curtose_media"), rs.getDouble("o1x_media"), rs.getDouble("o2x_media"),
-                rs.getDouble("o3x_media")));
+                rs.getDouble("o3x_media"), rs.getObject("vel_media", Double.class),
+                rs.getObject("vel_max", Double.class)));
     }
 
+    /** Uma linha agregada; a velocidade é nula quando nenhuma janela do intervalo a trouxe. */
     public record Linha(int balde, long janelas, double rotacaoMedia, boolean saturou, String ponto,
                         double rmsMedia, double rmsMax, double picoMax, double curtoseMedia,
-                        double o1xMedia, double o2xMedia, double o3xMedia) {
+                        double o1xMedia, double o2xMedia, double o3xMedia, Double velMedia, Double velMax) {
+
+        public Linha(int balde, long janelas, double rotacaoMedia, boolean saturou, String ponto, double rmsMedia,
+                     double rmsMax, double picoMax, double curtoseMedia, double o1xMedia, double o2xMedia,
+                     double o3xMedia) {
+            this(balde, janelas, rotacaoMedia, saturou, ponto, rmsMedia, rmsMax, picoMax, curtoseMedia, o1xMedia,
+                    o2xMedia, o3xMedia, null, null);
+        }
     }
 }

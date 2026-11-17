@@ -665,6 +665,11 @@
           "rms_g": {
             "format": "double",
             "type": "number"
+          },
+          "vel_rms_mm_s": {
+            "description": "Velocidade RMS em mm/s; só aparece quando o dispositivo mandou",
+            "format": "double",
+            "type": "number"
           }
         },
         "required": [
@@ -953,6 +958,14 @@
             "example": 0.12,
             "format": "double",
             "maximum": 1000,
+            "minimum": 0,
+            "type": "number"
+          },
+          "vel_rms_mm_s": {
+            "description": "Opcional. Velocidade RMS em mm/s (no firmware, banda de 10 Hz a ~800 Hz)",
+            "example": 1.85,
+            "format": "double",
+            "maximum": 100000,
             "minimum": 0,
             "type": "number"
           }
@@ -1853,6 +1866,16 @@
           "rms_media_g": {
             "format": "double",
             "type": "number"
+          },
+          "vel_rms_max_mm_s": {
+            "description": "Maior velocidade RMS (mm/s) no intervalo; só aparece se alguma janela trouxe",
+            "format": "double",
+            "type": "number"
+          },
+          "vel_rms_media_mm_s": {
+            "description": "Média da velocidade RMS (mm/s) das janelas que a trouxeram; só aparece se alguma trouxe",
+            "format": "double",
+            "type": "number"
           }
         },
         "required": [
@@ -1936,6 +1959,11 @@
           },
           "simulado": {
             "type": "boolean"
+          },
+          "vel_rms_mm_s": {
+            "description": "Velocidade RMS em mm/s; só aparece quando o dispositivo mandou",
+            "format": "double",
+            "type": "number"
           }
         },
         "required": [
@@ -1973,6 +2001,14 @@
             "minimum": 0,
             "type": "integer"
           },
+          "calibracao": {
+            "additionalProperties": {
+              "description": "Opcional. Identificador da calibração usada em cada ponto, pelo código do ponto (\"nominal\" quando o sensor não foi calibrado)",
+              "type": "string"
+            },
+            "description": "Opcional. Identificador da calibração usada em cada ponto, pelo código do ponto (\"nominal\" quando o sensor não foi calibrado)",
+            "type": "object"
+          },
           "canais": {
             "additionalProperties": {
               "description": "Opcional. Valor de cada canal auxiliar, pelo código do canal; cada chave é opcional",
@@ -1986,6 +2022,26 @@
             "example": "ps-torno-01",
             "maxLength": 60,
             "minLength": 0,
+            "type": "string"
+          },
+          "eixos": {
+            "additionalProperties": {
+              "description": "Opcional. Eixo do acelerômetro analisado em cada ponto, pelo código do ponto",
+              "enum": [
+                "x",
+                "y",
+                "z"
+              ],
+              "type": "string"
+            },
+            "description": "Opcional. Eixo do acelerômetro analisado em cada ponto, pelo código do ponto",
+            "type": "object"
+          },
+          "firmware_versao": {
+            "description": "Opcional. Versão do firmware que mediu a janela (\"simulado\" no simulador)",
+            "example": "2026-11-17+76951bf",
+            "maxLength": 40,
+            "minLength": 1,
             "type": "string"
           },
           "medido_em": {

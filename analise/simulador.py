@@ -11,6 +11,10 @@ Uso contínuo (uma janela a cada N segundos, até Ctrl+C):
 Como o firmware, obedece ao modo rápido: se a resposta da API trouxer "modo_rapido_ate" no futuro,
 passa a janelas de 1 s com "modo": "rapido" até esse instante e volta sozinho ao intervalo normal.
 Toda janela leva "modo", "amostras" e "amostras_esperadas" (1600 amostras/s x duração da janela).
+Como o firmware de 17/11/2026, toda janela leva também a rastreabilidade: "firmware_versao" =
+"simulado", "calibracao" = "simulada" e "eixos" = "z" em cada ponto, e cada ponto leva
+"vel_rms_mm_s". A velocidade do simulador é uma ESTIMATIVA a partir das ordens 1X, 2X e 3X (ver
+velocidade_estimada_mm_s), não uma medição nem a conta do firmware.
 
 Uso roteiro (abre um ensaio para cada combinação de etapa, condição e rotação, envia M janelas
 com medido_em espaçado de 5 s, encerra e passa ao próximo):
@@ -55,6 +59,10 @@ CANAIS = ("temp_cabecote_c", "temp_ferramenta_c", "amb_temp_c", "amb_umid_pct", 
 INTERVALO_JANELAS_S = 5
 JANELA_RAPIDA_S = 1
 TAXA_AMOSTRAS_HZ = 1600  # ADXL345 a 1600 Hz, como o firmware
+MM_S2_POR_G = 9806.65
+FIRMWARE_SIMULADO = "simulado"
+CALIBRACAO_SIMULADA = "simulada"
+EIXO_SIMULADO = "z"
 FUNDO_ESCALA_G = 16.0  # ADXL345 em +/-16 g
 RUIDO_FUNDO_G = 0.004
 
@@ -143,6 +151,23 @@ def _medida(rng, o1x, o2x, o3x, banda, curtose_extra):
     }
 
 
+def velocidade_estimada_mm_s(o1x, o2x, o3x, rotacao_rpm):
+    """Velocidade RMS (mm/s) ESTIMADA a partir das amplitudes de pico das ordens (em g).
+
+    v_rms = raiz da soma, para k = 1, 2, 3, de (a_k / raiz(2) x 9806,65 / (2 pi k f))^2, com
+    f = rpm / 60. Só as ordens entram: o ruído de banda larga do simulador fica de fora, e sem rotação
+    a estimativa é 0. É uma conta do simulador, não a do firmware (que integra o sinal inteiro de
+    10 Hz a ~800 Hz) e não é medição.
+    """
+    f = rotacao_rpm / 60.0
+    if f <= 0:
+        return 0.0
+    soma = 0.0
+    for k, pico_g in enumerate((o1x, o2x, o3x), start=1):
+        soma += (pico_g / math.sqrt(2.0) * MM_S2_POR_G / (2.0 * math.pi * k * f)) ** 2
+    return math.sqrt(soma)
+
+
 def gerar_payload(dispositivo, medido_em, rotacao_alvo_rpm, etapa="T3", condicao="normal", modo="normal",
                   rng=None, com_canais=True, rapido=False, duracao_s=INTERVALO_JANELAS_S):
     """Gera uma janela SIMULADA no contrato de POST /api/v1/telemetria (ver docs/payload.md).
@@ -210,13 +235,19 @@ def gerar_payload(dispositivo, medido_em, rotacao_alvo_rpm, etapa="T3", condicao
     if modo == "severo" and girando and rng.random() < CHANCE_IMPACTO_SEVERO:
         pontos["B"]["pico_g"] = round(min(FUNDO_ESCALA_G, rng.uniform(12.0, 17.0)), 5)
     saturou = any(p["pico_g"] >= FUNDO_ESCALA_G for p in pontos.values())
+    rotacao = round(rotacao, 1)
+    for p in pontos.values():
+        p["vel_rms_mm_s"] = round(velocidade_estimada_mm_s(p["o1x"], p["o2x"], p["o3x"], rotacao), 4)
 
     payload = {
         "dispositivo": dispositivo,
         "medido_em": formatar_instante(medido_em),
-        "rotacao_rpm": round(rotacao, 1),
+        "rotacao_rpm": rotacao,
         "saturou": saturou,
         "pontos": pontos,
+        "firmware_versao": FIRMWARE_SIMULADO,
+        "calibracao": {ponto: CALIBRACAO_SIMULADA for ponto in PONTOS},
+        "eixos": {ponto: EIXO_SIMULADO for ponto in PONTOS},
     }
     if com_canais:
         ambiente = 24.0 + rng.gauss(0.0, 0.3)

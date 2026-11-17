@@ -19,7 +19,7 @@ void setup() {
   Serial.begin(cfg::SERIAL_BAUD);
   delay(200);
   Serial.println();
-  Serial.println("#inicio PredictSpin firmware 3 sensores");
+  Serial.println("#inicio PredictSpin firmware 3 sensores, versao " FIRMWARE_VERSAO);
 
   estado::iniciar();
   calibrador::iniciar();  // lê /cal.txt antes da primeira janela

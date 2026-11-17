@@ -106,17 +106,58 @@ static float finito(float v) {
   return isfinite(v) ? v : 0.0f;
 }
 
+char letraEixo(uint8_t eixo) {
+  return eixo == 0 ? 'x' : eixo == 1 ? 'y' : 'z';
+}
+
 size_t montarJson(const DadosJanela& j, const char* dispositivo, char* buf, size_t tamanho) {
+  return montarJson(j, dispositivo, nullptr, buf, tamanho);
+}
+
+// Acrescenta ao buffer; false se não coube
+static bool acrescentar(char* buf, size_t tamanho, size_t* usado, int n) {
+  if (n < 0 || *usado + (size_t)n >= tamanho) return false;
+  *usado += (size_t)n;
+  return true;
+}
+
+size_t montarJson(const DadosJanela& j, const char* dispositivo, const Rastreio* rastreio, char* buf,
+                  size_t tamanho) {
   char instante[32];
   formatarIso(j.inicioUs, instante, sizeof(instante));
   size_t usado = 0;
   int n = snprintf(buf, tamanho,
                    "{\"dispositivo\":\"%s\",\"medido_em\":\"%s\",\"rotacao_rpm\":%.1f,\"saturou\":%s,"
-                   "\"modo\":\"%s\",\"amostras\":%u,\"amostras_esperadas\":%u,\"pontos\":{",
+                   "\"modo\":\"%s\",\"amostras\":%u,\"amostras_esperadas\":%u,",
                    dispositivo, instante, (double)finito(j.rotacaoRpm), j.saturou ? "true" : "false",
                    j.modoRapido ? "rapido" : "normal", (unsigned)j.amostras, (unsigned)j.amostrasEsperadas);
-  if (n < 0 || (size_t)n >= tamanho) return 0;
-  usado = (size_t)n;
+  if (!acrescentar(buf, tamanho, &usado, n)) return 0;
+  if (rastreio) {
+    if (rastreio->firmwareVersao) {
+      n = snprintf(buf + usado, tamanho - usado, "\"firmware_versao\":\"%s\",", rastreio->firmwareVersao);
+      if (!acrescentar(buf, tamanho, &usado, n)) return 0;
+    }
+    bool algum = false;
+    for (int i = 0; i < MAX_PONTOS; i++) {
+      if (!j.presente(i) || !rastreio->calibracao[i]) continue;
+      n = snprintf(buf + usado, tamanho - usado, "%s\"%s\":\"%s\"", algum ? "," : "\"calibracao\":{",
+                   CODIGOS_PONTOS[i], rastreio->calibracao[i]);
+      if (!acrescentar(buf, tamanho, &usado, n)) return 0;
+      algum = true;
+    }
+    if (algum && !acrescentar(buf, tamanho, &usado, snprintf(buf + usado, tamanho - usado, "},"))) return 0;
+    algum = false;
+    for (int i = 0; i < MAX_PONTOS; i++) {
+      if (!j.presente(i) || !rastreio->eixo[i]) continue;
+      n = snprintf(buf + usado, tamanho - usado, "%s\"%s\":\"%c\"", algum ? "," : "\"eixos\":{",
+                   CODIGOS_PONTOS[i], rastreio->eixo[i]);
+      if (!acrescentar(buf, tamanho, &usado, n)) return 0;
+      algum = true;
+    }
+    if (algum && !acrescentar(buf, tamanho, &usado, snprintf(buf + usado, tamanho - usado, "},"))) return 0;
+  }
+  n = snprintf(buf + usado, tamanho - usado, "\"pontos\":{");
+  if (!acrescentar(buf, tamanho, &usado, n)) return 0;
   bool primeiro = true;
   for (int i = 0; i < MAX_PONTOS; i++) {
     if (!j.presente(i)) continue;

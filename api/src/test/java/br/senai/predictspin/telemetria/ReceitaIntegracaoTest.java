@@ -181,12 +181,15 @@ class ReceitaIntegracaoTest extends IntegracaoBase {
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         List<String> linhas = Arrays.asList(csv.split("\n"));
         List<String> cabecalho = Arrays.asList(linhas.get(0).split(","));
-        assertThat(cabecalho.subList(cabecalho.size() - 5, cabecalho.size())).containsExactly("ferramenta",
+        // as colunas da V5 continuam juntas; as da V6 vêm depois delas, no fim
+        assertThat(cabecalho.subList(cabecalho.size() - 9, cabecalho.size() - 4)).containsExactly("ferramenta",
                 "profundidade_corte_mm", "diametro_peca_mm", "fluido_corte", "evento_marcado");
         int medido = cabecalho.indexOf("medido_em");
+        int evento = cabecalho.indexOf("evento_marcado");
         // uma linha por janela e ponto (3 pontos): só as janelas que contêm o evento e a seguinte
         List<String> marcadas = linhas.subList(1, linhas.size()).stream()
-                .filter(l -> l.endsWith(",true")).map(l -> l.split(",")[medido]).distinct().toList();
+                .map(l -> l.split(",", -1)).filter(c -> c[evento].equals("true")).map(c -> c[medido]).distinct()
+                .toList();
         assertThat(marcadas).containsExactly(inicio.plusSeconds(10).toString(), inicio.plusSeconds(15).toString());
     }
 

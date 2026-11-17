@@ -1,5 +1,6 @@
 package br.senai.predictspin.telemetria;
 
+import java.sql.Types;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -25,15 +26,17 @@ public class IngestaoRepository {
 
     /** Insere a janela; vazio se (dispositivo, medido_em) já existia. */
     public Optional<Long> inserirJanela(long dispositivoId, Long ensaioId, Instant medidoEm, Instant recebidoEm,
-                                        double rotacaoRpm, boolean saturou, Amostragem amostragem) {
+                                        double rotacaoRpm, boolean saturou, Amostragem amostragem,
+                                        Rastreio rastreio) {
         List<Long> ids = jdbc.queryForList("""
                 INSERT INTO janela (dispositivo_id, ensaio_id, medido_em, recebido_em, rotacao_rpm, saturou,
-                                    modo, amostras, amostras_esperadas)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    modo, amostras, amostras_esperadas, firmware_versao, calibracao, eixos)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (dispositivo_id, medido_em) DO NOTHING
                 RETURNING id
                 """, Long.class, dispositivoId, ensaioId, utc(medidoEm), utc(recebidoEm), rotacaoRpm, saturou,
-                amostragem.modo().valor(), amostragem.amostras(), amostragem.amostrasEsperadas());
+                amostragem.modo().valor(), amostragem.amostras(), amostragem.amostrasEsperadas(),
+                rastreio.firmwareVersao(), rastreio.calibracao(), rastreio.eixos());
         return ids.stream().findFirst();
     }
 
@@ -45,8 +48,9 @@ public class IngestaoRepository {
 
     public void inserirTelemetrias(long janelaId, List<LinhaTelemetria> linhas) {
         jdbc.batchUpdate("""
-                INSERT INTO telemetria (janela_id, ponto_medicao_id, rms_g, pico_g, curtose, ordem_1x, ordem_2x, ordem_3x)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO telemetria (janela_id, ponto_medicao_id, rms_g, pico_g, curtose, ordem_1x, ordem_2x, ordem_3x,
+                                        vel_rms_mm_s)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, linhas, linhas.size(), (ps, l) -> {
             ps.setLong(1, janelaId);
             ps.setLong(2, l.pontoId());
@@ -56,6 +60,7 @@ public class IngestaoRepository {
             ps.setDouble(6, l.o1x());
             ps.setDouble(7, l.o2x());
             ps.setDouble(8, l.o3x());
+            ps.setObject(9, l.velRmsMmS(), Types.DOUBLE);
         });
     }
 
@@ -80,7 +85,16 @@ public class IngestaoRepository {
     public record Amostragem(ModoJanela modo, Integer amostras, Integer amostrasEsperadas) {
     }
 
+    /**
+     * De onde a janela veio: versão do firmware e, por ponto, a calibração e o eixo de análise, em JSON
+     * compacto ({"A":"..."}). Tudo opcional: nulo quando o dispositivo não informa.
+     */
+    public record Rastreio(String firmwareVersao, String calibracao, String eixos) {
+        public static final Rastreio VAZIO = new Rastreio(null, null, null);
+    }
+
+    /** Uma linha de TELEMETRIA; a velocidade é opcional. */
     public record LinhaTelemetria(long pontoId, double rmsG, double picoG, double curtose,
-                                  double o1x, double o2x, double o3x) {
+                                  double o1x, double o2x, double o3x, Double velRmsMmS) {
     }
 }

@@ -49,8 +49,22 @@ static_assert(sizeof(DadosJanela) == 120, "DadosJanela mudou de tamanho: confira
 static const uint8_t VERSAO_DADOS_JANELA = 2;
 extern const char* const CODIGOS_PONTOS[MAX_PONTOS];
 
+// De onde a janela veio, para a API guardar com ela (campos opcionais firmware_versao, calibracao e
+// eixos). Só os pontos presentes entram nos objetos.
+struct Rastreio {
+  const char* firmwareVersao;              // nulo = sem o campo
+  const char* calibracao[MAX_PONTOS];      // identificador por ponto (nulo = sem o ponto no objeto)
+  char eixo[MAX_PONTOS];                   // 'x', 'y' ou 'z' por ponto (0 = sem o ponto no objeto)
+};
+
+// Letra do eixo de análise (0 = x, 1 = y, 2 = z)
+char letraEixo(uint8_t eixo);
+
 // JSON do POST /api/v1/telemetria (docs/payload.md). Devolve o tamanho, ou 0 se não coube.
-// Pontos ausentes ficam fora do JSON (a API aceita de 1 a 3).
+// Pontos ausentes ficam fora do JSON (a API aceita de 1 a 3). rastreio nulo = sem os campos de
+// rastreabilidade (formato anterior).
+size_t montarJson(const DadosJanela& j, const char* dispositivo, const Rastreio* rastreio, char* buf,
+                  size_t tamanho);
 size_t montarJson(const DadosJanela& j, const char* dispositivo, char* buf, size_t tamanho);
 
 // Procura "modo_rapido_ate" na resposta. Devolve true e o instante se o campo existe e é válido.

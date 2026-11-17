@@ -251,12 +251,14 @@ class EnsaioIntegracaoTest extends IntegracaoBase {
         assertThat(linhas[0]).startsWith("ensaio,etapa,condicao,material,rotacao_alvo_rpm")
                 // as colunas da V5 entram no fim, depois das de canal, sem mexer nas anteriores
                 .contains("amb_temp_c,amb_umid_pct,corrente_a,temp_cabecote_c,temp_ferramenta_c,")
-                .endsWith(",ferramenta,profundidade_corte_mm,diametro_peca_mm,fluido_corte,evento_marcado");
+                // V5 e, depois dela, V6: sempre no fim, sem mexer nas anteriores
+                .endsWith(",ferramenta,profundidade_corte_mm,diametro_peca_mm,fluido_corte,evento_marcado"
+                        + ",vel_rms_mm_s,firmware_versao,calibracao,eixo");
         assertThat(linhas[1]).contains(",T1,ferramenta_desgastada,\"aço, barra\",1200,")
                 .contains(",true,TORNO-01,ps-sim-01,")
                 .contains(",A,acionamento,0.1,")
-                .endsWith(",24.0,55.0,4.2,31.5,35.0,,,,,false");
-        assertThat(linhas[6]).contains(",C,estrutura,").endsWith(",,,,,,,,,false");
+                .endsWith(",24.0,55.0,4.2,31.5,35.0,,,,,false,,,,");
+        assertThat(linhas[6]).contains(",C,estrutura,").endsWith(",,,,,,,,,false,,,,");
 
         String reais = mvc.perform(comToken(get("/api/v1/ensaios/exportar.csv?simulado=false"), tecnico))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();

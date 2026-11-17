@@ -3,7 +3,9 @@
 `POST /api/v1/telemetria` — enviado pelo ESP32 (ou pelo simulador) a cada janela de ~5 s, com as
 características já extraídas na borda. **Este contrato é fixo:** mudanças que quebrem envio antigo exigem
 nova versão da rota. Em 11/11/2026 (migração V3) entraram três campos **opcionais** (`modo`, `amostras`,
-`amostras_esperadas`) e o campo de resposta `modo_rapido_ate`; o envio antigo continua válido.
+`amostras_esperadas`) e o campo de resposta `modo_rapido_ate`; o envio antigo continua válido. Em
+17/11/2026 (migração V6) entraram, também **opcionais**, a velocidade `vel_rms_mm_s` por ponto e a
+rastreabilidade da janela (`firmware_versao`, `calibracao`, `eixos`).
 
 ## Autenticação
 
@@ -50,8 +52,12 @@ Dispositivo inexistente, inativo, sem cabeçalho ou com chave errada: **401**.
 | `modo` | texto | **não** | `normal` (janela de 5 s) ou `rapido` (janela de 1 s); ausente = `normal`; outro valor → **400** |
 | `amostras` | inteiro | **não** | ≥ 0; o **menor** número de amostras lidas entre os sensores nesta janela |
 | `amostras_esperadas` | inteiro | **não** | ≥ 1; quantas amostras a janela deveria ter (taxa × duração: 8000 em 5 s, 1600 em 1 s a 1600 Hz) |
+| `pontos.*.vel_rms_mm_s` | número (mm/s) | **não** | ≥ 0; velocidade RMS do ponto. No firmware, banda de 10 Hz a ~800 Hz; falta na primeira janela depois da partida ou de uma falta de amostras (ver [`firmware.md`](firmware.md#velocidade-rms-em-mms)) |
+| `firmware_versao` | texto | **não** | 1 a 40 caracteres; versão do firmware que mediu a janela (data e hash curto do commit, por exemplo `2026-11-17+76951bf`; `simulado` no simulador) |
+| `calibracao` | objeto ponto → texto | **não** | identificador da calibração usada em cada ponto (`A-20261117T143200Z`, `A-semhora-3`, `nominal`); 1 a 40 caracteres, só letras, números e `. _ : + -`; ponto desconhecido → **400** |
+| `eixos` | objeto ponto → texto | **não** | eixo do acelerômetro analisado em cada ponto: `x`, `y` ou `z`; outro valor ou ponto desconhecido → **400** |
 
-Exemplo de envio do firmware de 3 sensores, só com o ponto A ligado:
+Exemplo de envio do firmware de 3 sensores (versão de 17/11/2026), só com o ponto A ligado:
 
 ```json
 {
@@ -62,9 +68,18 @@ Exemplo de envio do firmware de 3 sensores, só com o ponto A ligado:
   "modo": "normal",
   "amostras": 8000,
   "amostras_esperadas": 8000,
-  "pontos": {"A": {"rms_g": 0.031, "pico_g": 0.112, "curtose": 3.2, "o1x": 0.012, "o2x": 0.004, "o3x": 0.002}}
+  "firmware_versao": "2026-11-17+76951bf",
+  "calibracao": {"A": "A-20261117T143200Z"},
+  "eixos": {"A": "z"},
+  "pontos": {"A": {"rms_g": 0.031, "pico_g": 0.112, "curtose": 3.2, "o1x": 0.012, "o2x": 0.004, "o3x": 0.002,
+                   "vel_rms_mm_s": 1.85}}
 }
 ```
+
+(Exemplo do formato; os números não são medição.) A API guarda `firmware_versao`, `calibracao` e
+`eixos` na janela; nas consultas aparece só a velocidade. O simulador manda `firmware_versao` =
+`simulado`, `calibracao` = `simulada` e `eixos` = `z` em cada ponto, e uma velocidade **estimada** a
+partir das ordens (não medida).
 
 As janelas com `modo` = `rapido` e as que chegaram com menos de 98% das amostras esperadas ficam
 marcadas na exportação (`GET /api/v1/ensaios/exportar.csv`, coluna `marca`) para não entrarem no
@@ -80,7 +95,9 @@ Uma linha por janela e ponto, só de ensaios encerrados e não descartados. Orde
 2. uma por canal da máquina (código do canal, em ordem alfabética);
 3. **acrescentadas no fim pela V5**, sem mexer nas anteriores: `ferramenta, profundidade_corte_mm,
    diametro_peca_mm, fluido_corte, evento_marcado`. O material e o avanço da receita já estavam nas
-   colunas fixas (`material` passa a ser o nome do item do catálogo).
+   colunas fixas (`material` passa a ser o nome do item do catálogo);
+4. **acrescentadas no fim pela V6**: `vel_rms_mm_s` (vazia quando a janela não trouxe),
+   `firmware_versao` e, do ponto da linha, `calibracao` (identificador) e `eixo`.
 
 `evento_marcado` é `true` na janela cujo intervalo contém um evento marcado durante a gravação
 (pancada na bancada, cavaco enroscado, máquina vizinha ligada...) e na janela seguinte; `medido_em` é o
@@ -100,6 +117,17 @@ Canais cadastrados no torno `TORNO-01`:
 | `corrente_a` | corrente do motor | A |
 
 Rotação não é canal: é atributo da janela, porque define as ordens 1X/2X/3X.
+
+### Velocidade nas consultas
+
+Onde as consultas já mostram o RMS, a velocidade aparece **só quando a janela a trouxe** (a chave
+some, em vez de vir nula):
+
+| Consulta | Campo |
+|---|---|
+| `GET /maquinas/{id}/ultima-janela`, `GET /maquinas/{id}/janelas`, `GET /ensaios/{id}/janelas` e o evento `janela` | `pontos.*.vel_rms_mm_s` |
+| `GET /pontos/{id}/telemetria` | `vel_rms_mm_s` |
+| `GET /maquinas/{id}/serie` | `pontos.*.vel_rms_media_mm_s` e `vel_rms_max_mm_s` (das janelas do intervalo que trouxeram) |
 
 ## Respostas
 

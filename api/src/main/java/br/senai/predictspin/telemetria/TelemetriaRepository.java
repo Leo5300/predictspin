@@ -18,7 +18,7 @@ public interface TelemetriaRepository extends JpaRepository<Telemetria, Long> {
     @Query(value = """
             select new br.senai.predictspin.telemetria.dto.TelemetriaPontoResposta(
                 j.id, j.medidoEm, j.recebidoEm, j.rotacaoRpm, j.saturou, e.id, d.identificador, d.simulado,
-                t.rmsG, t.picoG, t.curtose, t.ordem1x, t.ordem2x, t.ordem3x)
+                t.rmsG, t.picoG, t.curtose, t.ordem1x, t.ordem2x, t.ordem3x, t.velRmsMmS)
             from Telemetria t
             join t.janela j
             join j.dispositivo d

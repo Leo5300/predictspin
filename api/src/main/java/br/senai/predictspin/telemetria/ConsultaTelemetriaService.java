@@ -72,7 +72,7 @@ public class ConsultaTelemetriaService {
             var p = t.getPonto();
             porPonto.put(p.getCodigo(), new UltimaJanelaResposta.Ponto(p.getId(), p.getPapel().valor(),
                     p.getDescricao(), t.getRmsG(), t.getPicoG(), t.getCurtose(), t.getOrdem1x(), t.getOrdem2x(),
-                    t.getOrdem3x()));
+                    t.getOrdem3x(), t.getVelRmsMmS()));
         }
         Map<String, UltimaJanelaResposta.Canal> porCanal = new LinkedHashMap<>();
         for (Leitura l : leituras.daJanela(janela.getId())) {

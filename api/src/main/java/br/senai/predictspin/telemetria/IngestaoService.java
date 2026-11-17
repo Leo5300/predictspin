@@ -10,7 +10,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -88,7 +90,9 @@ public class IngestaoService {
                     + "); confira o relógio do dispositivo");
         }
 
-        List<IngestaoRepository.LinhaTelemetria> linhas = resolverPontos(dispositivo.maquinaId(), req.pontos());
+        Map<String, Long> pontoPorCodigo = mapa(pontos.codigosAtivos(dispositivo.maquinaId()));
+        List<IngestaoRepository.LinhaTelemetria> linhas = resolverPontos(pontoPorCodigo, req.pontos());
+        IngestaoRepository.Rastreio rastreio = rastreio(pontoPorCodigo, req);
         Map<Long, Double> leituras = resolverCanais(dispositivo.maquinaId(), req.canais());
 
         dispositivos.registrarContato(dispositivo.id(), agora, agora.minus(INTERVALO_CONTATO));
@@ -96,7 +100,7 @@ public class IngestaoService {
         Long ensaioId = ensaios.idAberto(dispositivo.maquinaId(), dispositivo.simulado()).orElse(null);
         var amostragem = new IngestaoRepository.Amostragem(req.modoOuNormal(), req.amostras(), req.amostrasEsperadas());
         Optional<Long> novaJanela = ingestao.inserirJanela(dispositivo.id(), ensaioId, medidoEm, agora,
-                req.rotacaoRpm(), req.saturou(), amostragem);
+                req.rotacaoRpm(), req.saturou(), amostragem, rastreio);
         // Vale para envio novo e para reenvio: é assim que o dispositivo fica sabendo do modo rápido
         Instant modoRapidoAte = modoRapido.vigente(dispositivo.maquinaId());
 
@@ -117,14 +121,49 @@ public class IngestaoService {
         return new Resultado(new IngestaoResposta(janelaId, false, ensaioId, medidoEm, modoRapidoAte));
     }
 
-    private List<IngestaoRepository.LinhaTelemetria> resolverPontos(Long maquinaId,
-                                                                    Map<String, TelemetriaRequisicao.MedidaPonto> medidas) {
-        Map<String, Long> idPorCodigo = mapa(pontos.codigosAtivos(maquinaId));
+    private static List<IngestaoRepository.LinhaTelemetria> resolverPontos(
+            Map<String, Long> idPorCodigo, Map<String, TelemetriaRequisicao.MedidaPonto> medidas) {
         exigirConhecidos("pontos", medidas.keySet(), idPorCodigo);
         List<IngestaoRepository.LinhaTelemetria> linhas = new ArrayList<>(medidas.size());
         medidas.forEach((codigo, m) -> linhas.add(new IngestaoRepository.LinhaTelemetria(
-                idPorCodigo.get(codigo.trim()), m.rmsG(), m.picoG(), m.curtose(), m.o1x(), m.o2x(), m.o3x())));
+                idPorCodigo.get(codigo.trim()), m.rmsG(), m.picoG(), m.curtose(), m.o1x(), m.o2x(), m.o3x(),
+                m.velRmsMmS())));
         return linhas;
+    }
+
+    /** Versão do firmware, calibração e eixo por ponto; os pontos citados têm de existir na máquina. */
+    private static IngestaoRepository.Rastreio rastreio(Map<String, Long> idPorCodigo, TelemetriaRequisicao req) {
+        if (req.calibracao() != null) {
+            exigirConhecidos("calibracao", req.calibracao().keySet(), idPorCodigo);
+        }
+        if (req.eixos() != null) {
+            exigirConhecidos("eixos", req.eixos().keySet(), idPorCodigo);
+        }
+        String versao = req.firmwareVersao() == null ? null : req.firmwareVersao().trim();
+        return new IngestaoRepository.Rastreio(versao, compacto(req.calibracao(), Function.identity()),
+                compacto(req.eixos(), EixoSensor::valor));
+    }
+
+    /** Objeto JSON compacto, com os pontos em ordem: {"A":"z","B":"z"}. Nulo ou vazio vira nulo. */
+    static <V> String compacto(Map<String, V> porPonto, Function<V, String> texto) {
+        if (porPonto == null || porPonto.isEmpty()) {
+            return null;
+        }
+        Map<String, String> ordenado = new TreeMap<>();
+        porPonto.forEach((codigo, valor) -> ordenado.put(codigo.trim(), texto.apply(valor).trim()));
+        StringBuilder json = new StringBuilder("{");
+        ordenado.forEach((codigo, valor) -> {
+            if (json.length() > 1) {
+                json.append(',');
+            }
+            json.append('"').append(escapar(codigo)).append("\":\"").append(escapar(valor)).append('"');
+        });
+        return json.append('}').toString();
+    }
+
+    /** Os valores já passam pela validação; o escape é só para o JSON nunca sair inválido. */
+    private static String escapar(String texto) {
+        return texto.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private Map<Long, Double> resolverCanais(Long maquinaId, Map<String, Double> valores) {

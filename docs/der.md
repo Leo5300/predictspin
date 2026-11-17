@@ -1,6 +1,6 @@
 # Modelo de dados — DER v3
 
-Data: 10/11/2026, com as migrações V3 (11/11/2026), V4 (12/11/2026) e V5 (14/11/2026) · PostgreSQL 16 · Implementado em
+Data: 10/11/2026, com as migrações V3 (11/11/2026), V4 (12/11/2026), V5 (14/11/2026) e V6 (17/11/2026) · PostgreSQL 16 · Implementado em
 [`api/src/main/resources/db/migration`](../api/src/main/resources/db/migration) (Flyway)
 
 ## O que mudou da v2 para a v3
@@ -83,6 +83,21 @@ marcados durante a gravação:
 - **`ENSAIO_EVENTO`**: instante (`ocorrido_em`) em que algo fora do plano aconteceu num ensaio aberto,
   com `motivo` (`pancada`, `cavaco`, `maquina_vizinha` ou `outro`), `nota` opcional e `criado_por`.
   Na exportação, as janelas que contêm o instante e a seguinte saem com `evento_marcado = true`.
+
+## O que mudou com a migração V6 (17/11/2026)
+
+A migração `V6__rastreabilidade_e_velocidade.sql` acompanha a segunda rodada do firmware, sem quebrar
+o envio antigo (tudo anulável; janelas anteriores ficam com nulo):
+
+- **`TELEMETRIA.vel_rms_mm_s`** (`double precision`, ≥ 0 por CHECK): velocidade RMS do ponto em
+  mm/s, calculada no dispositivo (no firmware, banda de 10 Hz a ~800 Hz; no simulador, estimada das
+  ordens).
+- **`JANELA.firmware_versao`** (`varchar(40)`): versão do firmware que mediu a janela.
+- **`JANELA.calibracao`** e **`JANELA.eixos`** (`text`): identificador da calibração e eixo de
+  análise de cada ponto, em JSON compacto com os pontos em ordem
+  (`{"A":"A-20261117T143200Z","B":"nominal"}` e `{"A":"z","B":"z"}`). Ficam na janela, e não em
+  `TELEMETRIA`, porque chegam num objeto só por envio; a exportação abre o valor do ponto de cada
+  linha com o operador `->>` do PostgreSQL.
 
 ## Diagrama
 
@@ -238,6 +253,9 @@ erDiagram
         varchar modo
         integer amostras
         integer amostras_esperadas
+        varchar firmware_versao
+        text calibracao
+        text eixos
     }
     TELEMETRIA {
         bigint id PK
@@ -249,6 +267,7 @@ erDiagram
         double ordem_1x
         double ordem_2x
         double ordem_3x
+        double vel_rms_mm_s
     }
     LEITURA {
         bigint id PK

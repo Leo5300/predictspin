@@ -839,6 +839,11 @@ export interface components {
             ponto_id: number;
             /** Format: double */
             rms_g: number;
+            /**
+             * Format: double
+             * @description Velocidade RMS em mm/s; só aparece quando o dispositivo mandou
+             */
+            vel_rms_mm_s?: number;
         };
         JanelaResposta: {
             /**
@@ -944,6 +949,12 @@ export interface components {
              * @example 0.12
              */
             rms_g: number;
+            /**
+             * Format: double
+             * @description Opcional. Velocidade RMS em mm/s (no firmware, banda de 10 Hz a ~800 Hz)
+             * @example 1.85
+             */
+            vel_rms_mm_s?: number;
         };
         ModoRapidoResposta: {
             /** @description true enquanto o prazo estiver no futuro */
@@ -1315,6 +1326,16 @@ export interface components {
             rms_max_g: number;
             /** Format: double */
             rms_media_g: number;
+            /**
+             * Format: double
+             * @description Maior velocidade RMS (mm/s) no intervalo; só aparece se alguma janela trouxe
+             */
+            vel_rms_max_mm_s?: number;
+            /**
+             * Format: double
+             * @description Média da velocidade RMS (mm/s) das janelas que a trouxeram; só aparece se alguma trouxe
+             */
+            vel_rms_media_mm_s?: number;
         };
         SseEmitter: {
             /** Format: int64 */
@@ -1346,6 +1367,11 @@ export interface components {
             rotacao_rpm: number;
             saturou: boolean;
             simulado: boolean;
+            /**
+             * Format: double
+             * @description Velocidade RMS em mm/s; só aparece quando o dispositivo mandou
+             */
+            vel_rms_mm_s?: number;
         };
         TelemetriaRequisicao: {
             /**
@@ -1360,12 +1386,25 @@ export interface components {
              * @example 8000
              */
             amostras_esperadas?: number;
+            /** @description Opcional. Identificador da calibração usada em cada ponto, pelo código do ponto ("nominal" quando o sensor não foi calibrado) */
+            calibracao?: {
+                [key: string]: string;
+            };
             /** @description Opcional. Valor de cada canal auxiliar, pelo código do canal; cada chave é opcional */
             canais?: {
                 [key: string]: number;
             };
             /** @example ps-torno-01 */
             dispositivo: string;
+            /** @description Opcional. Eixo do acelerômetro analisado em cada ponto, pelo código do ponto */
+            eixos?: {
+                [key: string]: "x" | "y" | "z";
+            };
+            /**
+             * @description Opcional. Versão do firmware que mediu a janela ("simulado" no simulador)
+             * @example 2026-11-17+76951bf
+             */
+            firmware_versao?: string;
             /**
              * Format: date-time
              * @description Instante da medição, em UTC (ISO-8601)

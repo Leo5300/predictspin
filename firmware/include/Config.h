@@ -4,6 +4,15 @@
 
 #include <stdint.h>
 
+// Versão do firmware enviada em toda janela (firmware_versao): a data desta versão e, quando o
+// build tem git, o hash curto do commit (ferramentas/versao_git.py), por exemplo "2026-11-17+76951bf".
+#define FIRMWARE_DATA "2026-11-17"
+#ifdef FIRMWARE_COMMIT
+#define FIRMWARE_VERSAO FIRMWARE_DATA "+" FIRMWARE_COMMIT
+#else
+#define FIRMWARE_VERSAO FIRMWARE_DATA
+#endif
+
 namespace cfg {
 
 // ---------------------------------------------------------------- pinos

@@ -97,7 +97,7 @@ public class JanelaService {
             pontos.computeIfAbsent(t.getJanela().getId(), id -> new LinkedHashMap<>())
                     .put(p.getCodigo(), new UltimaJanelaResposta.Ponto(p.getId(), p.getPapel().valor(),
                             p.getDescricao(), t.getRmsG(), t.getPicoG(), t.getCurtose(), t.getOrdem1x(),
-                            t.getOrdem2x(), t.getOrdem3x()));
+                            t.getOrdem2x(), t.getOrdem3x(), t.getVelRmsMmS()));
         }
         Map<Long, Map<String, UltimaJanelaResposta.Canal>> canais = new HashMap<>();
         for (Leitura l : leituras.dasJanelas(ids)) {

@@ -5,6 +5,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -44,6 +46,12 @@ public record SerieAgregadaResposta(
             double curtoseMedia,
             double o1xMedia,
             double o2xMedia,
-            double o3xMedia) {
+            double o3xMedia,
+            @Schema(description = "Média da velocidade RMS (mm/s) das janelas que a trouxeram; só aparece se alguma "
+                    + "trouxe", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+            @JsonInclude(JsonInclude.Include.NON_NULL) Double velRmsMediaMmS,
+            @Schema(description = "Maior velocidade RMS (mm/s) no intervalo; só aparece se alguma janela trouxe",
+                    requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+            @JsonInclude(JsonInclude.Include.NON_NULL) Double velRmsMaxMmS) {
     }
 }

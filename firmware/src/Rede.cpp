@@ -9,6 +9,7 @@
 #include <time.h>
 
 #include "AlertaLocal.h"
+#include "Calibracao.h"
 #include "Config.h"
 #include "Estado.h"
 #include "FilaJanelas.h"
@@ -219,7 +220,15 @@ void conectar() {
 void enviarProxima() {
   ps::DadosJanela d;
   if (!fila.frente(&d)) return;
-  size_t n = ps::montarJson(d, DISPOSITIVO_ID, corpo, sizeof(corpo));
+  // rastreabilidade: versão do firmware, calibração usada em cada ponto (gravada na janela) e eixo
+  char ids[ps::MAX_PONTOS][32];
+  ps::Rastreio rastreio = {FIRMWARE_VERSAO, {nullptr, nullptr, nullptr}, {0, 0, 0}};
+  for (int i = 0; i < ps::MAX_PONTOS; i++) {
+    if (!d.presente(i)) continue;
+    if (ps::formatarIdCalibracao(i, d.pontos[i].calibracao, ids[i], sizeof(ids[i]))) rastreio.calibracao[i] = ids[i];
+    rastreio.eixo[i] = ps::letraEixo(cfg::EIXO_PONTO[i]);
+  }
+  size_t n = ps::montarJson(d, DISPOSITIVO_ID, &rastreio, corpo, sizeof(corpo));
   if (n == 0) {
     // não deveria acontecer: o corpo cabe com folga; descarta para não travar a fila
     fila.removerFrente();
