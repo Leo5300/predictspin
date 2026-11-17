@@ -6,6 +6,7 @@
 #include <Wire.h>
 #include <time.h>
 
+#include "Calibrador.h"
 #include "Config.h"
 #include "Estado.h"
 
@@ -77,7 +78,9 @@ void desenharTela(const Painel& p) {
   tela.drawStr(0, 25, l);
 
   uint64_t ate = estado::modoRapidoAte();
-  if (ate) {
+  if (p.avisoAteMs && (int32_t)(millis() - p.avisoAteMs) < 0) {
+    snprintf(l, sizeof(l), "%s", p.aviso);  // resultado da calibração, por alguns segundos
+  } else if (ate) {
     time_t s = (time_t)(ate / 1000000ULL);
     struct tm t;
     gmtime_r(&s, &t);
@@ -156,7 +159,10 @@ void desenharLeds(const Painel& p, uint32_t agoraMs) {
 }
 
 void executarComando(const char* c) {
-  if (strcmp(c, "bruto 1") == 0) {
+  if (strncmp(c, "cal", 3) == 0 && (c[3] == ' ' || c[3] == '\0')) {
+    // calibração: só com o sinal bruto desligado (a serial precisa estar em texto)
+    if (!estado::brutoLigado) calibrador::tratarComando(c);
+  } else if (strcmp(c, "bruto 1") == 0) {
     Serial.println("# bruto ligado: daqui em diante a serial é binária (bruto 0 desliga)");
     Serial.flush();
     estado::brutoLigado = true;
@@ -174,7 +180,7 @@ void executarComando(const char* c) {
                   textoSensor(p.sensores[0]), textoSensor(p.sensores[1]), textoSensor(p.sensores[2]),
                   (int)p.rede, p.horaOk, (unsigned long)p.fila, p.ultimoHttp, (unsigned long)ESP.getFreeHeap());
   } else if (c[0] && !estado::brutoLigado) {
-    Serial.println("# comandos: bruto 1 | bruto 0 | aprende | estado");
+    Serial.println("# comandos: bruto 1 | bruto 0 | aprende | estado | cal A|B|C cima|baixo|fim|mostrar|limpar");
   }
 }
 

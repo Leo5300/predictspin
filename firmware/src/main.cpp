@@ -8,6 +8,7 @@
 #include <Arduino.h>
 
 #include "Aquisicao.h"
+#include "Calibrador.h"
 #include "Config.h"
 #include "Estado.h"
 #include "Interface.h"
@@ -21,6 +22,7 @@ void setup() {
   Serial.println("#inicio PredictSpin firmware 3 sensores");
 
   estado::iniciar();
+  calibrador::iniciar();  // lê /cal.txt antes da primeira janela
   aquisicao::iniciar();  // núcleo 1 (o setup e o loop rodam no núcleo 1)
   rede::iniciar();       // tarefa no núcleo 0
   interface::iniciar();  // tarefa no núcleo 0

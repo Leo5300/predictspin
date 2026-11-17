@@ -47,6 +47,12 @@ uint32_t ticksComDefasagem = 0;
 uint32_t ultimaLeituraUs[3] = {0, 0, 0};
 uint32_t janelasPerdidas = 0;
 
+// Medida da calibração: o núcleo 0 pede, o núcleo 1 acumula em processarAmostra
+volatile int pontoCal = -1;
+volatile bool calPronta = false;
+uint32_t alvoCal = 0;
+ps::MediaDesvio medidaCal;
+
 // Sinal bruto
 uint8_t seqQuadro = 0;
 int16_t brutos[3][ps::QUADRO_MAX_POR_SENSOR * 3];
@@ -104,11 +110,16 @@ void fecharJanela(uint32_t agoraMcu) {
   j.dados.amostrasEsperadas = cfg::TAXA_NOMINAL_HZ * duracaoJanelaS;
   j.horaValida = janelaComHora;
 
+  // ganho calibrado de cada ponto (1/ganho), ou o nominal sem calibração
+  float escala[3];
+  uint32_t carimbo[3];
+  estado::lerCalibracao(escala, carimbo);
+
   uint32_t menor = UINT32_MAX;
   bool saturou = saturouJanela;
   for (int s = 0; s < 3; s++) {
     if (!presente[s]) continue;
-    ps::ResultadoPonto r = acumuladores[s].concluir(cfg::ESCALA_G);
+    ps::ResultadoPonto r = acumuladores[s].concluir(escala[s]);
     ps::MedidaPonto& m = j.dados.pontos[s];
     m.presente = true;
     m.rmsG = r.rmsG;
@@ -155,6 +166,13 @@ void processarAmostra(int s, const int16_t xyz[3]) {
     }
   }
   int16_t valor = xyz[cfg::EIXO_PONTO[s]];
+  if (pontoCal == s) {
+    medidaCal.amostra(valor);
+    if (medidaCal.n() >= alvoCal) {
+      calPronta = true;
+      pontoCal = -1;
+    }
+  }
   if (!temMedia[s]) {
     // primeira janela: a primeira amostra serve de deslocamento (evita somar o DC inteiro)
     mediaAnterior[s] = valor;
@@ -174,6 +192,27 @@ const char* nomeEstado(EstadoSensor e) {
 }
 
 }  // namespace
+
+bool pedirMedidaCal(int ponto, uint32_t amostras) {
+  if (ponto < 0 || ponto > 2 || !presente[ponto] || pontoCal >= 0) return false;
+  medidaCal.zerar();
+  alvoCal = amostras;
+  calPronta = false;
+  pontoCal = ponto;  // por último: a partir daqui o núcleo 1 acumula
+  return true;
+}
+
+bool medidaCalPronta(ps::MediaDesvio* resultado) {
+  if (!calPronta) return false;
+  *resultado = medidaCal;
+  calPronta = false;
+  return true;
+}
+
+void cancelarMedidaCal() {
+  pontoCal = -1;
+  calPronta = false;
+}
 
 void iniciar() {
   SPI.begin(cfg::PINO_SCK, cfg::PINO_MISO, cfg::PINO_MOSI, -1);

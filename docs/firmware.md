@@ -116,12 +116,12 @@ Calculadas em fluxo, amostra a amostra, sem guardar a janela
 | Característica | Como |
 |---|---|
 | eixo | configurável por ponto em `EIXO_PONTO` (padrão **Z**, perpendicular à face do ímã: é a direção em que a fixação magnética é mais rígida e o sinal chega com menos perda) |
-| `rms_g` | raiz da variância (sem o nível DC) x 3,9 mg/LSB |
+| `rms_g` | raiz da variância (sem o nível DC) x escala do ponto (1/ganho calibrado, ou 3,9 mg/LSB sem calibração) |
 | `pico_g` | maior \|x − média\| na janela |
 | `curtose` | momento central de 4ª ordem / variância²; 3 para sinal gaussiano, 1,5 para senoide pura; 0 se o sinal for constante |
 | `o1x`, `o2x`, `o3x` | amplitude de pico em 1X, 2X e 3X da rotação, por Goertzel com janela de Hann |
 | saturação | qualquer eixo com \|bruto\| ≥ 4090 marca a janela (`saturou`) |
-| escala | 3,9 mg/LSB, constante única `ESCALA_G` |
+| escala | por ponto: 1/ganho calibrado (ver [Calibração](#calibração-por-sensor)); sem calibração, o nominal de 3,9 mg/LSB (`ESCALA_G`) |
 
 Os momentos são somas de (x − k) até a 4ª potência em `double`, com k = média da janela anterior,
 para não perder precisão com a gravidade no eixo Z.
@@ -142,6 +142,57 @@ A janela de Hann tem o comprimento das amostras esperadas na taxa medida do sens
 vazamento do DC residual e das ordens vizinhas. A amplitude é normalizada pela soma dos pesos.
 Testes nativos conferem as três ordens de um sinal sintético com 1%, 2% e 5% de tolerância, mesmo
 com frequência fora de bin inteiro e com 1 g de DC.
+
+## Calibração por sensor
+
+O valor nominal de 3,9 mg/LSB não é o do sensor. Na bancada, em 10/11/2026, um ADXL345 solto sobre
+a mesa deu **273,5 LSB/g** (3,66 mg/LSB, cerca de 7% de diferença) e offset Z de +1286 LSB. O
+offset não muda RMS, pico, curtose nem ordens, porque as contas tiram a média; o ganho muda todos os
+valores em g e a velocidade. Por isso cada ponto guarda a própria calibração
+([`lib/calibracao`](../firmware/lib/calibracao/Calibracao.h), [`src/Calibrador.cpp`](../firmware/src/Calibrador.cpp)):
+
+| Campo | Conteúdo |
+|---|---|
+| ganho | LSB por g do **eixo de análise** do ponto (`EIXO_PONTO`, Z por padrão) |
+| offset | leitura com 0 g, em LSB |
+| carimbo | instante da calibração (UTC), ou um número de série quando o ESP32 ainda não tem hora |
+| identificador | `A-20261117T143200Z`, `A-semhora-3` ou `nominal` (sem calibração) |
+
+**Só o eixo de análise é calibrado.** Os outros dois eixos (que só entram na checagem de saturação e
+no sinal bruto) continuam no nominal.
+
+**Procedimento**, na bancada, com o sensor **solto** sobre uma superfície nivelada, **antes** de
+montá-lo na máquina, e com o sinal bruto desligado:
+
+| Comando | O que faz |
+|---|---|
+| `cal A cima` | eixo de análise do ponto A virado para cima (+1 g), sensor parado: média de 2 s |
+| `cal A baixo` | o mesmo eixo virado para baixo (−1 g) |
+| `cal A fim` | ganho = (cima − baixo) / 2; offset = (cima + baixo) / 2; grava, mostra na serial e na tela |
+| `cal A mostrar` | calibração em uso e as posições já medidas |
+| `cal A limpar` | volta ao nominal |
+
+O mesmo vale para B e C. O comando `estado` mostra o identificador dos três pontos.
+
+**Recusas**, sempre com a explicação na serial e "RECUSADA" na tela:
+
+- desvio-padrão das leituras acima de 20 LSB (cerca de 75 mg): o sensor estava mexendo;
+- média acima de 2048 LSB em módulo (8 g no nominal): não é 1 g parado;
+- menos de 2880 amostras (90% de 2 s) na medida;
+- `fim` sem uma das posições;
+- ganho fora de **200 a 320 LSB/g**. O datasheet dá 230 a 282; a faixa é mais larga para não recusar
+  um sensor bom fora do típico, mas pega posições trocadas e sensor de lado.
+
+Os limites de 20 LSB e 2048 LSB são escolhas deste firmware, não do datasheet. As medidas de 2 s
+bloqueiam a tarefa da interface (tela e LEDs param por 2 s); a aquisição e o envio continuam.
+
+**Onde fica.** Em `/cal.txt` no LittleFS, lido na partida, antes da primeira janela. Regravar só o
+programa (`pio run -t upload`) **não apaga** a calibração; regravar o sistema de arquivos
+(`pio run -t uploadfs`), apagar o flash ou trocar a tabela de partições **apaga**. Se o LittleFS
+falhar na montagem, ele é formatado (como já acontecia com a fila) e a calibração se perde. Sem
+arquivo, cada ponto usa o nominal e o identificador `nominal`. O número de série das calibrações
+sem hora recomeça em 1 quando o arquivo se perde; calibre com a hora sincronizada para o
+identificador não se repetir.
 
 ## Rotação (FC-51)
 
@@ -248,7 +299,8 @@ Comandos pela serial (texto terminado em `\n`):
 | `bruto 1` | liga o sinal bruto; a serial passa a ser só binária |
 | `bruto 0` | desliga |
 | `aprende` | reaprende o RMS normal (como o botão BOOT) |
-| `estado` | uma linha `#` com o estado atual |
+| `estado` | uma linha `#` com o estado atual, incluindo a calibração de cada ponto |
+| `cal A cima` (e `baixo`, `fim`, `mostrar`, `limpar`; também B e C) | calibração do ponto (ver [Calibração](#calibração-por-sensor)) |
 
 [`analise/captura.py`](../analise/captura.py) manda `bruto 1`, decodifica os quadros e grava
 `t_us,ax_A,ay_A,az_A,ax_B,ay_B,az_B,ax_C,ay_C,az_C,ir`. Em cada tick, as linhas são alinhadas
@@ -343,7 +395,10 @@ o do WinLibs (`winget install BrechtSanders.WinLibs.POSIX.UCRT`).
 ## Limites conhecidos
 
 - **Nada testado em hardware:** tempos de tick, defasagem entre A e C, taxa real dos osciladores,
-  autoteste, Wi-Fi, TLS com o Render, LittleFS, tela e LEDs.
+  autoteste, Wi-Fi, TLS com o Render, LittleFS, tela e LEDs. A calibração tem a conta, as
+  checagens, os comandos e o arquivo testados no computador; a medida de 2 s e a gravação no
+  LittleFS não rodaram no ESP32.
+- **Calibração:** só o eixo de análise; perde-se com `uploadfs` ou apagando o flash.
 - **Osciladores dos sensores:**
   - se um ADXL345 estiver mais de 2% abaixo de 1600 Hz, todas as janelas dele saem marcadas como
     amostras incompletas na exportação;

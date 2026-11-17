@@ -48,6 +48,8 @@ struct Painel {
   ps::EstadoAlerta alertas[3];
   uint8_t progressoAprendizado;
   uint32_t janelaS;          // duração da janela atual
+  char aviso[26];            // mensagem temporária na tela (calibração)
+  uint32_t avisoAteMs;       // millis() até quando o aviso aparece; 0 = sem aviso
 };
 
 namespace estado {
@@ -67,6 +69,14 @@ extern volatile bool pedidoReaprender;
 
 // Cópia do painel sob trava
 Painel copiarPainel();
+
+// Mensagem curta na tela por algum tempo (resultado da calibração)
+void mostrarAviso(const char* texto, uint32_t duracaoMs);
+
+// Calibração em uso por ponto: g por LSB e carimbo (0 = nominal). Escrita pelo Calibrador e lida
+// pelo núcleo 1 ao fechar cada janela, sob trava.
+void definirCalibracao(int ponto, float escalaG, uint32_t carimbo);
+void lerCalibracao(float escalaG[3], uint32_t carimbo[3]);
 
 void iniciar();
 
