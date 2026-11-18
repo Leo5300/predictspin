@@ -24,6 +24,8 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import br.senai.predictspin.referencia.ReferenciaService;
+
 /**
  * Base dos testes de integração: API inteira (MockMvc) sobre PostgreSQL real do Testcontainers.
  * Antes de cada teste apaga janelas, ensaios e usuários criados, mantendo os dados iniciais.
@@ -55,8 +57,20 @@ public abstract class IntegracaoBase {
 
     protected Long maquinaId;
 
+    @Autowired
+    protected ReferenciaService referencias;
+
     @BeforeEach
     void limparBase() {
+        jdbc.update("DELETE FROM alerta_historico");
+        jdbc.update("DELETE FROM ordem_servico");
+        jdbc.update("DELETE FROM alerta");
+        jdbc.update("DELETE FROM avaliacao");
+        jdbc.update("DELETE FROM estado_ponto");
+        jdbc.update("DELETE FROM severidade_acumulada");
+        jdbc.update("DELETE FROM referencia_celula");
+        jdbc.update("DELETE FROM referencia_versao");
+        referencias.esquecer();
         jdbc.update("DELETE FROM leitura");
         jdbc.update("DELETE FROM telemetria");
         jdbc.update("DELETE FROM janela");

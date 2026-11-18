@@ -78,6 +78,23 @@ predictspin:
     dispositivo-simulado: ps-sim-01
     chave-dispositivo-simulado: ${DISPOSITIVO_SIM_CHAVE:}
 
+# Referência, alarme e OS: todos os números são PROPOSTA a confirmar com dado real (docs/alarmes.md).
+# A rota GET /api/v1/alarmes/limites os serve ao painel; o painel nunca os escreve à mão.
+ps:
+  referencia:
+    # célula com menos janelas fica "insuficiente" e não gera z (24 janelas = 2 min a 5 s)
+    min-janelas: 24
+    # piso do σ efetivo como fração da mediana
+    sigma-min-fracao: 0.05
+    # rotação fora de ±10% da marcha mais próxima torna a janela ruim
+    tolerancia-marcha: 0.10
+    # janela com menos de 98% das amostras esperadas é ruim
+    amostras-min-fracao: 0.98
+    deriva:
+      habilitada: true
+      dias: 7
+      fracao-maxima: 0.30
+
 springdoc:
   # As respostas são JSON; sem isto o documento diz "*/*" e o cliente gerado perde o tipo
   default-produces-media-type: application/json

@@ -89,6 +89,8 @@ public class SegurancaConfig {
                                 "/api/v1/ferramentas/**").hasAnyRole("ADMIN", "TECNICO")
                         .requestMatchers("/api/v1/ensaios/**", "/api/v1/maquinas/*/ensaios",
                                 "/api/v1/maquinas/*/coleta/**").hasAnyRole("ADMIN", "TECNICO")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/maquinas/*/referencias/recalcular")
+                        .hasAnyRole("ADMIN", "TECNICO")
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(o -> o

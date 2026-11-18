@@ -81,6 +81,132 @@
           "mensagem"
         ]
       },
+      "CelulaReferenciaResposta": {
+        "properties": {
+          "calibracao": {
+            "type": "string"
+          },
+          "etapa": {
+            "example": "T3",
+            "type": "string"
+          },
+          "ferramenta_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "firmware_versoes": {
+            "type": "string"
+          },
+          "marcha_rpm": {
+            "description": "0 no T0; senão a rotação nominal da marcha",
+            "format": "int32",
+            "type": "integer"
+          },
+          "material_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "mediana": {
+            "format": "double",
+            "type": "number"
+          },
+          "medida": {
+            "enum": [
+              "rms_g",
+              "pico_g",
+              "curtose",
+              "o1x",
+              "o2x",
+              "o3x",
+              "vel_rms_mm_s"
+            ],
+            "type": "string"
+          },
+          "n": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "n_deriva": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "p95": {
+            "format": "double",
+            "type": "number"
+          },
+          "piso_ruido": {
+            "description": "p95 da medida no T0 do ponto; nulo quando não medido",
+            "format": "double",
+            "type": "number"
+          },
+          "ponto": {
+            "example": "B",
+            "type": "string"
+          },
+          "por_receita": {
+            "description": "true: célula de uma receita no T3; false: T0, T1 ou T3 genérica",
+            "type": "boolean"
+          },
+          "sigma": {
+            "description": "1,4826 × MAD",
+            "format": "double",
+            "type": "number"
+          },
+          "sigma_efetivo": {
+            "description": "Maior entre σ, piso de ruído e a fração mínima da mediana",
+            "format": "double",
+            "type": "number"
+          },
+          "suficiente": {
+            "description": "false: menos janelas que o mínimo, não gera z",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "calibracao",
+          "etapa",
+          "ferramenta_id",
+          "firmware_versoes",
+          "marcha_rpm",
+          "material_id",
+          "mediana",
+          "medida",
+          "n",
+          "n_deriva",
+          "p95",
+          "piso_ruido",
+          "ponto",
+          "por_receita",
+          "sigma",
+          "sigma_efetivo",
+          "suficiente"
+        ]
+      },
+      "Cobertura": {
+        "properties": {
+          "etapa": {
+            "example": "T1",
+            "type": "string"
+          },
+          "marcha_rpm": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "situacao": {
+            "enum": [
+              "com",
+              "insuficiente",
+              "sem"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "etapa",
+          "marcha_rpm",
+          "situacao"
+        ]
+      },
       "CoberturaItem": {
         "properties": {
           "condicao": {
@@ -1518,6 +1644,39 @@
           "total_paginas"
         ]
       },
+      "PaginaVersaoReferenciaResposta": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/VersaoReferenciaResposta"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
+        ]
+      },
       "PlanoColetaRequisicao": {
         "properties": {
           "rotacoes_rpm": {
@@ -1680,6 +1839,39 @@
         "required": [
           "id",
           "nome"
+        ]
+      },
+      "ReferenciaResposta": {
+        "properties": {
+          "celulas": {
+            "items": {
+              "$ref": "#/components/schemas/CelulaReferenciaResposta"
+            },
+            "type": "array"
+          },
+          "cobertura": {
+            "items": {
+              "$ref": "#/components/schemas/Cobertura"
+            },
+            "type": "array"
+          },
+          "piso_ruido_medido": {
+            "description": "false: não há T0 gravado; o σ efetivo usa só a fração mínima da mediana",
+            "type": "boolean"
+          },
+          "simulado": {
+            "type": "boolean"
+          },
+          "versao": {
+            "$ref": "#/components/schemas/VersaoReferenciaResposta"
+          }
+        },
+        "required": [
+          "celulas",
+          "cobertura",
+          "piso_ruido_medido",
+          "simulado",
+          "versao"
         ]
       },
       "ResumoEnsaioResposta": {
@@ -2256,6 +2448,69 @@
           "id",
           "nome",
           "papel"
+        ]
+      },
+      "VersaoReferenciaResposta": {
+        "properties": {
+          "autor": {
+            "description": "Nome de quem recalculou",
+            "type": "string"
+          },
+          "celulas": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "celulas_suficientes": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "criada_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "excluidas": {
+            "additionalProperties": {
+              "description": "Janelas excluídas por motivo (uma janela pode ter mais de um motivo; calibracao_antiga conta janela e ponto)",
+              "format": "int32",
+              "type": "integer"
+            },
+            "description": "Janelas excluídas por motivo (uma janela pode ter mais de um motivo; calibracao_antiga conta janela e ponto)",
+            "type": "object"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "janelas_deriva": {
+            "description": "Janelas de uso normal (deriva) usadas",
+            "format": "int32",
+            "type": "integer"
+          },
+          "janelas_usadas": {
+            "description": "Janelas de ensaio usadas",
+            "format": "int32",
+            "type": "integer"
+          },
+          "numero": {
+            "description": "Número da versão na máquina e no tipo de dado (1, 2, ...)",
+            "format": "int32",
+            "type": "integer"
+          },
+          "simulado": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "autor",
+          "celulas",
+          "celulas_suficientes",
+          "criada_em",
+          "excluidas",
+          "id",
+          "janelas_deriva",
+          "janelas_usadas",
+          "numero",
+          "simulado"
         ]
       }
     },
@@ -4825,6 +5080,274 @@
         ]
       }
     },
+    "/api/v1/maquinas/{id}/referencias": {
+      "get": {
+        "operationId": "consultar_1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "true: referência dos dados simulados; false (padrão): dos reais",
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferenciaResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Referência em uso: versão, células e cobertura por marcha e etapa",
+        "tags": [
+          "Referência"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/referencias/recalcular": {
+      "post": {
+        "description": "Gera uma versão nova e imutável a partir das janelas boas dos ensaios \"normal\" (e, com a deriva ligada, das janelas de uso avaliadas NORMAL nos últimos dias). A versão anterior fica guardada.",
+        "operationId": "recalcular",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersaoReferenciaResposta"
+                }
+              }
+            },
+            "description": "Versão criada"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Recalcula a referência (ADMIN e TECNICO)",
+        "tags": [
+          "Referência"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/referencias/versoes": {
+      "get": {
+        "operationId": "versoes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaVersaoReferenciaResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Versões da referência, mais recente primeiro",
+        "tags": [
+          "Referência"
+        ]
+      }
+    },
     "/api/v1/maquinas/{id}/serie": {
       "get": {
         "description": "Por intervalo e por ponto: média e máximo de rms_g, máximo de pico_g, média de curtose e das ordens 1X, 2X e 3X. Por intervalo: rotação média, número de janelas e se houve saturação. Janelas do modo rápido ficam fora. Intervalo sem janela volta vazio (lacuna), nunca interpolado. Sem 'de', usa as últimas 24 h; período máximo de 31 dias.",
@@ -5782,6 +6305,10 @@
     {
       "description": "Ingestão pelo dispositivo e consultas pelos usuários",
       "name": "Telemetria"
+    },
+    {
+      "description": "O normal aprendido de cada ponto, por marcha, etapa e receita",
+      "name": "Referência"
     },
     {
       "description": "Materiais e ferramentas da receita do corte. Listar e criar: ADMIN e TECNICO. Renomear e desativar: ADMIN.",

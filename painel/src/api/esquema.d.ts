@@ -463,6 +463,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/maquinas/{id}/referencias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Referência em uso: versão, células e cobertura por marcha e etapa */
+        get: operations["consultar_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maquinas/{id}/referencias/recalcular": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recalcula a referência (ADMIN e TECNICO)
+         * @description Gera uma versão nova e imutável a partir das janelas boas dos ensaios "normal" (e, com a deriva ligada, das janelas de uso avaliadas NORMAL nos últimos dias). A versão anterior fica guardada.
+         */
+        post: operations["recalcular"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maquinas/{id}/referencias/versoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Versões da referência, mais recente primeiro */
+        get: operations["versoes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/maquinas/{id}/serie": {
         parameters: {
             query?: never;
@@ -655,6 +709,60 @@ export interface components {
         CampoInvalido: {
             campo: string;
             mensagem: string;
+        };
+        CelulaReferenciaResposta: {
+            calibracao: string;
+            /** @example T3 */
+            etapa: string;
+            /** Format: int64 */
+            ferramenta_id: number;
+            firmware_versoes: string;
+            /**
+             * Format: int32
+             * @description 0 no T0; senão a rotação nominal da marcha
+             */
+            marcha_rpm: number;
+            /** Format: int64 */
+            material_id: number;
+            /** Format: double */
+            mediana: number;
+            /** @enum {string} */
+            medida: "rms_g" | "pico_g" | "curtose" | "o1x" | "o2x" | "o3x" | "vel_rms_mm_s";
+            /** Format: int32 */
+            n: number;
+            /** Format: int32 */
+            n_deriva: number;
+            /** Format: double */
+            p95: number;
+            /**
+             * Format: double
+             * @description p95 da medida no T0 do ponto; nulo quando não medido
+             */
+            piso_ruido: number;
+            /** @example B */
+            ponto: string;
+            /** @description true: célula de uma receita no T3; false: T0, T1 ou T3 genérica */
+            por_receita: boolean;
+            /**
+             * Format: double
+             * @description 1,4826 × MAD
+             */
+            sigma: number;
+            /**
+             * Format: double
+             * @description Maior entre σ, piso de ruído e a fração mínima da mediana
+             */
+            sigma_efetivo: number;
+            /** @description false: menos janelas que o mínimo, não gera z */
+            suficiente: boolean;
+        };
+        Cobertura: {
+            /** @example T1 */
+            etapa: string;
+            /** Format: int32 */
+            marcha_rpm: number;
+            /** @enum {string} */
+            situacao: "com" | "insuficiente" | "sem";
         };
         CoberturaItem: {
             /** @enum {string} */
@@ -1168,6 +1276,17 @@ export interface components {
             /** Format: int32 */
             total_paginas: number;
         };
+        PaginaVersaoReferenciaResposta: {
+            conteudo: components["schemas"]["VersaoReferenciaResposta"][];
+            /** Format: int32 */
+            pagina: number;
+            /** Format: int32 */
+            tamanho: number;
+            /** Format: int64 */
+            total_elementos: number;
+            /** Format: int32 */
+            total_paginas: number;
+        };
         PlanoColetaRequisicao: {
             /**
              * @description Rotações alvo em rpm; repetidas são ignoradas e a lista é gravada em ordem crescente
@@ -1249,6 +1368,14 @@ export interface components {
             /** Format: int64 */
             id: number;
             nome: string;
+        };
+        ReferenciaResposta: {
+            celulas: components["schemas"]["CelulaReferenciaResposta"][];
+            cobertura: components["schemas"]["Cobertura"][];
+            /** @description false: não há T0 gravado; o σ efetivo usa só a fração mínima da mediana */
+            piso_ruido_medido: boolean;
+            simulado: boolean;
+            versao: components["schemas"]["VersaoReferenciaResposta"];
         };
         ResumoEnsaioResposta: {
             aberto: boolean;
@@ -1503,6 +1630,38 @@ export interface components {
             nome: string;
             /** @enum {string} */
             papel: "ADMIN" | "TECNICO" | "OPERADOR";
+        };
+        VersaoReferenciaResposta: {
+            /** @description Nome de quem recalculou */
+            autor: string;
+            /** Format: int32 */
+            celulas: number;
+            /** Format: int32 */
+            celulas_suficientes: number;
+            /** Format: date-time */
+            criada_em: string;
+            /** @description Janelas excluídas por motivo (uma janela pode ter mais de um motivo; calibracao_antiga conta janela e ponto) */
+            excluidas: {
+                [key: string]: number;
+            };
+            /** Format: int64 */
+            id: number;
+            /**
+             * Format: int32
+             * @description Janelas de uso normal (deriva) usadas
+             */
+            janelas_deriva: number;
+            /**
+             * Format: int32
+             * @description Janelas de ensaio usadas
+             */
+            janelas_usadas: number;
+            /**
+             * Format: int32
+             * @description Número da versão na máquina e no tipo de dado (1, 2, ...)
+             */
+            numero: number;
+            simulado: boolean;
         };
     };
     responses: never;
@@ -3247,6 +3406,189 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginaPontoResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    consultar_1: {
+        parameters: {
+            query?: {
+                /** @description true: referência dos dados simulados; false (padrão): dos reais */
+                simulado?: boolean;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferenciaResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    recalcular: {
+        parameters: {
+            query?: {
+                simulado?: boolean;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Versão criada */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersaoReferenciaResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    versoes: {
+        parameters: {
+            query?: {
+                simulado?: boolean;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaVersaoReferenciaResposta"];
                 };
             };
             /** @description Requisição inválida */
