@@ -61,6 +61,10 @@ hardware.**
 
 - **Núcleo 1, aquisição:** a cada 2 ms esvazia as FIFO dos três sensores (ODR 1600 Hz) no mesmo
   tick. Calcula em fluxo RMS, pico, curtose e as ordens por Goertzel com janela de Hann.
+- **Segunda rodada (17/11/2026):** calibração de ganho e offset por sensor (comandos `cal` na serial,
+  `/cal.txt` no LittleFS), velocidade RMS em mm/s por ponto, versão do firmware e calibração em cada
+  janela, reenvio da fila em ritmo controlado depois de uma queda e largura do pulso do FC-51 no
+  diagnóstico. Nada disso foi testado em hardware.
 - **Núcleo 0, rede e interface:** Wi-Fi, NTP, a fila (RAM e LittleFS, 5 h 25 min sem rede), o
   HTTPS com verificação de certificado, a tela e os LEDs.
 
@@ -276,8 +280,8 @@ tiver a regra, só eles mudam. Detalhes, decisões e revisão em [`painel.md`](p
 
 | Bloco da ISO 13374 | No PredictSpin | Onde | Situação |
 |---|---|---|---|
-| DA · Aquisição de dados | leitura sincronizada dos 3 acelerômetros e do sensor de rotação | firmware (ESP32) | 1 sensor medido em bancada (firmware antigo); firmware de 3 sensores compilado e com testes nativos, não testado em hardware |
-| DM · Manipulação de dados | RMS, pico, curtose e ordens 1X–3X por janela | firmware (borda) | no simulador; no firmware compilado, não testado em hardware |
+| DA · Aquisição de dados | leitura sincronizada dos 3 acelerômetros e do sensor de rotação; calibração de ganho e offset por sensor; largura do pulso do FC-51 | firmware (ESP32) | 1 sensor medido em bancada (firmware antigo); firmware de 3 sensores compilado e com testes nativos, **não testado em hardware**; calibração implementada e **não testada em hardware** |
+| DM · Manipulação de dados | RMS, pico, curtose, ordens 1X–3X e velocidade RMS em mm/s (10 Hz a ~800 Hz) por janela, com a versão do firmware e a calibração de cada ponto | firmware (borda) | no simulador (velocidade estimada das ordens); no firmware compilado, **não testado em hardware**; velocidade em mm/s implementada e **não testada em hardware**, sem comparação com zonas da ISO 20816 |
 | SD · Detecção de estado | comparação com a referência por ponto e rotação (NORMAL, ATENÇÃO, ALARME) | API | próximo prompt |
 | HA · Avaliação de saúde | detecção de anomalia e classificação da condição; componente provável | API | próximo prompt |
 | PA · Avaliação de prognóstico | tendência e severidade acumulada | API | preparado e desabilitado; trabalho futuro |

@@ -69,12 +69,12 @@ Situação em 16/11/2026.
 
 | Parte | Situação |
 |---|---|
-| API (`api/`) | Pronta para a coleta e para o firmware de 3 sensores: login, usuários e papéis, máquinas, ingestão de telemetria (com `modo`, `amostras` e `amostras_esperadas` opcionais), modo rápido, consultas, ensaios rotulados, cobertura da coleta e exportação CSV com treino e validação separados; para o painel, documento OpenAPI fiel ao JSON, `GET /auth/eu`, janelas completas, série agregada, eventos ao vivo (SSE) e plano de coleta; catálogos de material e ferramenta, receita do corte no ensaio (correção com histórico) e eventos marcados durante a gravação (migração `V5`). 229 testes automatizados. |
-| Banco | PostgreSQL 16 com o modelo criado pelo Flyway (`V1`), carga inicial (`V2`: máquina `TORNO-01`, pontos A, B e C, canais) e `V3` (condições `desbalanceamento` e `sensor_solto`, modo e amostras da janela, modo rápido da máquina) `V4` (plano de coleta da máquina) e `V5` (catálogos, receita do ensaio, histórico de correções e eventos marcados). |
+| API (`api/`) | Pronta para a coleta e para o firmware de 3 sensores: login, usuários e papéis, máquinas, ingestão de telemetria (com `modo`, `amostras` e `amostras_esperadas` opcionais), modo rápido, consultas, ensaios rotulados, cobertura da coleta e exportação CSV com treino e validação separados; para o painel, documento OpenAPI fiel ao JSON, `GET /auth/eu`, janelas completas, série agregada, eventos ao vivo (SSE) e plano de coleta; catálogos de material e ferramenta, receita do corte no ensaio (correção com histórico) e eventos marcados durante a gravação (migração `V5`); velocidade RMS por ponto e rastreabilidade de cada janela (versão do firmware, calibração e eixo de cada ponto) e evento ao vivo `recuperacao` para o reenvio em massa depois de uma queda de rede (migração `V6`). 251 testes automatizados. |
+| Banco | PostgreSQL 16 com o modelo criado pelo Flyway (`V1`), carga inicial (`V2`: máquina `TORNO-01`, pontos A, B e C, canais) e `V3` (condições `desbalanceamento` e `sensor_solto`, modo e amostras da janela, modo rápido da máquina) `V4` (plano de coleta da máquina) `V5` (catálogos, receita do ensaio, histórico de correções e eventos marcados) e `V6` (velocidade RMS em `TELEMETRIA`; versão do firmware, calibração e eixos em `JANELA`). |
 | Alerta e ordem de serviço | Tabelas e entidades existem; **ainda não há regra nem rota**. |
 | Classificação da condição | **Não iniciada.** |
-| Firmware (`firmware/`) | Reescrito para 3 ADXL345 e o FC-51: aquisição no núcleo 1 (FIFO a 1600 Hz), características em fluxo, envio HTTPS à API com fila em RAM e LittleFS, modo rápido, tela, LEDs e sinal bruto binário pela serial. Compila e passa em 44 testes nativos; **não foi testado em hardware**. Roteiro de bancada em [`docs/teste-bancada-firmware.md`](docs/teste-bancada-firmware.md). |
-| Análise (`analise/`) | Captura da serial (`captura.py`, binário de 3 sensores e texto antigo de 1), espectro com janela de Hann e ordens (`espectro.py`) e simulador de telemetria (`simulador.py`, que obedece ao modo rápido). |
+| Firmware (`firmware/`) | Reescrito para 3 ADXL345 e o FC-51: aquisição no núcleo 1 (FIFO a 1600 Hz), características em fluxo, envio HTTPS à API com fila em RAM e LittleFS, modo rápido, tela, LEDs e sinal bruto binário pela serial. Segunda rodada (17/11): calibração de ganho e offset por sensor pela serial, velocidade RMS em mm/s (10 Hz a ~800 Hz, sem comparação com a ISO 20816), versão do firmware e calibração em cada janela, reenvio da fila em ritmo controlado e largura do pulso do FC-51 no diagnóstico. Compila e passa em 77 testes nativos; **nada foi testado em hardware**. Roteiro de bancada, com as medições que viram número para o artigo, em [`docs/teste-bancada-firmware.md`](docs/teste-bancada-firmware.md). |
+| Análise (`analise/`) | Captura da serial (`captura.py`, binário de 3 sensores e texto antigo de 1), espectro com janela de Hann e ordens (`espectro.py`), simulador de telemetria (`simulador.py`, que obedece ao modo rápido e manda velocidade estimada e rastreabilidade) e contas de bancada (`bancada.py`: piso de ruído, teste-reteste e banda acima de 800 Hz). |
 | Painel web (`painel/`) | **Partes A e B prontas:** leitura (visão geral, máquina com mapa de ordens comparado ao típico de cada linha, ponto com tendência e AO VIVO), coleta de ensaios pelo celular (receita com catálogos, checagem antes de gravar, REC, fita, eventos marcados, sessão T0 → T1 → T2 → T3, matriz de cobertura, exportação CSV), replay de ensaio gravado, diagnóstico (dispositivos, qualidade, catálogos, usuários), alarmes e OS com estado vazio honesto, paleta de comandos (Ctrl+K) e explicações "?". Testado localmente com dados simulados, sem celular real; site estático descrito no `render.yaml`, **não publicado** ([`docs/painel.md`](docs/painel.md)). |
 | Aplicativo (`mobile/`) | **Não iniciado.** |
 | Integração contínua | Workflow em `.github/workflows/ci.yml` (API, `analise/` e painel: lint, tipos, testes e build); o resultado no GitHub não foi conferido nesta atualização. Os testes nativos do firmware e os de ponta a ponta do painel não estão no CI. |
@@ -271,9 +271,9 @@ cd api
 .\mvnw.cmd -B verify
 ```
 
-Resultado em 16/11/2026 (Java 21, depois da migração `V5`): **229 testes, nenhuma falha**. Cobertura de
-linhas medida pelo JaCoCo (`target/site/jacoco/jacoco.csv`): **98,2 %** nas classes de regra
-(`*Service`) e **94,7 %** no projeto inteiro. O build falha se a
+Resultado em 17/11/2026 (Java 21, depois da migração `V6`): **251 testes, nenhuma falha**. Cobertura de
+linhas medida pelo JaCoCo (`target/site/jacoco/jacoco.csv`): **98,3 %** nas classes de regra
+(`*Service`) e **94,8 %** no projeto inteiro (em 16/11, com 229 testes: 98,2 % e 94,7 %). O build falha se a
 cobertura das classes de regra ficar abaixo de 70 %. O relatório fica em
 `api/target/site/jacoco/index.html`.
 
@@ -307,7 +307,7 @@ pip install -r requirements.txt
 python -m pytest -q
 ```
 
-Resultado em 11/11/2026: **128 testes, nenhuma falha**.
+Resultado em 17/11/2026: **142 testes, nenhuma falha** (simulador, captura, espectro e `bancada.py`).
 
 **Firmware.** Compilação para o ESP32 e testes nativos da lógica pura (precisa de `g++` no PATH;
 foi usado o WinLibs, `winget install BrechtSanders.WinLibs.POSIX.UCRT`):
@@ -320,8 +320,8 @@ python -m platformio run
 python -m platformio test -e native
 ```
 
-Resultado em 11/11/2026: compila (RAM estática 63.844 bytes, flash 1.091.333 bytes) e
-**44 testes nativos, nenhuma falha**. Nada disso substitui o teste em hardware.
+Resultado em 17/11/2026: compila sem erro nem aviso (RAM estática 65.396 bytes, flash 1.118.517
+bytes) e **77 testes nativos, nenhuma falha**. Nada disso substitui o teste em hardware.
 
 **Dependências com vulnerabilidade conhecida** (OWASP dependency-check), fora do build normal:
 
@@ -373,7 +373,10 @@ Etapas do protocolo de ensaios, como o simulador as representa:
   `--rotacao`, `--etapa` (padrão `T3`), `--condicao`, `--intervalo`, `--quantidade`. Como o
   firmware, obedece ao modo rápido: com `modo_rapido_ate` na resposta, passa a janelas de 1 s até o
   prazo e volta sozinho ao intervalo normal.
-- Toda janela leva `modo`, `amostras` e `amostras_esperadas` (1600 por segundo de janela).
+- Toda janela leva `modo`, `amostras` e `amostras_esperadas` (1600 por segundo de janela), e também
+  `firmware_versao` = `simulado`, `calibracao` = `simulada` e `eixos` = `z` em cada ponto, e
+  `vel_rms_mm_s` por ponto. Essa velocidade é uma **estimativa** a partir das ordens 1X a 3X
+  (soma quadrática de a/(√2·2π·k·f)), não uma medição nem a conta do firmware.
 - **`roteiro`** abre um ensaio para cada combinação, envia as janelas e encerra. Usa o login de
   `ADMIN_EMAIL` e `ADMIN_SENHA` (ou `--email` e `--senha`). Sem opções, percorre as 4 etapas
   (T0 a T3), as 4 condições que ele modela e 3 rotações (`desbalanceamento` e `sensor_solto`

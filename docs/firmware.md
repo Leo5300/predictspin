@@ -1,11 +1,13 @@
 # Firmware de 3 sensores
 
-Data: 11/11/2026. Código em [`firmware/`](../firmware) (PlatformIO, Arduino-ESP32 2.0.17 pela
-plataforma `espressif32` 7.1.3).
+Data: 11/11/2026; segunda rodada em 17/11/2026 (calibração por sensor, velocidade em mm/s,
+rastreabilidade de cada janela, reenvio em ritmo controlado e largura do pulso do FC-51). Código em
+[`firmware/`](../firmware) (PlatformIO, Arduino-ESP32 2.0.17 pela plataforma `espressif32` 7.1.3).
 
-**Situação:** compila e os testes da lógica pura passam no computador (`pio test -e native`).
-**Nada foi testado em hardware.** Este documento descreve o que o código faz; a conferência na
-bancada segue [`teste-bancada-firmware.md`](teste-bancada-firmware.md).
+**Situação:** compila sem erro nem aviso e os 77 testes da lógica pura passam no computador
+(`pio test -e native`). **Nada foi testado em hardware**, nem a primeira nem a segunda rodada. Este
+documento descreve o que o código faz; a conferência na bancada segue
+[`teste-bancada-firmware.md`](teste-bancada-firmware.md).
 
 ## O que faz
 
@@ -441,15 +443,16 @@ também é opcional.
 
 ## Memória
 
-Medida na compilação (`pio run`, 11/11/2026):
+Medida na compilação (`pio run`, 17/11/2026, segunda rodada):
 
 | | Usado | Total |
 |---|---|---|
-| RAM estática | 63.844 bytes (19,5%) | 327.680 bytes |
-| Flash (app) | 1.091.333 bytes (34,7%) | 3.145.728 bytes (`huge_app.csv`) |
+| RAM estática | 65.396 bytes (20,0%) | 327.680 bytes |
+| Flash (app) | 1.118.517 bytes (35,6%) | 3.145.728 bytes (`huge_app.csv`) |
 
-Da RAM estática, a fila usa 10.800 bytes (64 janelas na RAM e o lote em envio). **Em execução
-não foi medido.**
+Na primeira rodada (11/11) eram 63.844 bytes de RAM e 1.091.333 de flash. Da RAM estática, a fila
+usa 11.520 bytes (64 janelas na RAM e o lote em envio, 120 bytes cada). **Em execução não foi
+medido.**
 
 **Estimativa** (não é medida) da memória livre com Wi-Fi e TLS conectados: cerca de 100 a 130 KB.
 A conta parte dos 327 KB:
@@ -474,10 +477,13 @@ python -m platformio device monitor        # serial a 921600
 python -m platformio test -e native        # testes da lógica pura no computador (precisa de g++ no PATH)
 ```
 
-Os testes nativos cobrem Goertzel nas 3 ordens, RMS/pico/curtose contra valores conhecidos, JSON da
-janela, leitura de `modo_rapido_ate`, decisão por código HTTP e espera crescente, decodificador de
-rotação, alerta local e a fila (ordem, despejo em lotes, reinício, fila cheia). O `g++` usado foi
-o do WinLibs (`winget install BrechtSanders.WinLibs.POSIX.UCRT`).
+Os testes nativos (77, em 5 grupos) cobrem Goertzel nas 3 ordens, RMS/pico/curtose contra valores
+conhecidos, velocidade em 5, 25, 100 e 400 Hz e com a gravidade parada, calibração (conta, recusas,
+comandos, arquivo e o efeito de 7% no RMS), JSON da janela com velocidade e rastreabilidade, leitura
+de `modo_rapido_ate`, decisão por código HTTP e espera crescente, ritmo de recuperação da fila,
+decodificador de rotação e largura do pulso, alerta local e a fila (ordem, despejo em lotes,
+reinício, fila cheia). O `g++` usado foi o do WinLibs
+(`winget install BrechtSanders.WinLibs.POSIX.UCRT`).
 
 ## Limites conhecidos
 
