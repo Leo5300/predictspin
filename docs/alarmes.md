@@ -24,13 +24,19 @@ janela (POST /telemetria) ─► filtro de qualidade ─► avaliação contra a
    gravada junto                         alerta ISA-18.2 ─► ordem de serviço ─► retorno do técnico
 ```
 
-A janela é gravada primeiro, na transação da ingestão. A avaliação (estado, alerta, OS) roda logo depois
-do commit, ainda na thread do pedido, em transação própria (`JanelaRecebida` com
-`@TransactionalEventListener(AFTER_COMMIT)`): se ela falhar, a transação dela é desfeita inteira, a janela
-continua gravada, a resposta do `POST /api/v1/telemetria` é a mesma (201) e o erro vai para o log e para o
-contador "Janelas sem avaliação" do Diagnóstico (`falhas_avaliacao`, desde que a API subiu). A janela que
-ficou sem avaliação não é reavaliada depois; a seguinte é avaliada normalmente. Os eventos ao vivo
-(`alerta`, `os`) saem depois do commit da avaliação.
+A janela é gravada primeiro, na transação da ingestão. Quando ela termina (commit feito e conexão devolvida
+ao pool), o `RecepcaoTelemetriaService`, sem transação, anuncia `JanelaRecebida`: a avaliação (estado,
+alerta, OS) roda ainda na thread do pedido, em transação própria; só depois a janela vai ao fluxo ao vivo,
+já avaliada. Se a avaliação falhar, a transação dela é desfeita inteira, a janela continua gravada, a
+resposta do `POST /api/v1/telemetria` é a mesma (201) e o erro vai para o log e para o contador "Sem
+avaliação por erro" do Diagnóstico (`falhas_avaliacao`, desde que a API subiu). A janela que ficou sem
+avaliação não é reavaliada depois; a seguinte é avaliada normalmente. Os eventos ao vivo (`alerta`, `os`)
+saem depois do commit da avaliação.
+
+Uma primeira versão rodava a avaliação no `afterCommit` da ingestão. Nesse ponto o Spring ainda não
+devolveu a conexão da ingestão, e a transação da avaliação pegava uma segunda: com 20 VUs no k6 e pool de
+10 conexões, as threads esperavam a segunda conexão até o prazo de 30 s do pool (24% de falhas numa
+execução de 60 s em 18/11/2026). Por isso a avaliação saiu de dentro do ciclo da transação.
 
 ## Filtro de qualidade
 

@@ -344,6 +344,29 @@ Ainda **não medido**: mais de 3 clientes, cliente lento de verdade (rede ruim) 
 0,1 CPU do Render. O comportamento com cliente lento é coberto por teste automatizado
 (`EventosServiceTest.clienteLentoEhDescartadoSemSegurarQuemPublica`), não por medição.
 
+## Ingestão com a avaliação contra a referência (18/11/2026)
+
+Medido nesta máquina (Windows, compose local, simulador `ps-sim-01`, banco com o histórico dos testes do
+dia e referência ativa), 20 VUs, mesmo método da seção de 11/11: API reconstruída, aquecimento de 10 s
+descartado e execuções de 60 s (`-e CENARIO=20 -e DURACAO_S=60`). Desde a parte A, cada janela recebida é
+avaliada contra a referência (estado de cada ponto, alerta e OS) antes da resposta.
+
+| Execução | Requisições | Erros | p95 total | p95 da ingestão |
+|---|---|---|---|---|
+| avaliação no afterCommit da ingestão (versão descartada) | 84 | 23,8% | 30,51 s | (pedidos parados até o prazo de 30 s) |
+| avaliação depois da ingestão, 1ª | 1638 | 0% | 1,33 s | 1,94 s |
+| avaliação depois da ingestão, 2ª | 1944 | 0% | 544,71 ms | 852,23 ms |
+| avaliação depois da ingestão, 3ª (com amostragem do banco) | — | 0% | 524,22 ms | 672,66 ms |
+
+- A meta de p95 abaixo de 500 ms **não é atendida** pela ingestão depois da parte A (antes dela, a mediana
+  dos p95 da ingestão nesta máquina era 63 ms).
+- Na 3ª execução, 30 amostras de `pg_stat_activity` (uma por segundo) não mostraram espera de trava
+  (`Lock`); apareceram só `Client:ClientRead` e CPU. A causa do tempo a mais não foi isolada; a hipótese
+  da trava em `estado_ponto` (`SELECT ... FOR UPDATE`, as 20 VUs usam o mesmo dispositivo e os mesmos
+  pontos) não foi confirmada nesta medição.
+- O cenário é mais pesado que o uso real: um ESP32 manda uma janela a cada 5 s, em série; aqui 20 VUs
+  mandam janelas do mesmo dispositivo ao mesmo tempo.
+
 ### Como medir em produção
 
 Para ter o antes em produção, rode **antes do push** que leva esta mudança ao Render; depois do

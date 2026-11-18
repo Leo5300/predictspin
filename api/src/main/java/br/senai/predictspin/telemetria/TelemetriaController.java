@@ -38,14 +38,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Telemetria", description = "Ingestão pelo dispositivo e consultas pelos usuários")
 public class TelemetriaController {
 
-    private final IngestaoService ingestao;
+    private final RecepcaoTelemetriaService recepcao;
     private final ConsultaTelemetriaService consulta;
     private final JanelaService janelas;
     private final SerieAgregadaService series;
 
-    public TelemetriaController(IngestaoService ingestao, ConsultaTelemetriaService consulta, JanelaService janelas,
-                                SerieAgregadaService series) {
-        this.ingestao = ingestao;
+    public TelemetriaController(RecepcaoTelemetriaService recepcao, ConsultaTelemetriaService consulta,
+                                JanelaService janelas, SerieAgregadaService series) {
+        this.recepcao = recepcao;
         this.consulta = consulta;
         this.janelas = janelas;
         this.series = series;
@@ -64,7 +64,7 @@ public class TelemetriaController {
     @ApiResponse(responseCode = "403", description = "Campo 'dispositivo' diferente do cabeçalho")
     public ResponseEntity<IngestaoResposta> receber(@AuthenticationPrincipal DispositivoAutenticado dispositivo,
                                                     @Valid @RequestBody TelemetriaRequisicao requisicao) {
-        IngestaoService.Resultado resultado = ingestao.receber(dispositivo, requisicao);
+        IngestaoService.Resultado resultado = recepcao.receber(dispositivo, requisicao);
         return ResponseEntity.status(resultado.criada() ? HttpStatus.CREATED : HttpStatus.OK)
                 .body(resultado.resposta());
     }

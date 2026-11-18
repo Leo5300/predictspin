@@ -15,7 +15,6 @@ import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,10 +37,11 @@ import br.senai.predictspin.telemetria.dto.TelemetriaRequisicao;
  *   <li>reenvio do mesmo (dispositivo, medido_em) não grava nada e devolve a janela existente;</li>
  *   <li>se houver ensaio aberto na máquina, do mesmo tipo (real ou simulado) do dispositivo,
  *       a janela é gravada com ele;</li>
- *   <li>janela nova é anunciada ({@link JanelaGravada}) para o fluxo de eventos ao vivo; reenvio não;</li>
+ *   <li>janela nova volta com o {@link JanelaRecebida} que o {@link RecepcaoTelemetriaService} anuncia
+ *       depois do commit (avaliação e fluxo ao vivo); reenvio não;</li>
  *   <li>janela nova com medido_em mais antigo que {@link #LIMITE_AO_VIVO} (a fila do dispositivo sendo
- *       esvaziada depois de uma queda de rede) é anunciada como {@link JanelaRecuperada}: o fluxo ao
- *       vivo junta essas num evento "recuperacao" em vez de mandar uma a uma.</li>
+ *       esvaziada depois de uma queda de rede) sai com aoVivo = false: o fluxo ao vivo junta essas num
+ *       evento "recuperacao" em vez de mandar uma a uma.</li>
  * </ul>
  * Gravação, ensaio, último contato e consultas são iguais para as duas.
  */
@@ -67,19 +67,17 @@ public class IngestaoService {
     private final DispositivoRepository dispositivos;
     private final EnsaioRepository ensaios;
     private final ModoRapidoService modoRapido;
-    private final ApplicationEventPublisher anuncios;
     private final Clock relogio;
 
     public IngestaoService(IngestaoRepository ingestao, PontoMedicaoRepository pontos, CanalRepository canais,
                            DispositivoRepository dispositivos, EnsaioRepository ensaios, ModoRapidoService modoRapido,
-                           ApplicationEventPublisher anuncios, Clock relogio) {
+                           Clock relogio) {
         this.ingestao = ingestao;
         this.pontos = pontos;
         this.canais = canais;
         this.dispositivos = dispositivos;
         this.ensaios = ensaios;
         this.modoRapido = modoRapido;
-        this.anuncios = anuncios;
         this.relogio = relogio;
     }
 
@@ -115,7 +113,7 @@ public class IngestaoService {
             IngestaoRepository.JanelaExistente existente = ingestao.buscarJanela(dispositivo.id(), medidoEm)
                     .orElseThrow(() -> new IllegalStateException("Janela em conflito não encontrada"));
             return new Resultado(new IngestaoResposta(existente.id(), true, existente.ensaioId(), medidoEm,
-                    modoRapidoAte));
+                    modoRapidoAte), null);
         }
 
         long janelaId = novaJanela.get();
@@ -124,17 +122,13 @@ public class IngestaoService {
             ingestao.inserirLeituras(janelaId, leituras);
         }
         boolean aoVivo = !medidoEm.isBefore(agora.minus(LIMITE_AO_VIVO));
-        // Avaliação contra a referência: roda depois do commit, em transação própria; falha nela não muda a resposta
-        anuncios.publishEvent(new JanelaRecebida(dispositivo.maquinaId(), dispositivo.simulado(), janelaId, medidoEm,
-                aoVivo, req.rotacaoRpm(), req.saturou(), req.modoOuNormal(), req.amostras(), req.amostrasEsperadas(),
-                rastreio.firmwareVersao(), rastreio.calibracao(), ensaioId, pontoPorCodigo, linhas));
-        // Só anuncia: quem escuta age depois do commit e fora desta thread (eventos ao vivo do painel)
-        if (!aoVivo) {
-            anuncios.publishEvent(new JanelaRecuperada(dispositivo.maquinaId(), dispositivo.simulado(), medidoEm));
-        } else {
-            anuncios.publishEvent(new JanelaGravada(dispositivo.maquinaId(), janelaId));
-        }
-        return new Resultado(new IngestaoResposta(janelaId, false, ensaioId, medidoEm, modoRapidoAte));
+        // Nada é anunciado daqui: a avaliação e o fluxo ao vivo vêm depois do commit, com a conexão desta
+        // transação já devolvida ao pool ({@link RecepcaoTelemetriaService})
+        JanelaRecebida recebida = new JanelaRecebida(dispositivo.maquinaId(), dispositivo.simulado(), janelaId,
+                medidoEm, aoVivo, req.rotacaoRpm(), req.saturou(), req.modoOuNormal(), req.amostras(),
+                req.amostrasEsperadas(), rastreio.firmwareVersao(), rastreio.calibracao(), ensaioId, pontoPorCodigo,
+                linhas);
+        return new Resultado(new IngestaoResposta(janelaId, false, ensaioId, medidoEm, modoRapidoAte), recebida);
     }
 
     private static List<IngestaoRepository.LinhaTelemetria> resolverPontos(
@@ -210,8 +204,11 @@ public class IngestaoService {
         }
     }
 
-    /** Resposta e se a janela foi criada agora (201) ou já existia (200). */
-    public record Resultado(IngestaoResposta resposta) {
+    /**
+     * Resposta, se a janela foi criada agora (201) ou já existia (200) e, para janela nova, o que anunciar
+     * depois do commit (nulo no reenvio).
+     */
+    public record Resultado(IngestaoResposta resposta, JanelaRecebida recebida) {
         public boolean criada() {
             return !resposta.duplicada();
         }

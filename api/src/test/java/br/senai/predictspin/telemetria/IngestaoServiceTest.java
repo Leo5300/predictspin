@@ -51,6 +51,7 @@ class IngestaoServiceTest {
     private ModoRapidoService modoRapido;
     private ApplicationEventPublisher anuncios;
     private IngestaoService servico;
+    private RecepcaoTelemetriaService recepcao;
 
     @BeforeEach
     void criar() {
@@ -64,8 +65,9 @@ class IngestaoServiceTest {
         when(pontos.codigosAtivos(MAQUINA)).thenReturn(List.of(codigo("A", 11L), codigo("B", 12L), codigo("C", 13L)));
         when(canais.codigosAtivos(MAQUINA)).thenReturn(List.of(codigo("corrente_a", 31L), codigo("amb_temp_c", 32L)));
         when(ensaios.idAberto(MAQUINA, true)).thenReturn(Optional.empty());
-        servico = new IngestaoService(ingestao, pontos, canais, dispositivos, ensaios, modoRapido, anuncios,
+        servico = new IngestaoService(ingestao, pontos, canais, dispositivos, ensaios, modoRapido,
                 Clock.fixed(AGORA, ZoneOffset.UTC));
+        recepcao = new RecepcaoTelemetriaService(servico, anuncios);
     }
 
     private static CodigoId codigo(String codigo, Long id) {
@@ -324,7 +326,7 @@ class IngestaoServiceTest {
         janelaNova(100L);
         Instant antiga = AGORA.minusSeconds(600);
 
-        var resultado = servico.receber(SIMULADOR, requisicao("ps-sim-01", antiga, null));
+        var resultado = recepcao.receber(SIMULADOR, requisicao("ps-sim-01", antiga, null));
 
         // gravação e resposta iguais às de uma janela ao vivo
         assertThat(resultado.criada()).isTrue();
@@ -340,10 +342,10 @@ class IngestaoServiceTest {
     @Test
     void limiteDoAoVivoEhDe30Segundos() {
         janelaNova(100L);
-        servico.receber(SIMULADOR, requisicao("ps-sim-01", AGORA.minusSeconds(10), null));
-        servico.receber(SIMULADOR, requisicao("ps-sim-01", AGORA.minusSeconds(30), null));
+        recepcao.receber(SIMULADOR, requisicao("ps-sim-01", AGORA.minusSeconds(10), null));
+        recepcao.receber(SIMULADOR, requisicao("ps-sim-01", AGORA.minusSeconds(30), null));
         verify(anuncios, org.mockito.Mockito.times(2)).publishEvent(any(JanelaGravada.class));
-        servico.receber(SIMULADOR, requisicao("ps-sim-01", AGORA.minusSeconds(31), null));
+        recepcao.receber(SIMULADOR, requisicao("ps-sim-01", AGORA.minusSeconds(31), null));
         verify(anuncios).publishEvent(new JanelaRecuperada(MAQUINA, true, AGORA.minusSeconds(31)));
     }
 
@@ -354,20 +356,26 @@ class IngestaoServiceTest {
         Instant antiga = AGORA.minusSeconds(600);
         when(ingestao.buscarJanela(20L, antiga)).thenReturn(Optional.of(new IngestaoRepository.JanelaExistente(9L, null)));
 
-        assertThat(servico.receber(SIMULADOR, requisicao("ps-sim-01", antiga, null)).criada()).isFalse();
+        assertThat(recepcao.receber(SIMULADOR, requisicao("ps-sim-01", antiga, null)).criada()).isFalse();
         verify(anuncios, never()).publishEvent(any());
     }
 
     @Test
     void janelaNovaEhAnunciadaEReenvioNao() {
         janelaNova(100L);
-        servico.receber(SIMULADOR, requisicao("ps-sim-01", MEDIDO, null));
-        verify(anuncios).publishEvent(new JanelaGravada(MAQUINA, 100L));
+        var resultado = recepcao.receber(SIMULADOR, requisicao("ps-sim-01", MEDIDO, null));
+        // primeiro a avaliação (para a janela sair avaliada), depois o fluxo ao vivo
+        var ordem = org.mockito.Mockito.inOrder(anuncios);
+        ordem.verify(anuncios).publishEvent(resultado.recebida());
+        ordem.verify(anuncios).publishEvent(new JanelaGravada(MAQUINA, 100L));
+        // a ingestão sozinha não anuncia nada: tudo sai depois do commit, pela recepção
+        servico.receber(SIMULADOR, requisicao("ps-sim-01", MEDIDO.plusSeconds(5), null));
+        verify(anuncios, org.mockito.Mockito.times(2)).publishEvent(org.mockito.ArgumentMatchers.<Object>any());
 
         when(ingestao.inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean(), any(), any()))
                 .thenReturn(Optional.empty());
         when(ingestao.buscarJanela(20L, MEDIDO)).thenReturn(Optional.of(new IngestaoRepository.JanelaExistente(100L, null)));
-        servico.receber(SIMULADOR, requisicao("ps-sim-01", MEDIDO, null));
+        recepcao.receber(SIMULADOR, requisicao("ps-sim-01", MEDIDO, null));
         verify(anuncios, org.mockito.Mockito.times(1)).publishEvent(any(JanelaGravada.class));
     }
 }
