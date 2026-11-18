@@ -303,8 +303,19 @@ relógio das janelas controlado). Com dado real, a severidade só se acumula dep
 - Nenhum número desta página foi confirmado com o torno: são todos proposta. Os testes provam a lógica
   com sinal sintético; o roteiro de demonstração prova o encadeamento com dado simulado.
 - A validação do alerta de instrumento depende dos ensaios reais com rótulo `sensor_solto`.
-- Fora de ensaio, a regra "menor pior z entre vazio e corte" evita alarmar todo corte, mas também deixa
-  passar como normal um valor entre o vazio e o corte normal (corte leve).
+- **Escolha da referência fora de ensaio.** Sem ensaio aberto, a API não sabe se o torno está girando em
+  vazio ou cortando: compara a janela com o T1 (vazio) e com a T3 genérica (corte) e fica com o menor
+  pior z. Isso evita alarmar todo corte, mas tem dois efeitos:
+  - o giro em vazio também é comparado com o corte. Um defeito que **sobe o nível do vazio sem passar
+    do nível normal de corte** (por exemplo, um desbalanceamento leve que leva o vazio de 0,10 g para
+    0,13 g quando o corte normal é 0,14 g) sai como NORMAL fora de ensaio, porque contra o corte o z é
+    baixo. **Dentro de um ensaio T1** a comparação é só com o T1 e o mesmo defeito é detectado;
+  - pelo mesmo motivo, um valor entre o vazio e o corte normal (corte leve) passa como normal.
+
+  Os números do exemplo são ilustrativos (do sinal sintético dos testes), não medidos. Quanto essa
+  limitação pesa no uso real só se sabe com os ensaios T0 a T3 no torno (com as condições de defeito
+  gravadas nas duas etapas); é essa coleta que valida ou derruba a regra. Até lá, para conferir a
+  máquina em vazio, abra um ensaio T1.
 - Saturação e falta de amostras são da janela inteira no payload; o alerta de instrumento vai para o
   ponto de maior pico, que pode não ser o sensor com defeito.
 - A deriva compara a mediana das razões RMS ÷ típico (porque a marcha muda o nível), não as medianas
