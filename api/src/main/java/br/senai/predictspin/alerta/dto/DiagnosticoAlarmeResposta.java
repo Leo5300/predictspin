@@ -37,7 +37,7 @@ public record DiagnosticoAlarmeResposta(
             @Schema(description = "Severidade desde a última OS do ponto (abre OS ao passar do limite)")
             double severidadeDesdeOs,
             @Schema(description = "Diferença % entre o RMS típico das janelas NORMAL de uso das últimas 24 h "
-                    + "(|z| abaixo do limite de atenção) e o da referência; nulo sem janelas") @Nullable Double derivaPct,
+                    + "(z abaixo do limite de atenção; z negativo entra) e o da referência; nulo sem janelas") @Nullable Double derivaPct,
             int derivaJanelas,
             @Schema(description = "Piso de ruído do RMS (p95 do T0), em g; nulo quando não medido")
             @Nullable Double pisoRuidoRms,

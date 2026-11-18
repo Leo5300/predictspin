@@ -94,10 +94,12 @@ recálculo.
 sem ensaio** dos últimos `deriva.dias` (7) que foram avaliadas NORMAL, sem alerta aberto na máquina no
 instante da janela, na mesma célula da referência que as avaliou, limitadas a `deriva.fracao-maxima`
 (30%) das janelas da célula (as mais recentes primeiro; d ≤ f/(1−f) × n). Nunca entram em célula de
-receita. Além disso, só entram janelas com |z| abaixo do limite de atenção em **todas** as medidas:
-fora de ensaio, uma janela de giro em vazio é comparada também com o corte (ver abaixo) e, com z muito
-negativo, puxaria a referência do corte para baixo. No Diagnóstico, a deriva de cada ponto é a mediana
-de RMS ÷ típico das janelas de uso NORMAL das últimas 24 h, menos 1, em %.
+receita. Além disso, só entram janelas com z abaixo do limite de atenção em **todas** as medidas: a
+janela com z de atenção ou mais fica fora mesmo quando o ponto ainda está NORMAL por causa do atraso.
+z negativo (vibração abaixo do típico) entra: é janela normal. Consequência aceita: fora de ensaio, um
+giro em vazio comparado com o corte (ver "Limitações") entra na célula do corte com z negativo e puxa um
+pouco o típico dele para baixo, no máximo até a fração acima. No Diagnóstico, a deriva de cada ponto é a
+mediana de RMS ÷ típico das janelas de uso NORMAL das últimas 24 h (mesmo critério de z), menos 1, em %.
 
 ## Avaliação de cada janela
 
@@ -182,7 +184,8 @@ piorar; não abre um por janela. Um alerta ativo por ponto, tipo (máquina ou in
 | `suprimido` | ADMIN, com motivo e prazo | ao fim do prazo (ou cancelado), o estado que teria sem a supressão |
 
 **Prioridade:** ATENÇÃO = baixa, ALARME = alta, instrumento = baixa (gravada na coluna `severidade` da
-V1). Durante a supressão a regra continua: se o ponto volta ao normal e sai de novo, é o mesmo alerta
+V1). Ela segue o nível ATUAL: o alerta que caiu de alarme para atenção volta a baixa; o pior nível alcançado
+fica em `pior_nivel` e o maior z em `pior_z`. Durante a supressão a regra continua: se o ponto volta ao normal e sai de novo, é o mesmo alerta
 (histórico "piorou"). Cada alerta guarda máquina, ponto, tipo, prioridade, nível atual e o pior, janela
 de origem, explicação, ação recomendada, componente provável, versão da referência, firmware e
 calibração da janela, ensaio e condição, simulado, quem reconheceu e quando, e o histórico de cada

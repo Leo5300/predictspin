@@ -48,9 +48,9 @@ public class ReferenciaRepository {
 
     /**
      * Janelas de uso (sem ensaio) desde {@code desde}, avaliadas NORMAL no ponto, sem alerta aberto na
-     * máquina no instante da janela, e com |z| abaixo de {@code zMaximo} em todas as medidas (perto do
-     * normal nos dois sentidos: uma janela de giro em vazio comparada com o corte tem z muito negativo e
-     * puxaria a referência do corte para baixo). A etapa vem da referência usada na avaliação.
+     * máquina no instante da janela, e com z abaixo de {@code zMaximo} em todas as medidas. z negativo
+     * (vibração abaixo do típico) entra; a janela com z de atenção ou mais fica fora mesmo quando o ponto
+     * ainda está NORMAL por causa do atraso. A etapa vem da referência usada na avaliação.
      */
     public List<LinhaJanela> janelasDeDeriva(long maquinaId, boolean simulado, Instant desde, double zMaximo) {
         return jdbc.query("SELECT " + COLUNAS_JANELA + """
@@ -62,9 +62,9 @@ public class ReferenciaRepository {
                 JOIN avaliacao a ON a.janela_id = j.id AND a.ponto_medicao_id = t.ponto_medicao_id
                 WHERE d.maquina_id = ? AND d.simulado = ? AND j.ensaio_id IS NULL AND j.medido_em >= ?
                   AND a.situacao = 0 AND a.estado = 0 AND a.etapa_ref IS NOT NULL
-                  AND greatest(abs(coalesce(a.z_rms, 0)), abs(coalesce(a.z_pico, 0)), abs(coalesce(a.z_curtose, 0)),
-                               abs(coalesce(a.z_o1x, 0)), abs(coalesce(a.z_o2x, 0)), abs(coalesce(a.z_o3x, 0)),
-                               abs(coalesce(a.z_vel, 0))) < ?
+                  AND greatest(coalesce(a.z_rms, 0), coalesce(a.z_pico, 0), coalesce(a.z_curtose, 0),
+                               coalesce(a.z_o1x, 0), coalesce(a.z_o2x, 0), coalesce(a.z_o3x, 0),
+                               coalesce(a.z_vel, 0)) < ?
                   AND NOT EXISTS (SELECT 1 FROM alerta al
                                   WHERE al.maquina_id = d.maquina_id AND al.simulado = d.simulado
                                     AND al.criado_em <= j.medido_em

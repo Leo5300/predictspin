@@ -133,11 +133,13 @@ class AvaliacaoIntegracaoTest extends AlarmeIntegracaoBase {
         String token = tokenAdmin();
         prepararReferencia(token);
         Instant t = enviarSequencia(Instant.now().truncatedTo(ChronoUnit.SECONDS), 4, 1120, CORTE);
-        // giro em vazio fora de ensaio é NORMAL, mas comparado com o corte (|z| alto): não entra na deriva
-        enviarSequencia(t, 2, 1120, VAZIO);
+        // um pico isolado nos três pontos: ainda NORMAL (atraso), mas com z de alarme: fica fora da deriva
+        t = enviarSequencia(t, 1, 1120, SEVERO);
+        // corte mais leve que o típico (z negativo), avaliado NORMAL: entra
+        enviarSequencia(t, 1, 1120, new double[] {CORTE[0] * 0.8, CORTE[1] * 0.8, CORTE[2] * 0.8});
         JsonNode versao = recalcular(token);
         assertThat(versao.get("numero").asInt()).isEqualTo(2);
-        assertThat(versao.get("janelas_deriva").asInt()).isEqualTo(4);
+        assertThat(versao.get("janelas_deriva").asInt()).isEqualTo(5);
         mvc.perform(comToken(get("/api/v1/maquinas/999999/avaliacao"), token)).andExpect(status().isNotFound());
         JsonNode real = corpo(mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId + "/avaliacao"), token)));
         assertThat(real.get("janela_id").isNull()).isTrue();

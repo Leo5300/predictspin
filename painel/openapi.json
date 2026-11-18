@@ -3079,7 +3079,7 @@
             "type": "integer"
           },
           "deriva_pct": {
-            "description": "Diferença % entre o RMS típico das janelas NORMAL de uso das últimas 24 h (|z| abaixo do limite de atenção) e o da referência; nulo sem janelas",
+            "description": "Diferença % entre o RMS típico das janelas NORMAL de uso das últimas 24 h (z abaixo do limite de atenção; z negativo entra) e o da referência; nulo sem janelas",
             "format": "double",
             "type": [
               "number",

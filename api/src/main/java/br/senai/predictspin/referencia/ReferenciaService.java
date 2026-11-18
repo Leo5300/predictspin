@@ -50,7 +50,7 @@ public class ReferenciaService {
     private final ObjectMapper json;
     private final Clock relogio;
     private final Map<ChaveCache, Optional<ReferenciaAtiva>> cache = new ConcurrentHashMap<>();
-    /** Janela de deriva só entra com |z| abaixo do limite de ATENÇÃO em todas as medidas. */
+    /** Janela de deriva só entra com z abaixo do limite de ATENÇÃO em todas as medidas (z negativo entra). */
     private final double zAtencao;
 
     public ReferenciaService(ReferenciaRepository repositorio, MaquinaRepository maquinas,

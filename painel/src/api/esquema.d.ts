@@ -2009,7 +2009,7 @@ export interface components {
             deriva_janelas: number;
             /**
              * Format: double
-             * @description Diferença % entre o RMS típico das janelas NORMAL de uso das últimas 24 h (|z| abaixo do limite de atenção) e o da referência; nulo sem janelas
+             * @description Diferença % entre o RMS típico das janelas NORMAL de uso das últimas 24 h (z abaixo do limite de atenção; z negativo entra) e o da referência; nulo sem janelas
              */
             deriva_pct: number | null;
             /**

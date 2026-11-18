@@ -110,8 +110,8 @@ public class DiagnosticoAlarmeService {
                 JOIN telemetria t ON t.janela_id = a.janela_id AND t.ponto_medicao_id = a.ponto_medicao_id
                 WHERE d.maquina_id = ? AND d.simulado = ? AND j.ensaio_id IS NULL AND j.medido_em >= ?
                   AND a.situacao = 0 AND a.estado = 0 AND a.etapa_ref IS NOT NULL
-                  AND greatest(abs(coalesce(a.z_rms, 0)), abs(coalesce(a.z_pico, 0)), abs(coalesce(a.z_o1x, 0)),
-                               abs(coalesce(a.z_o2x, 0)), abs(coalesce(a.z_o3x, 0)), abs(coalesce(a.z_vel, 0))) < ?
+                  AND greatest(coalesce(a.z_rms, 0), coalesce(a.z_pico, 0), coalesce(a.z_o1x, 0),
+                               coalesce(a.z_o2x, 0), coalesce(a.z_o3x, 0), coalesce(a.z_vel, 0)) < ?
                 ORDER BY j.medido_em DESC
                 LIMIT ?
                 """, rs -> {
