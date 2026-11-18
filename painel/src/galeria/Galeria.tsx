@@ -402,10 +402,13 @@ export function Galeria() {
 
         <section className="flex flex-col gap-2" aria-label="Alarmes e ordens de serviço">
           <h2 className="text-15 font-semibold">
-            Alarmes (ISA-18.2) e ordens de serviço: prontos, fora das telas até a API ter a regra
+            Alarmes (ISA-18.2) e ordens de serviço (exemplos; nas telas, só dados da API)
           </h2>
           <Painel className="lg:grid-cols-2">
-            <Modulo rotulo="Alarmes: não reconhecido, reconhecido, normalizado, suprimido" semRecuo>
+            <Modulo
+              rotulo="Alarmes: não reconhecido, ensaio de condição, reconhecido, normalizado, suprimido, instrumento"
+              semRecuo
+            >
               <ul>
                 {ALARMES_EXEMPLO.map((a) => (
                   <LinhaAlarme

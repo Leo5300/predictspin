@@ -42,6 +42,7 @@ import {
 import { paresParecidos } from '@/dominio/nomes'
 import { podeAbrir, ROTULO_PAPEL_USUARIO } from '@/dominio/papeis'
 import { useFonte } from '@/estado/preferencias'
+import { ModuloDiagnosticoAlarme } from '@/componentes/alarmes/ModuloDiagnosticoAlarme'
 import { useMaquinaDaColeta } from '@/hooks/useMaquinaDaColeta'
 import { cn } from '@/lib/utils'
 
@@ -53,6 +54,7 @@ export function TelaDiagnostico() {
   const sessao = useSessao()
   const papel = sessao.fase === 'autenticada' ? sessao.usuario.papel : null
   const { maquinas, id } = useMaquinaDaColeta(undefined)
+  const simulado = useFonte() === 'simulado'
   useEffect(() => {
     document.title = 'Diagnóstico · PredictSpin'
   }, [])
@@ -64,7 +66,8 @@ export function TelaDiagnostico() {
       <header>
         <h1 className="text-24 font-semibold">Diagnóstico</h1>
         <p className="text-13 text-apoio">
-          O sistema de medição: dispositivos, qualidade das janelas, cadastros e versão.
+          O sistema de medição: dispositivos, qualidade das janelas, regra de alarme, cadastros e
+          versão.
           {maquina ? (
             <>
               {' '}
@@ -87,6 +90,7 @@ export function TelaDiagnostico() {
           <Sobre />
         </Painel>
       )}
+      {id === undefined ? null : <ModuloDiagnosticoAlarme maquinaId={id} simulado={simulado} />}
       {podeAbrir(papel, 'catalogos') ? (
         <Painel className="lg:grid-cols-2">
           <Catalogo tipo="materiais" admin={papel === 'ADMIN'} />

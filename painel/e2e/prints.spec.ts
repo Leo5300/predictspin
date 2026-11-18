@@ -153,9 +153,13 @@ export const TELAS: Tela[] = [
   },
   {
     nome: 'alarmes',
+    fonte: 'simulado',
     abrir: async (page) => {
       await page.goto('/alarmes')
-      await page.getByText('A regra de alarme ainda não foi implantada na API.').waitFor()
+      await page
+        .getByRole('list', { name: 'Lista de alarmes' })
+        .or(page.getByText('Nenhum alarme com estes filtros.'))
+        .waitFor()
     },
   },
   {

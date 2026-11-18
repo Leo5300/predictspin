@@ -109,7 +109,16 @@ for (const tema of ['grafite', 'claro'] as const) {
     await semViolacoesGraves(page, 'diagnóstico')
 
     await page.goto('/alarmes')
-    await expect(page.getByText('A regra de alarme ainda não foi implantada na API.')).toBeVisible()
+    await expect(
+      page
+        .getByRole('list', { name: 'Lista de alarmes' })
+        .or(page.getByText('Nenhum alarme com estes filtros.')),
+    ).toBeVisible()
+    await semViolacoesGraves(page, 'alarmes')
+    // os termos novos do "?" leem os limites da API
+    await page.getByRole('button', { name: 'O que é Atenção e alarme?' }).first().click()
+    await expect(page.getByTestId('balao-explica')).not.toContainText('{')
+    await page.keyboard.press('Escape')
     // com um balão "?" aberto
     await page.getByRole('button', { name: 'O que é SIM (simulado)?' }).click()
     await expect(page.getByTestId('balao-explica')).toBeVisible()

@@ -4,7 +4,9 @@
  *
  * Os textos são fixos e não são medição. Os números dos exemplos são texto explicativo, sempre
  * começando por "Exemplo:", e não vêm da API: isso não fere a regra de nenhum valor inventado no
- * painel (todo número de medição exibido vem da API; estes são parte da explicação).
+ * painel (todo número de medição exibido vem da API; estes são parte da explicação). Limites da regra
+ * de alarme NUNCA são escritos aqui: aparecem como {z_atencao}, {z_alarme}, {atraso_s} e {saida_s} e o
+ * balão os troca pelos valores em uso lidos da API.
  */
 
 export type Termo = {
@@ -75,15 +77,69 @@ export const GLOSSARIO = {
   referencia: {
     titulo: 'Referência',
     explicacao:
-      'A faixa normal aprendida para cada ponto e cada rotação, a partir de gravações em operação normal. Enquanto ela não existe, o painel fica cinza: não há como dizer o que é anormal.',
+      'O normal desta máquina, aprendido de gravações boas: a vibração típica de cada ponto em cada marcha. Sem referência, o painel não chama nada de atenção ou alarme.',
     exemplo:
-      'Exemplo: se o normal do ponto B a 1120 rpm fica entre 0,07 e 0,09 g, um RMS de 0,15 g passa a chamar atenção.',
+      'Exemplo: a referência do B na marcha 1120, no corte, diz que o RMS costuma ficar perto de 0,08 g.',
   },
   desvio: {
-    titulo: 'Desvio do RMS',
-    explicacao: 'Quanto o RMS atual se afasta da referência. Sem referência, a régua fica vazia.',
+    titulo: 'Desvio (z)',
+    explicacao:
+      "Quanto o valor de agora se afastou do normal, contado em 'tamanhos da variação normal'. Abaixo de {z_atencao} é variação comum; a partir de {z_atencao} é atenção; a partir de {z_alarme} é alarme.",
+    exemplo: 'Exemplo: z = 4 no B·RMS quer dizer bem acima do normal, mas ainda não alarme.',
+  },
+  atencao_alarme: {
+    titulo: 'Atenção e alarme',
+    explicacao:
+      'Atenção: saiu do normal e vale olhar. Alarme: saiu muito e tem uma ação recomendada. Os dois só entram depois de {atraso_s} s seguidos fora do normal, para uma batida isolada não disparar nada, e só apagam depois de {saida_s} s de volta ao normal.',
+    exemplo: 'Exemplo: o B ficou {atraso_s} s acima de {z_alarme} e o alarme acendeu.',
+  },
+  reconhecer: {
+    titulo: 'Reconhecer',
+    explicacao:
+      "Dizer ao sistema 'eu vi'. Não apaga o alarme nem conserta nada: ele só some quando a vibração volta ao normal.",
+    exemplo: 'Exemplo: o técnico reconhece e vai conferir a ferramenta.',
+  },
+  suprimido: {
+    titulo: 'Suprimido',
+    explicacao: 'Alarme silenciado de propósito, com motivo e prazo, por quem pode.',
     exemplo:
-      'Exemplo: régua no meio = dentro do normal; régua avançando para a direita = vibrando acima do normal.',
+      'Exemplo: suprimido por 1 h porque a máquina ao lado está em manutenção e faz o C vibrar.',
+  },
+  severidade: {
+    titulo: 'Severidade acumulada',
+    explicacao:
+      'Soma de quanto e por quanto tempo um ponto ficou acima do normal. Duas máquinas com as mesmas horas de uso podem ter severidades bem diferentes.',
+    exemplo: 'Exemplo: 10 min um pouco acima pode pesar mais que 10 s muito acima.',
+  },
+  acao_recomendada: {
+    titulo: 'Ação recomendada',
+    explicacao:
+      'O que conferir primeiro quando o alarme acende. É orientação de inspeção, não diagnóstico.',
+    exemplo: "Exemplo: 'conferir o estado da ferramenta e reduzir o avanço'.",
+  },
+  deriva: {
+    titulo: 'Deriva',
+    explicacao:
+      'Quanto o normal recente se afastou da referência gravada, devagar, ao longo dos dias. Pode ser desgaste começando ou só mudança de uso.',
+    exemplo: 'Exemplo: deriva de +12% no A em uma semana.',
+  },
+  referencia_generica: {
+    titulo: 'Referência genérica',
+    explicacao:
+      'Não havia gravação suficiente com este material e esta ferramenta, então o painel comparou com o corte normal desta marcha, de todas as receitas juntas.',
+    exemplo: 'Exemplo: material novo, ainda sem gravações.',
+  },
+  sem_referencia_completa: {
+    titulo: 'Sem referência completa',
+    explicacao:
+      'Para avaliar o torno girando fora de uma gravação, o painel precisa saber o normal do giro em vazio e o do corte nesta marcha. Falta um dos dois.',
+    exemplo: 'Exemplo: há gravação em vazio a 1120 rpm, mas nenhuma de corte.',
+  },
+  calibracao_diferente: {
+    titulo: 'Calibração diferente',
+    explicacao:
+      'O sensor foi calibrado de novo depois que a referência foi gravada, então os números não são mais comparáveis. Recalcule a referência.',
+    exemplo: 'Exemplo: o sensor B foi recalibrado ontem.',
   },
   dado_velho: {
     titulo: 'Dado velho',
@@ -129,6 +185,28 @@ export const GLOSSARIO = {
 export type ChaveDoGlossario = keyof typeof GLOSSARIO
 
 export const CHAVES_DO_GLOSSARIO = Object.keys(GLOSSARIO) as ChaveDoGlossario[]
+
+/** Valores em uso que os textos citam entre chaves; vêm da API (GET /alarmes/limites), nunca à mão. */
+export type ValoresDoGlossario = {
+  z_atencao: number
+  z_alarme: number
+  atraso_s: number
+  saida_s: number
+}
+
+/** Troca {nome} pelo valor em uso; sem os valores (ainda carregando), mostra "…". */
+export function interpolar(texto: string, valores: ValoresDoGlossario | undefined): string {
+  return texto.replace(/\{(\w+)\}/g, (_, nome: string) => {
+    const valor = valores?.[nome as keyof ValoresDoGlossario]
+    return valor === undefined ? '…' : valor.toLocaleString('pt-BR')
+  })
+}
+
+/** O termo usa algum valor da API? */
+export function usaValores(chave: ChaveDoGlossario): boolean {
+  const termo = GLOSSARIO[chave]
+  return /\{\w+\}/.test(termo.explicacao + termo.exemplo)
+}
 
 /** Nome acessível do botão "?": "O que é RMS?". */
 export function nomeDoBotao(chave: ChaveDoGlossario): string {

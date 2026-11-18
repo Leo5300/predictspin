@@ -1,13 +1,41 @@
 import { Popover } from '@base-ui/react/popover'
+import { useQuery } from '@tanstack/react-query'
 import { CircleHelp } from 'lucide-react'
 
-import { GLOSSARIO, nomeDoBotao, type ChaveDoGlossario } from '@/dominio/glossario'
+import { consultaLimites } from '@/api/adaptadores/referencia'
+import {
+  GLOSSARIO,
+  interpolar,
+  nomeDoBotao,
+  usaValores,
+  type ChaveDoGlossario,
+  type ValoresDoGlossario,
+} from '@/dominio/glossario'
 import { cn } from '@/lib/utils'
+
+/** Texto do balão; quem cita limites lê os valores em uso da API (só estes termos consultam). */
+function Texto({ texto, chave }: { texto: string; chave: ChaveDoGlossario }) {
+  return usaValores(chave) ? <TextoComValores texto={texto} /> : <>{texto}</>
+}
+
+function TextoComValores({ texto }: { texto: string }) {
+  const alarme = useQuery(consultaLimites()).data?.alarme
+  const valores: ValoresDoGlossario | undefined = alarme
+    ? {
+        z_atencao: alarme.z_atencao,
+        z_alarme: alarme.z_alarme,
+        atraso_s: alarme.atraso_s,
+        saida_s: alarme.saida_s,
+      }
+    : undefined
+  return <>{interpolar(texto, valores)}</>
+}
 
 /**
  * "?" ao lado de um termo técnico: abre um balão (não modal) com título, explicação em linguagem de
  * oficina e um mini exemplo. Abre com clique, toque, Enter ou Espaço; fecha com Esc, clique fora ou
  * novo toque. O ícone é pequeno e cinza (sem cor de sinal em repouso), mas a área de toque tem 44 px.
+ * Limites citados no texto ({z_atencao}...) vêm da API.
  */
 export function Explica({ chave, className }: { chave: ChaveDoGlossario; className?: string }) {
   const termo = GLOSSARIO[chave]
@@ -43,10 +71,10 @@ export function Explica({ chave, className }: { chave: ChaveDoGlossario; classNa
               {termo.titulo}
             </Popover.Title>
             <Popover.Description className="mt-1 text-13 leading-snug font-normal tracking-normal text-texto">
-              {termo.explicacao}
+              <Texto texto={termo.explicacao} chave={chave} />
             </Popover.Description>
             <p className="mt-2 border-t border-linha pt-2 text-13 leading-snug font-normal tracking-normal text-apoio">
-              {termo.exemplo}
+              <Texto texto={termo.exemplo} chave={chave} />
             </p>
           </Popover.Popup>
         </Popover.Positioner>

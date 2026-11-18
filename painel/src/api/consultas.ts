@@ -226,6 +226,43 @@ export function consultaJanelasDoPeriodo(
   })
 }
 
+/** Chaves das consultas com período explícito: [nome, máquina, simulado, de, ate, ...]. */
+const COM_PERIODO = new Set(['serie-periodo', 'janelas-periodo', 'janelas-pagina'])
+/** Chaves "do agora" da máquina: [nome, máquina, simulado, ...]. */
+const DO_AGORA = new Set(['serie', 'ultima-janela', 'janelas-recentes'])
+
+/**
+ * Decide se uma consulta precisa ser refeita depois de um evento "recuperacao" (janelas antigas que
+ * chegaram depois de uma queda): as do agora sempre; as de período só se o período cruza [de, ate].
+ * Assim o painel aberto não fica com lacuna depois de uma queda longa.
+ */
+export function afetadaPelaRecuperacao(
+  chave: readonly unknown[],
+  maquinaId: number,
+  simulado: boolean,
+  deIso: string,
+  ateIso: string,
+): boolean {
+  const [nome, maquina, fonte, de, ate] = chave
+  if (maquina !== maquinaId || fonte !== simulado || typeof nome !== 'string') return false
+  if (DO_AGORA.has(nome)) return true
+  if (!COM_PERIODO.has(nome) || typeof de !== 'string' || typeof ate !== 'string') return false
+  return Date.parse(de) <= Date.parse(ateIso) && Date.parse(ate) >= Date.parse(deIso)
+}
+
+export function invalidarRecuperacao(
+  cliente: QueryClient,
+  maquinaId: number,
+  simulado: boolean,
+  deIso: string,
+  ateIso: string,
+) {
+  return cliente.invalidateQueries({
+    predicate: (consulta) =>
+      afetadaPelaRecuperacao(consulta.queryKey, maquinaId, simulado, deIso, ateIso),
+  })
+}
+
 export const LINHAS_POR_PAGINA = 15
 
 /** Uma página da tabela de janelas do período (todas, normais e rápidas), mais recente primeiro. */

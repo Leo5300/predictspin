@@ -184,48 +184,92 @@ export const NOMINAIS_EXEMPLO = [
   45, 71, 90, 112, 140, 180, 224, 265, 280, 355, 450, 560, 710, 900, 1120, 1400, 1800, 2240,
 ]
 
-// ---- alarmes e ordens de serviço (a API ainda não tem; só a galeria mostra)
+// ---- alarmes e ordens de serviço (exemplos inventados, só a galeria mostra)
 
-const ACAO_EXEMPLO = 'Exemplo: conferir o aperto da placa e o balanceamento da peça'
+const ACAO_EXEMPLO = 'Exemplo: conferir a fixação e o balanceamento da peça na placa'
 
 const alarme = (
   id: number,
   estado: Alarme['estado'],
-  prioridade: Alarme['prioridade'],
+  nivel: Alarme['nivel'],
+  tipo: 'maquina' | 'instrumento' = 'maquina',
+  condicao: string | null = null,
 ): Alarme => ({
   id,
+  maquina_id: 1,
   maquina: 'TORNO-01',
-  origem: 'Ponto A',
-  metrica: '1X',
-  prioridade,
+  ponto: 'A',
+  tipo,
+  prioridade: tipo === 'maquina' && nivel === 'alarme' ? 'alta' : 'baixa',
   estado,
-  ocorridoEm: '2026-11-12T10:14:05Z',
-  valor: prioridade === 'alarme' ? 0.118 : 0.083,
-  unidade: 'g',
-  acaoRecomendada: ACAO_EXEMPLO,
+  nivel,
+  pior_nivel: nivel,
+  z: nivel === 'alarme' ? 6.2 : 3.8,
+  pior_z: nivel === 'alarme' ? 6.2 : 3.8,
+  metrica: tipo === 'instrumento' ? 'instrumento' : 'o1x',
+  valor: nivel === 'alarme' ? 0.118 : 0.083,
+  explicacao:
+    tipo === 'instrumento'
+      ? 'Exemplo: sensor A sumiu do envio enquanto os outros pontos continuaram chegando.'
+      : 'Exemplo: A·1X 6,2σ acima do típico da marcha 1120.',
+  acao_recomendada: ACAO_EXEMPLO,
+  componente: 'eixo-árvore e mancal dianteiro',
+  referencia_versao: 1,
+  firmware_versao: null,
+  calibracao: null,
+  ensaio_id: null,
+  condicao_ensaio: condicao,
+  durante_ensaio_de_condicao: condicao !== null,
+  simulado: false,
+  janela_id: 1,
+  criado_em: '2026-11-12T10:14:05Z',
+  atualizado_em: null,
+  reconhecido_em: estado === 'ativo_reconhecido' ? '2026-11-12T10:15:00Z' : null,
+  reconhecido_por: null,
+  normalizado_em: estado === 'normalizado_nao_reconhecido' ? '2026-11-12T10:18:00Z' : null,
+  encerrado_em: null,
+  suprimido_ate: estado === 'suprimido' ? '2026-11-12T11:14:05Z' : null,
+  motivo_supressao: estado === 'suprimido' ? 'Exemplo: máquina ao lado em manutenção' : null,
+  suprimido_por: null,
+  ordem_servico_id: null,
 })
 
 export const ALARMES_EXEMPLO: Alarme[] = [
-  alarme(1, 'nao_reconhecido', 'alarme'),
-  alarme(2, 'nao_reconhecido', 'atencao'),
-  alarme(3, 'reconhecido', 'alarme'),
-  alarme(4, 'normalizado_sem_reconhecimento', 'atencao'),
+  alarme(1, 'ativo_nao_reconhecido', 'alarme'),
+  alarme(2, 'ativo_nao_reconhecido', 'atencao', 'maquina', 'avanco_excessivo'),
+  alarme(3, 'ativo_reconhecido', 'alarme'),
+  alarme(4, 'normalizado_nao_reconhecido', 'atencao'),
   alarme(5, 'suprimido', 'alarme'),
+  alarme(6, 'ativo_nao_reconhecido', 'atencao', 'instrumento'),
 ]
 
 const ordem = (
   id: number,
-  retorno: OrdemServico['retornoTecnico'],
+  retorno: OrdemServico['retorno_tecnico'],
   status: OrdemServico['status'],
 ): OrdemServico => ({
   id,
   numero: `OS-2026-${String(id).padStart(4, '0')}`,
+  maquina_id: 1,
   maquina: 'TORNO-01',
+  ponto: 'A',
+  componente: 'eixo-árvore e mancal dianteiro',
   status,
-  tipoFalha: 'desbalanceamento provável',
-  acaoRecomendada: ACAO_EXEMPLO,
-  abertaEm: '2026-11-12T10:20:00Z',
-  retornoTecnico: retorno,
+  motivo_abertura: 'alarme_continuo',
+  alerta_id: 1,
+  explicacao: 'Exemplo: A·1X 6,2σ acima do típico da marcha 1120.',
+  acao_recomendada: ACAO_EXEMPLO,
+  severidade_acumulada: 640,
+  referencia_versao: 1,
+  firmware_versao: null,
+  calibracao: null,
+  simulado: false,
+  responsavel: status === 'aberta' ? null : 'Exemplo de técnico',
+  aberta_em: '2026-11-12T10:20:00Z',
+  assumida_em: status === 'aberta' ? null : '2026-11-12T10:25:00Z',
+  concluida_em: status === 'concluida' ? '2026-11-12T11:00:00Z' : null,
+  retorno_tecnico: retorno,
+  comentario_tecnico: retorno ? 'Exemplo: peça desbalanceada, recolocada na placa.' : null,
 })
 
 export const ORDENS_EXEMPLO: OrdemServico[] = [

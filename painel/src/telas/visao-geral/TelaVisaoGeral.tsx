@@ -11,7 +11,9 @@ import {
   consultaUltimaJanela,
   type UltimaObservada,
 } from '@/api/consultas'
+import { consultaLimites } from '@/api/adaptadores/referencia'
 import type { Maquina } from '@/api/tipos'
+import { EstadoDoPonto } from '@/componentes/instrumento/EstadoDoPonto'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '@/componentes/instrumento/Estados'
 import { MarcaDeIdade } from '@/componentes/instrumento/Idade'
 import { Modulo, Painel } from '@/componentes/instrumento/Modulo'
@@ -19,7 +21,7 @@ import { PlacaEstado, SeloAvaliacao } from '@/componentes/instrumento/Selos'
 import { SeloSim } from '@/componentes/instrumento/SeloSim'
 import { Sparkline } from '@/componentes/instrumento/Sparkline'
 import { Button } from '@/componentes/ui/button'
-import { estadoDaMaquina } from '@/dominio/estado'
+import { classeDoDesvio, desvioDoZ, estadoDaMaquina, resumoDosPontos } from '@/dominio/estado'
 import { formatarDataHora, formatarG, formatarRpm, TRACO } from '@/dominio/formato'
 import { SPARKLINE_BALDES, SPARKLINE_SEGUNDOS } from '@/dominio/periodos'
 import { ultimoContato } from '@/dominio/maquina'
@@ -183,6 +185,7 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
     refetchInterval: 30_000,
   })
   const dispositivos = useQuery(consultaDispositivos(maquina.id, simulado))
+  const limites = useQuery(consultaLimites()).data?.alarme
   const { frescor, idadeS, velho } = useFrescorDaMaquina(ultima)
   // no celular as células ficam em duas colunas: a sparkline encolhe para caber no campo
   const estreita = useTelaEstreita()
@@ -263,7 +266,15 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
                   {codigo}
                 </span>
                 <span className="flex items-baseline gap-1">
-                  <span className="valor text-15 font-medium text-texto">
+                  <span
+                    className={cn(
+                      'valor text-15 font-medium text-texto',
+                      !velho &&
+                        classeDoDesvio(
+                          desvioDoZ(janela?.pontos[codigo]?.avaliacao?.z.rms_g, limites),
+                        ),
+                    )}
+                  >
                     {formatarG(janela?.pontos[codigo]?.rms_g)}
                   </span>
                   {formatarG(janela?.pontos[codigo]?.rms_g) === TRACO ? null : (
@@ -290,10 +301,16 @@ function LinhaDaMaquina({ maquina, simulado, ultima, carregando }: PropsDaLinha)
       })}
 
       <Celula rotulo="Avaliação">
-        <span className="flex items-center gap-1">
-          <SeloAvaliacao avaliacao="sem_referencia" />
-          <Explica chave="referencia" />
-        </span>
+        {velho || !janela ? (
+          <span className="flex items-center gap-1">
+            <SeloAvaliacao avaliacao="sem_referencia" />
+            <Explica chave="referencia" />
+          </span>
+        ) : (
+          <EstadoDoPonto
+            avaliacao={resumoDosPontos(codigos.map((c) => janela.pontos[c]?.avaliacao))}
+          />
+        )}
       </Celula>
 
       <Celula rotulo="Ensaio">

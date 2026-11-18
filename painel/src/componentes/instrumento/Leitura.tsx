@@ -2,9 +2,13 @@ import { useState } from 'react'
 
 import { Explica } from '@/componentes/ui/explica'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/componentes/ui/tooltip'
+import { classeDoDesvio } from '@/dominio/estado'
 import type { ChaveDoGlossario } from '@/dominio/glossario'
 import { TRACO } from '@/dominio/formato'
 import { cn } from '@/lib/utils'
+
+import { FormaDeEstado } from './FormaDeEstado'
+import { FORMA_DA_AVALIACAO } from './formasDeEstado'
 
 type Tamanho = 'pequeno' | 'medio' | 'grande' | 'destaque'
 
@@ -34,6 +38,11 @@ type Props = {
   velho?: boolean
   /** Termo do glossário: põe o "?" ao lado do rótulo (o balão explica; dispensa a dica). */
   explica?: ChaveDoGlossario
+  /**
+   * Valor em desvio pela referência (z acima do limite, vindo da API): âmbar ou vermelho, com a forma
+   * do estado ao lado e o texto para leitor de tela. Sem desvio, o valor fica neutro.
+   */
+  desvio?: 'atencao' | 'alarme' | null
   className?: string
 }
 
@@ -51,8 +60,10 @@ export function Leitura({
   velho = false,
   texto = false,
   explica,
+  desvio = null,
   className,
 }: Props) {
+  const emDesvio = desvio !== null && !velho
   // Conta as trocas de valor para reiniciar o traço de mudança (estado derivado durante o render)
   const [anterior, setAnterior] = useState(valor)
   const [trocas, setTrocas] = useState(0)
@@ -62,7 +73,11 @@ export function Leitura({
   }
 
   return (
-    <div className={cn('flex min-w-0 flex-col', className)} data-velho={velho || undefined}>
+    <div
+      className={cn('flex min-w-0 flex-col', className)}
+      data-velho={velho || undefined}
+      data-estado={emDesvio ? desvio : undefined}
+    >
       {explica ? (
         <span className="flex items-center gap-1">
           <span className="rotulo">{rotulo}</span>
@@ -94,12 +109,28 @@ export function Leitura({
           CLASSE_DO_VALOR[tamanho],
         )}
       >
+        {emDesvio ? (
+          <>
+            <FormaDeEstado
+              forma={FORMA_DA_AVALIACAO[desvio]}
+              className={cn(
+                'size-[0.45em] shrink-0 self-center',
+                desvio === 'alarme' ? 'text-alarme' : 'text-atencao',
+              )}
+            />
+            <span className="sr-only">{desvio === 'alarme' ? 'em alarme: ' : 'em atenção: '}</span>
+          </>
+        ) : null}
         <span
           className={cn(
             'truncate',
             !texto && 'valor',
             // velho: tom fraco e sem peso, como a regra de dado velho faz com os números
-            velho ? 'font-normal text-fraco' : 'font-medium text-texto',
+            velho
+              ? 'font-normal text-fraco'
+              : emDesvio
+                ? cn('font-semibold', classeDoDesvio(desvio))
+                : 'font-medium text-texto',
           )}
           title={valor}
         >

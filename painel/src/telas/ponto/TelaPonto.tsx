@@ -17,7 +17,10 @@ import {
 } from '@/api/consultas'
 import { mensagemDoErro } from '@/api/erros'
 import { useSessao } from '@/api/sessao'
+import { consultaLimites } from '@/api/adaptadores/referencia'
 import type { Janela, Ponto } from '@/api/tipos'
+import { EstadoDoPonto } from '@/componentes/instrumento/EstadoDoPonto'
+import { desvioDoZ } from '@/dominio/estado'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '@/componentes/instrumento/Estados'
 import { GraficoTendencia, type SerieDoGrafico } from '@/componentes/instrumento/GraficoTendencia'
 import { MarcaDeIdade } from '@/componentes/instrumento/Idade'
@@ -523,6 +526,8 @@ type PropsDoCabecalho = {
 
 function CabecalhoDoPonto({ ponto, janela, simulado, frescor, idadeS, velho }: PropsDoCabecalho) {
   const medida = janela?.pontos[ponto.codigo]
+  const limites = useQuery(consultaLimites()).data?.alarme
+  const desvio = (nome: string) => desvioDoZ(medida?.avaliacao?.z[nome], limites)
   return (
     <Modulo
       // o título da tela (h1) já diz "Ponto B": o módulo diz o que mostra
@@ -533,10 +538,14 @@ function CabecalhoDoPonto({ ponto, janela, simulado, frescor, idadeS, velho }: P
       acoes={
         <>
           <MarcaDeIdade frescor={frescor} idadeS={idadeS} />
-          <span className="flex items-center gap-1">
-            <SeloAvaliacao avaliacao="sem_referencia" />
-            <Explica chave="referencia" />
-          </span>
+          {velho ? (
+            <span className="flex items-center gap-1">
+              <SeloAvaliacao avaliacao="sem_referencia" />
+              <Explica chave="referencia" />
+            </span>
+          ) : (
+            <EstadoDoPonto avaliacao={medida?.avaliacao} />
+          )}
         </>
       }
     >
@@ -557,12 +566,14 @@ function CabecalhoDoPonto({ ponto, janela, simulado, frescor, idadeS, velho }: P
             unidade="g"
             tamanho="destaque"
             velho={velho}
+            desvio={desvio('rms_g')}
             className="col-span-2 @min-[30rem]:col-span-1"
           />
           <Leitura
             rotulo="Pico"
             explica="pico"
             valor={formatarG(medida?.pico_g)}
+            desvio={desvio('pico_g')}
             unidade="g"
             tamanho="grande"
             velho={velho}
@@ -579,6 +590,7 @@ function CabecalhoDoPonto({ ponto, janela, simulado, frescor, idadeS, velho }: P
             rotulo="1X"
             explica="ordens"
             valor={formatarG(medida?.o1x)}
+            desvio={desvio('o1x')}
             unidade="g"
             tamanho="grande"
             velho={velho}
@@ -586,6 +598,7 @@ function CabecalhoDoPonto({ ponto, janela, simulado, frescor, idadeS, velho }: P
           <Leitura
             rotulo="2X"
             valor={formatarG(medida?.o2x)}
+            desvio={desvio('o2x')}
             unidade="g"
             tamanho="grande"
             velho={velho}
@@ -593,6 +606,7 @@ function CabecalhoDoPonto({ ponto, janela, simulado, frescor, idadeS, velho }: P
           <Leitura
             rotulo="3X"
             valor={formatarG(medida?.o3x)}
+            desvio={desvio('o3x')}
             unidade="g"
             tamanho="grande"
             velho={velho}

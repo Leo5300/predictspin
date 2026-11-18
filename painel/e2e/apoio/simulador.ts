@@ -19,16 +19,21 @@ const REMOVIDAS = [
   'ADMIN_SENHA',
 ]
 
-export function ligarSimulador(): Simulador {
+function ambienteLimpo(): NodeJS.ProcessEnv {
   const ambiente: NodeJS.ProcessEnv = Object.fromEntries(
     Object.entries(process.env).filter(([nome]) => !REMOVIDAS.includes(nome)),
   )
   ambiente.PYTHONUNBUFFERED = '1'
   ambiente.PYTHONIOENCODING = 'utf-8'
+  return ambiente
+}
+
+/** Simulador contínuo; {@code argumentos} vão depois de "continuo" (ex.: --modo severo --rotacao 1120). */
+export function ligarSimulador(argumentos: readonly string[] = []): Simulador {
   const processo: ChildProcess = spawn(
     'python',
-    [path.join('analise', 'simulador.py'), 'continuo', '--url', URL_API],
-    { cwd: RAIZ_DO_REPOSITORIO, env: ambiente, stdio: 'ignore', windowsHide: true },
+    [path.join('analise', 'simulador.py'), 'continuo', '--url', URL_API, ...argumentos],
+    { cwd: RAIZ_DO_REPOSITORIO, env: ambienteLimpo(), stdio: 'ignore', windowsHide: true },
   )
   return {
     parar() {
@@ -40,4 +45,14 @@ export function ligarSimulador(): Simulador {
       }
     },
   }
+}
+
+/** Roteiro de ensaios simulados (subcomando roteiro), esperando terminar; falha se o simulador falhar. */
+export function executarRoteiro(argumentos: readonly string[]): void {
+  const resultado = spawnSync(
+    'python',
+    [path.join('analise', 'simulador.py'), 'roteiro', '--url', URL_API, ...argumentos],
+    { cwd: RAIZ_DO_REPOSITORIO, env: ambienteLimpo(), stdio: 'ignore', windowsHide: true },
+  )
+  if (resultado.status !== 0) throw new Error(`roteiro do simulador saiu com ${resultado.status}`)
 }

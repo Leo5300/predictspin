@@ -94,6 +94,13 @@ test.describe('cada papel só vê o que pode', () => {
     await page.goto('/coleta/ensaios')
     await expect(page.getByRole('heading', { name: 'Sem permissão' })).toBeVisible()
     await page.goto('/alarmes')
-    await expect(page.getByText('A regra de alarme ainda não foi implantada na API.')).toBeVisible()
+    await expect(
+      page
+        .getByRole('list', { name: 'Lista de alarmes' })
+        .or(page.getByText('Nenhum alarme com estes filtros.')),
+    ).toBeVisible()
+    // OPERADOR vê, mas não assume nem conclui OS e não suprime
+    await expect(page.getByRole('button', { name: 'Assumir OS' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Suprimir…' })).toHaveCount(0)
   })
 })

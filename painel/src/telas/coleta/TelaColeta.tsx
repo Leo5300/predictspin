@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { baixarCsvDosEnsaios, gravarPlano } from '@/api/coleta'
 import { mensagemDoErro } from '@/api/erros'
 import { MatrizCobertura } from '@/componentes/coleta/MatrizCobertura'
+import { ModuloReferencia } from '@/componentes/coleta/ModuloReferencia'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '@/componentes/instrumento/Estados'
 import { Modulo, Painel } from '@/componentes/instrumento/Modulo'
 import { Button, buttonVariants } from '@/componentes/ui/button'
@@ -231,6 +232,9 @@ function EntradaDaColeta({ maquinaId }: { maquinaId: number }) {
             />
           </div>
         </Modulo>
+        <div className="col-span-full">
+          <ModuloReferencia maquinaId={maquinaId} simulado={simulado} />
+        </div>
       </Painel>
       <AcoesDaColeta maquinaId={maquinaId} className="pb-6 lg:hidden" />
     </div>

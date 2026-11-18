@@ -47,7 +47,32 @@ export type LinhaDoMapa = {
   valores: readonly (number | null)[]
   /** Referência do ponto para esta grandeza; só com ela aparecem âmbar e vermelho. */
   referencia?: Referencia | null
+  /**
+   * Maior z de cada intervalo contra a referência (vindo da API); nulo onde nenhuma janela foi
+   * avaliada. Com os limites do mapa, decide âmbar e vermelho no lugar da referência em g.
+   */
+  zs?: readonly (number | null)[]
 }
+
+/** Estado da célula: pelo z da API (com limites) ou pela referência em g (galeria). */
+function estadoDaCelula(
+  linha: LinhaDoMapa,
+  k: number,
+  valor: number,
+  limites: LimitesDoMapa | null | undefined,
+): 'atencao' | 'alarme' | null {
+  const z = linha.zs?.[k]
+  if (limites && z !== undefined && z !== null) {
+    if (z >= limites.z_alarme) return 'alarme'
+    return z >= limites.z_atencao ? 'atencao' : null
+  }
+  const referencia = linha.referencia
+  if (!referencia) return null
+  if (valor >= referencia.alarme) return 'alarme'
+  return valor >= referencia.atencao ? 'atencao' : null
+}
+
+export type LimitesDoMapa = { z_atencao: number; z_alarme: number }
 
 /** Ensaio do período, como faixa acima das linhas (código e etapa). */
 export type EnsaioDoMapa = { inicio: string; fim: string | null; codigo: string; etapa: string }
@@ -64,6 +89,8 @@ type Props = {
   simulado?: boolean
   /** Dado velho: hora da última janela; a leitura em texto diz que vale até ela. */
   ultimaJanelaVelha?: string | null
+  /** Limites de z em uso (da API): com eles e os z das linhas, âmbar e vermelho pela referência. */
+  limites?: LimitesDoMapa | null
   className?: string
 }
 
@@ -94,6 +121,7 @@ export function MapaOrdens({
   eventos = [],
   simulado = false,
   ultimaJanelaVelha = null,
+  limites = null,
   className,
 }: Props) {
   const cores = useCoresDoCanvas()
@@ -171,8 +199,9 @@ export function MapaOrdens({
       linhas,
       classes,
       cores,
+      limites,
     })
-  }, [largura, posicoes, intervalos, linhas, classes, cores])
+  }, [largura, posicoes, intervalos, linhas, classes, cores, limites])
 
   // A coluna nova entra pela direita: o desenho desliza uma célula em 200 ms (só transform)
   const inicioDaUltima = intervalos.at(-1)?.inicio ?? null
@@ -519,7 +548,10 @@ export function MapaOrdens({
         simulado={simulado}
         passoS={passoS}
         cores={cores}
-        temReferencia={linhas.some((l) => l.referencia)}
+        temReferencia={
+          linhas.some((l) => l.referencia) ||
+          (limites !== null && linhas.some((l) => l.zs?.some((z) => z !== null)))
+        }
       />
     </div>
   )
@@ -673,8 +705,16 @@ function Legenda({
           </span>
         </>
       ) : (
-        <span>sem cor de alarme até existir referência</span>
+        <span>sem referência: só o típico do período, sem cor de atenção ou alarme</span>
       )}
+      <span
+        className="basis-full text-texto"
+        data-comparacao={temReferencia ? 'referencia' : 'tipico'}
+      >
+        {temReferencia
+          ? 'Em uso: referência aprendida (âmbar e vermelho só onde o z passou dos limites); o tom compara com o típico do período.'
+          : 'Em uso: típico do período (mediana na mesma marcha).'}
+      </span>
       {simulado ? (
         <span className="flex items-center gap-1.5">
           <SeloSim /> moldura hachurada: dado simulado
@@ -693,6 +733,7 @@ type Desenho = {
   linhas: readonly LinhaDoMapa[]
   classes: readonly ClasseDaCelula[][]
   cores: CoresDoCanvas
+  limites?: LimitesDoMapa | null
 }
 
 function desenhar(ctx: CanvasRenderingContext2D, d: Desenho) {
@@ -712,20 +753,14 @@ function desenhar(ctx: CanvasRenderingContext2D, d: Desenho) {
       const x0 = Math.floor(k * passo)
       const x1 = Math.floor((k + 1) * passo)
       const larguraDaCelula = Math.max(1, x1 - x0)
-      const referencia = linha.referencia
-      // com referência aprendida (prompt futuro), atenção e alarme vencem a comparação com o típico
-      if (referencia && classe.valor >= referencia.alarme) ctx.fillStyle = d.cores.alarme
-      else if (referencia && classe.valor >= referencia.atencao) ctx.fillStyle = d.cores.atencao
+      // com referência, atenção e alarme (pelo z da API) vencem a comparação com o típico
+      const estado = estadoDaCelula(linha, k, classe.valor, d.limites)
+      if (estado === 'alarme') ctx.fillStyle = d.cores.alarme
+      else if (estado === 'atencao') ctx.fillStyle = d.cores.atencao
       else ctx.fillStyle = tomDaCelula(classe.tipo === 'acima' ? classe.intensidade : 0, d.cores)
       ctx.fillRect(x0, y, larguraDaCelula, ALTURA_DA_LINHA - 1)
       // forma além da cor (2 de 3 canais), as mesmas do resto do painel: triângulo = atenção,
       // losango = alarme; só quando a célula tem largura para a forma
-      const estado =
-        referencia && classe.valor >= referencia.alarme
-          ? 'alarme'
-          : referencia && classe.valor >= referencia.atencao
-            ? 'atencao'
-            : null
       if (estado && larguraDaCelula >= 7) {
         const cx = x0 + larguraDaCelula / 2
         const cy = y + (ALTURA_DA_LINHA - 1) / 2

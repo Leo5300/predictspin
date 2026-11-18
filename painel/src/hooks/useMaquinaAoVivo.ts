@@ -7,14 +7,17 @@ import {
   consultaJanelasRecentes,
   consultaModoRapido,
   consultaUltimaJanela,
+  invalidarRecuperacao,
   registrarJanela,
   type UltimaObservada,
 } from '@/api/consultas'
+import { chavesReferencia } from '@/api/adaptadores/referencia'
 import { assinarEventos, type EstadoEventos } from '@/api/eventos'
 import type { Janela, ModoRapido } from '@/api/tipos'
 import { useFonte } from '@/estado/preferencias'
 import { definirTransporte, definirUltimaObservacao } from '@/estado/transporte'
 
+import { reagirAOrdemServico, reagirAoAlerta } from './useAlarmesAoVivo'
 import { usePaginaVisivel } from './usePaginaVisivel'
 
 export type MaquinaAoVivo = {
@@ -71,6 +74,15 @@ export function useMaquinaAoVivo(maquinaId: number): MaquinaAoVivo {
         }
         cliente.setQueryData(chaves.ultimaJanela(maquinaId, simulado), () => observada)
         registrarJanela(cliente, maquinaId, simulado, janela)
+        // a avaliação detalhada (típico, %, explicação) acompanha cada janela nova
+        void cliente.invalidateQueries({
+          queryKey: chavesReferencia.avaliacao(maquinaId, simulado),
+        })
+      },
+      aoReceberAlerta: (evento) => reagirAoAlerta(cliente, evento),
+      aoReceberOrdemServico: (evento) => reagirAOrdemServico(cliente, evento),
+      aoReceberRecuperacao: (evento) => {
+        void invalidarRecuperacao(cliente, maquinaId, simulado, evento.de, evento.ate)
       },
       aoReceberEnsaio: (evento) => {
         void cliente.invalidateQueries({ queryKey: chaves.ensaios(maquinaId, simulado) })

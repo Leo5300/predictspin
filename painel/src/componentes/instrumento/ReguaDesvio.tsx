@@ -12,10 +12,22 @@ type Props = {
   /** Valores dos últimos 60 s, do mais antigo ao mais novo: viram o rastro do ponteiro. */
   rastro?: readonly number[]
   velho?: boolean
+  /**
+   * Escala da régua quando ela não está em g: em z (desvios da referência), o centro é o típico. O
+   * painel só posiciona o z que a API mandou.
+   */
+  escala?: { formatar: (v: number) => string; rotuloCentro: string; descricao: string }
+  /** Texto quando não há referência (padrão: "sem referência aprendida"). */
+  textoSemReferencia?: string
   className?: string
 }
 
 const TEXTO_SEM_REFERENCIA = 'sem referência aprendida'
+const ESCALA_EM_G = {
+  formatar: (v: number) => formatarG(v),
+  rotuloCentro: '',
+  descricao: '',
+}
 
 /**
  * Régua de desvio: o centro é a referência, a faixa mais escura é a tolerância, as marcas são os
@@ -23,21 +35,30 @@ const TEXTO_SEM_REFERENCIA = 'sem referência aprendida'
  * passou no último minuto, com opacidade decrescente. A referência chega por parâmetro; o painel
  * não a calcula.
  */
-export function ReguaDesvio({ valor, referencia, rastro = [], velho = false, className }: Props) {
+export function ReguaDesvio({
+  valor,
+  referencia,
+  rastro = [],
+  velho = false,
+  escala,
+  textoSemReferencia = TEXTO_SEM_REFERENCIA,
+  className,
+}: Props) {
   if (!referencia) {
     return (
       <div className={cn('flex flex-col gap-1', className)} data-referencia="ausente">
         <div
           className="relative h-3 border border-dashed border-linha-forte bg-rebaixo"
           role="img"
-          aria-label={`Régua de desvio: ${TEXTO_SEM_REFERENCIA}`}
+          aria-label={`Régua de desvio: ${textoSemReferencia}`}
         >
           <span className="absolute top-0 bottom-0 left-1/2 w-px bg-linha-forte" />
         </div>
-        <span className="text-12 text-apoio">{TEXTO_SEM_REFERENCIA}</span>
+        <span className="text-12 text-apoio">{textoSemReferencia}</span>
       </div>
     )
   }
+  const { formatar, rotuloCentro, descricao } = escala ?? ESCALA_EM_G
 
   const alcance = alcanceDaRegua(referencia)
   const largura = (meia: number) => `${Math.min(100, (meia / alcance) * 100)}%`
@@ -61,7 +82,11 @@ export function ReguaDesvio({ valor, referencia, rastro = [], velho = false, cla
       <div
         className="relative h-3 border border-linha-forte bg-rebaixo"
         role="img"
-        aria-label={`Régua de desvio: valor ${formatarG(valor)} g, referência ${formatarG(referencia.centro)} g`}
+        aria-label={
+          escala
+            ? `Régua de desvio: ${descricao}`
+            : `Régua de desvio: valor ${formatarG(valor)} g, referência ${formatarG(referencia.centro)} g`
+        }
       >
         {/* faixa de tolerância em torno do centro */}
         <span
@@ -97,9 +122,9 @@ export function ReguaDesvio({ valor, referencia, rastro = [], velho = false, cla
         ) : null}
       </div>
       <div className="valor flex justify-between text-12 text-apoio">
-        <span>{formatarG(referencia.centro - alcance)}</span>
-        <span>ref. {formatarG(referencia.centro)} g</span>
-        <span>{formatarG(referencia.centro + alcance)}</span>
+        <span>{formatar(referencia.centro - alcance)}</span>
+        <span>{escala ? rotuloCentro : `ref. ${formatarG(referencia.centro)} g`}</span>
+        <span>{formatar(referencia.centro + alcance)}</span>
       </div>
     </div>
   )

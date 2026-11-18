@@ -1,0 +1,261 @@
+# Referência, alarmes e ordem de serviço
+
+Como o PredictSpin decide que um ponto saiu do normal, como isso vira alerta no padrão ISA-18.2 e
+quando abre ordem de serviço (OS). É a parte A da inteligência do sistema: tudo aqui é regra
+estatística em Java, sem modelo de aprendizado de máquina (Isolation Forest, Random Forest e ONNX são
+a parte B).
+
+> **Todos os números desta página são PROPOSTA a confirmar com dado real.** Eles ficam em
+> `api/src/main/resources/application.yml` (prefixos `ps.referencia`, `ps.alarme` e `ps.os`), são
+> servidos por `GET /api/v1/alarmes/limites` e aparecem no Diagnóstico. O painel nunca os escreve à
+> mão: até os textos do "?" interpolam os valores vindos da API. Com dado simulado, o que está aqui
+> prova o **encadeamento**, não a detecção real: limites e referência só valem depois dos ensaios
+> T0–T3 no torno.
+
+## Visão geral
+
+```
+janela (POST /telemetria) ─► filtro de qualidade ─► avaliação contra a referência (z por medida)
+        │                                              │
+        │                                              ├─► estado do ponto (atraso e histerese)
+        │                                              ├─► severidade acumulada (z·s por dia)
+        │                                              └─► alerta de instrumento
+        ▼                                              ▼
+   gravada junto                         alerta ISA-18.2 ─► ordem de serviço ─► retorno do técnico
+```
+
+Tudo acontece na mesma transação da ingestão (evento síncrono `JanelaRecebida`): se a avaliação falhar,
+a janela também não fica gravada. Os eventos ao vivo (`alerta`, `os`) saem depois do commit.
+
+## Filtro de qualidade
+
+Função única (`FiltroQualidade`), reusada pela parte B no treino. Uma janela é **ruim** quando:
+
+| Motivo | Regra |
+|---|---|
+| `saturou` | algum acelerômetro chegou ao fundo de escala |
+| `modo_rapido` | janela de 1 s (estatística diferente da de 5 s) |
+| `amostras_faltando` | menos de `amostras-min-fracao` (98%) das amostras esperadas |
+| `fora_da_marcha` | rotação > 0 fora de ±`tolerancia-marcha` (10%) da marcha mais próxima |
+| `ordens_zeradas` | 1X, 2X e 3X iguais a 0 com rotação > 0 (primeira janela depois de ligar ou trocar de marcha) |
+| `ensaio_descartado` | o ensaio foi descartado |
+
+**Marcha** = a rotação nominal da placa mais próxima da medida (`rotacoes_nominais_rpm`; empate fica
+com a menor; 0 com o torno parado; sem rotações cadastradas, a própria rotação arredondada).
+
+## Seleção para a referência
+
+Separada do filtro. Entram as janelas boas de ensaios com condição **normal** (nunca `sensor_solto` nem
+as outras condições; motivo `condicao_nao_normal`). **T2 não tem referência própria** (motivo
+`etapa_t2`): as janelas de T2 são avaliadas contra a do T1 da mesma marcha.
+
+**Calibração.** Calibrar o sensor muda os valores em g em cerca de 7%. Em cada ponto vale a calibração
+da janela boa mais recente; as janelas do ponto com outra calibração ficam de fora (motivo
+`calibracao_antiga`, contado por janela × ponto). Cada célula guarda a calibração e as versões de
+firmware das janelas usadas.
+
+## Referência
+
+**Célula** = máquina × tipo de dado (real ou simulado) × ponto × medida × marcha × etapa (T0, T1, T3).
+No T3 existe também a célula da **receita** (par material + ferramenta do ensaio); avanço, profundidade,
+diâmetro e fluido ficam gravados no ensaio, mas não separam a referência (para não fragmentar demais).
+A **T3 genérica** da marcha junta todas as receitas. Medidas: `rms_g`, `pico_g`, `curtose`, `o1x`,
+`o2x`, `o3x`, `vel_rms_mm_s` (as ordens não existem no T0).
+
+Estatística robusta: **mediana**, **σ = 1,4826 × MAD** (desvio absoluto mediano; o fator torna o σ
+comparável ao desvio-padrão numa distribuição normal), **n** e **p95** (interpolação linear). Célula com
+menos de `min-janelas` (24 = 2 min a 5 s) fica **insuficiente** e não gera z.
+
+**σ efetivo** = o maior entre:
+
+1. o σ da célula;
+2. para `rms_g`, `pico_g` e `vel_rms_mm_s`, o **piso de ruído** do mesmo ponto e tipo de dado: o p95
+   da medida nos ensaios T0 (só quando o T0 do ponto tem janelas suficientes);
+3. `sigma-min-fracao` (0,05) × mediana.
+
+Motivo: em marcha baixa o σ fica minúsculo e qualquer ruído viraria z alto. Sem T0 gravado vale (3), e o
+Diagnóstico avisa "sem piso de ruído medido".
+
+**z** = (x − mediana) / σ efetivo. σ efetivo igual a 0 não gera z.
+
+**Versões.** "Recalcular referência" (`POST /api/v1/maquinas/{id}/referencias/recalcular?simulado=`,
+ADMIN e TECNICO) grava uma versão nova e imutável, com data, autor, janelas usadas e excluídas por
+motivo; a anterior fica guardada (`GET .../referencias/versoes`). `GET .../referencias` devolve a versão
+em uso, as células e a cobertura (com / insuficiente / sem) por marcha e etapa, pelo RMS de todos os
+pontos ativos. A versão em uso fica em memória por máquina e tipo de dado e é trocada no commit do
+recálculo.
+
+**Deriva** (`deriva.habilitada`, ligada por padrão). No recálculo entram também janelas boas de **uso
+sem ensaio** dos últimos `deriva.dias` (7) que foram avaliadas NORMAL, sem alerta aberto na máquina no
+instante da janela, na mesma célula da referência que as avaliou, limitadas a `deriva.fracao-maxima`
+(30%) das janelas da célula (as mais recentes primeiro; d ≤ f/(1−f) × n). Nunca entram em célula de
+receita. Além disso, só entram janelas com |z| abaixo do limite de atenção em **todas** as medidas:
+fora de ensaio, uma janela de giro em vazio é comparada também com o corte (ver abaixo) e, com z muito
+negativo, puxaria a referência do corte para baixo. No Diagnóstico, a deriva de cada ponto é a mediana
+de RMS ÷ típico das janelas de uso NORMAL das últimas 24 h, menos 1, em %.
+
+## Avaliação de cada janela
+
+Uma linha por janela e ponto em `avaliacao` (z de cada medida em `real`, 4 bytes), só quando há
+referência. Situações: `avaliada`, `sem_referencia`, `sem_referencia_completa`,
+`calibracao_diferente`, `nao_avaliavel` (saturou, amostras faltando ou fora da marcha). Medidas de
+ordem não são avaliadas com o torno parado nem quando vieram zeradas.
+
+**Qual referência usar:**
+
+- **Dentro de ensaio aberto:** a da etapa (T2 usa T1). No T3, a da receita se a célula do RMS da
+  receita é suficiente; senão a T3 genérica, e a avaliação fica marcada **referência genérica**.
+- **Sem ensaio (uso em aula):** rotação 0 → T0. Girando → compara com o T1 e com a T3 genérica da
+  mesma marcha e fica com a de **menor pior z** (a interpretação mais normal): só sai do normal se a
+  janela não parecer nem giro em vazio nem corte normal. Se faltar uma das duas, o ponto fica **sem
+  referência completa** (sem estado), porque comparar o corte só com o giro em vazio alarmaria todo
+  corte. Consequência visível: uma janela de giro em vazio aparece "comparada com o corte" com z
+  negativo, e o estado é NORMAL do mesmo jeito.
+- **Calibração diferente:** se a janela chega com calibração diferente da referência daquele ponto, o
+  ponto fica `calibracao_diferente`, não gera estado nem alerta, e o Diagnóstico pede recalcular.
+
+**Estado do ponto** pela pior medida entre `rms_g`, `vel_rms_mm_s`, `o1x`, `o2x`, `o3x` e `pico_g` (a
+curtose entra só na explicação). Só desvio **para cima** gera estado.
+
+| Parâmetro | Valor (proposta) | Regra |
+|---|---|---|
+| `ps.alarme.z-atencao` | 3 | ATENÇÃO com z ≥ 3 |
+| `ps.alarme.z-alarme` | 5 | ALARME com z ≥ 5 |
+| `ps.alarme.atraso-s` | 15 s | só entra no estado depois de 15 s seguidos acima do limite |
+| `ps.alarme.histerese-z` | 1 | só sai com z abaixo do limite − 1... |
+| `ps.alarme.saida-s` | 15 s | ...por 15 s seguidos |
+
+Tempos em segundos pelo `medido_em` das janelas (uma condição que começou na janela t0 e continua na
+janela t durou (t − t0) + duração da janela): no modo rápido a janela é de 1 s. De ALARME o ponto desce
+para ATENÇÃO se z ainda está na faixa de atenção (com a histerese), senão para NORMAL. Janela sem
+avaliação conta como "fora do desvio" (não sobe e ajuda a sair). Mais que max(atraso, saída) + duas
+janelas sem janela zera os temporizadores. Estado da máquina = pior estado entre os pontos.
+
+**Explicação:** as 3 medidas/pontos de maior z, em texto pronto ("B·RMS 4,2σ acima do típico da marcha
+1120"). Quando só um ponto saiu do normal, acrescenta "Se só este ponto mudou, confira também a fixação
+do sensor." `GET /api/v1/maquinas/{id}/avaliacao` dá o detalhe da última janela (z, típico e % de cada
+medida); cada ponto das janelas (listas, última janela e evento `janela`) traz a avaliação compacta, e a
+série agregada traz o maior z de cada intervalo (`z_max`), usado pelo mapa de ordens.
+
+**Severidade acumulada:** S += max(0, zMax − z-atenção) × duração da janela (z·s), por ponto e dia em
+`severidade_acumulada`, e um contador "desde a última OS" em `estado_ponto`. Janela de ensaio de
+condição não soma.
+
+**Janelas antigas** (fila do firmware, mais de 30 s de idade): são avaliadas e gravadas, mas não abrem
+alerta ao vivo nem OS. Uma janela fora de ordem (medido_em anterior à última processada no ponto) é
+gravada com o nível bruto e não mexe no estado; as em ordem andam o estado normalmente. Se o ponto
+continuar fora do normal, o alerta abre na primeira janela ao vivo.
+
+## Alerta de instrumento × alerta de máquina [PROPOSTA]
+
+Alerta de **instrumento** (sensor solto, caído ou com defeito), prioridade baixa, abre quando, por
+`instrumento-s` (30 s):
+
+- o ponto some do envio (o firmware tira do payload o sensor que falha) enquanto a máquina envia os
+  outros pontos; ou
+- num ponto só, com rotação > 0 e os outros pontos sem queda, RMS **e** 1X abaixo de `sinal-fracao`
+  (50%) do típico (fora de ensaio, o típico do giro em vazio); ou
+- saturação ou amostras faltando se repetem em 30 s (o payload diz isso da janela inteira; o alerta vai
+  para o ponto de maior pico).
+
+Normaliza depois de `saida-s` sem nenhuma das condições. Não abre OS: a ação já é conferir o sensor.
+Desvio só para cima num ponto só continua sendo alerta de **máquina** (o corte afeta principalmente o
+B), com a dica de conferir a fixação. **A validação real fica para os ensaios com rótulo
+`sensor_solto`**: com dado simulado, só o encadeamento foi testado.
+
+## Alertas no padrão ISA-18.2
+
+Um alerta abre quando o ponto **entra** em ATENÇÃO ou ALARME (depois do atraso) e é atualizado se
+piorar; não abre um por janela. Um alerta ativo por ponto, tipo (máquina ou instrumento) e tipo de dado.
+
+| Estado | Como chega | Sai para |
+|---|---|---|
+| `ativo_nao_reconhecido` | abriu | reconhecido (alguém reconheceu) ou normalizado (voltou ao normal) |
+| `ativo_reconhecido` | reconheceram | encerrado (voltou ao normal) |
+| `normalizado_nao_reconhecido` | voltou ao normal sem reconhecimento | encerrado (alguém reconheceu) |
+| `encerrado` | — | — (se sair de novo do normal, abre outro) |
+| `suprimido` | ADMIN, com motivo e prazo | ao fim do prazo (ou cancelado), o estado que teria sem a supressão |
+
+**Prioridade:** ATENÇÃO = baixa, ALARME = alta, instrumento = baixa (gravada na coluna `severidade` da
+V1). Durante a supressão a regra continua: se o ponto volta ao normal e sai de novo, é o mesmo alerta
+(histórico "piorou"). Cada alerta guarda máquina, ponto, tipo, prioridade, nível atual e o pior, janela
+de origem, explicação, ação recomendada, componente provável, versão da referência, firmware e
+calibração da janela, ensaio e condição, simulado, quem reconheceu e quando, e o histórico de cada
+mudança (`alerta_historico`).
+
+**Ação recomendada** (obrigatória: alarme sem ação definida é evento, não alarme), semeada na V7 por papel
+do ponto × medida dominante; é orientação de inspeção, não diagnóstico:
+
+| Ponto | Medida dominante | Ação |
+|---|---|---|
+| A (acionamento) | 1X | Conferir a fixação e o balanceamento da peça na placa. Se continuar sem peça, pedir ao técnico para verificar o mancal do eixo-árvore. |
+| A | 2X | Conferir com o técnico o alinhamento e o aperto do conjunto do cabeçote e da placa. |
+| A | 3X, RMS, velocidade, pico | Conferir folgas e parafusos soltos no cabeçote e na placa. |
+| B (ferramenta) | 1X | Conferir a fixação da peça na placa e quanto ela fica para fora da placa (balanço). |
+| B | RMS, velocidade, pico, 2X, 3X | Conferir o estado da ferramenta (desgaste ou lasca) e reduzir o avanço ou a profundidade de corte. |
+| C (estrutura) | qualquer | Conferir se há outra máquina próxima ligada e o aperto da base e dos pés do torno. |
+| instrumento | qualquer | Conferir a fixação do sensor {ponto} (ímã, superfície, cabo puxando ou solto) antes de agir na máquina. |
+
+Componente provável (tabela `componente`): A = eixo-árvore e mancal dianteiro; B = ferramenta e
+porta-ferramenta; C = estrutura e base.
+
+**Ensaio de condição** (ensaio aberto com condição diferente de "normal", como avanço excessivo): a
+avaliação e as cores aparecem e o alerta abre marcado "durante ensaio de {condição}", mas não abre OS,
+não soma severidade e não entra nos indicadores.
+
+**Rotas:** `GET /api/v1/alertas` (filtros máquina, estado, ponto, prioridade, tipo, simulado,
+período; paginado, não reconhecidos primeiro), `GET /api/v1/alertas/{id}` (com histórico),
+`POST .../reconhecer` (qualquer usuário), `POST .../suprimir` e `.../cancelar-supressao` (ADMIN),
+`GET /api/v1/alarmes/limites`, `GET /api/v1/maquinas/{id}/alarmes/diagnostico`. Evento SSE `alerta`
+com a ação (abriu, piorou, normalizou, reconhecido, suprimido, supressao_encerrada, encerrado).
+
+## Indicadores de desempenho (Diagnóstico)
+
+Últimas 24 h, sem os alertas de ensaio de condição: alertas por hora (média), pior janela de 10 min,
+pontos repetitivos (o mesmo alerta reabriu 3 vezes ou mais em 10 min), parados (ativos há mais de 24 h)
+e suprimidos. **Referência de leitura:** a EEMUA 191 e a ISA-18.2 citam cerca de 6 alarmes por hora
+por operador como aceitável. Isto não é afirmação de conformidade com a norma.
+
+## Ordem de serviço
+
+Abre sozinha quando:
+
+- um alerta de **máquina** fica em ALARME por `ps.os.alarme-continuo-s` (120 s) seguidos (alerta ativo,
+  não suprimido, que ainda não gerou OS: uma OS por alerta); ou
+- a severidade acumulada do ponto passa de `ps.os.severidade-limite` (600 z·s, cerca de 5 min com
+  z = 5) desde a última OS daquele ponto (o contador recomeça).
+
+No máximo uma OS aberta (ou em andamento) por ponto e tipo de dado. Nunca a partir de janela recuperada,
+de ensaio de condição ou de alerta de instrumento. Campos: número (OS-ano-sequência), máquina, ponto,
+componente, alerta de origem, motivo, explicação, ação recomendada, severidade acumulada no momento,
+versões, simulado, responsável e o **retorno do técnico** ao concluir: `confirmada` (havia problema) ou
+`rejeitada` (falso positivo), com comentário. O retorno fica também no alerta de origem
+(`alerta.retorno_tecnico`), como rótulo para o treino da parte B. Ciclo `aberta → em_andamento →
+concluida`; concluir direto de `aberta` é aceito (quem conclui vira o responsável). Rotas
+`/api/v1/ordens-servico` (listar, detalhe, `assumir`, `concluir`; ADMIN e TECNICO agem, OPERADOR só vê)
+e evento SSE `os`.
+
+Com z muito alto (como no simulador severo), a severidade passa de 600 z·s em poucos segundos e a OS
+abre por severidade antes dos 120 s de ALARME contínuo.
+
+## Perfil de tempos curtos (só para teste)
+
+`application-tempos-curtos.yml` encurta atraso, saída, instrumento e OS para o Playwright do fluxo de
+alarme. No compose local: `$env:PERFIL_API = "tempos-curtos"; docker compose up -d api`. Nunca em
+produção. Os testes da API não precisam dele: eles controlam o `medido_em` das janelas.
+
+## Roteiro de demonstração com o simulador
+
+(preenchido na ETAPA 6)
+
+## Limitações
+
+- Nenhum número desta página foi confirmado com o torno: são todos proposta. Os testes provam a lógica
+  com sinal sintético; o roteiro de demonstração prova o encadeamento com dado simulado.
+- A validação do alerta de instrumento depende dos ensaios reais com rótulo `sensor_solto`.
+- Fora de ensaio, a regra "menor pior z entre vazio e corte" evita alarmar todo corte, mas também deixa
+  passar como normal um valor entre o vazio e o corte normal (corte leve).
+- Saturação e falta de amostras são da janela inteira no payload; o alerta de instrumento vai para o
+  ponto de maior pico, que pode não ser o sensor com defeito.
+- A deriva compara a mediana das razões RMS ÷ típico (porque a marcha muda o nível), não as medianas
+  brutas.

@@ -13,6 +13,9 @@ import type { components } from './esquema'
 import type { EnsaioEvento, Janela, ModoRapido } from './tipos'
 
 export type EventoMarcadoSse = components['schemas']['EventoMarcadoResposta']
+export type AlertaSse = components['schemas']['AlertaEvento']
+export type OrdemServicoSse = components['schemas']['OrdemServicoEvento']
+export type RecuperacaoSse = components['schemas']['RecuperacaoEvento']
 
 export type EstadoEventos = 'conectando' | 'ao_vivo' | 'reconectando'
 
@@ -24,6 +27,12 @@ export type OpcoesDeEventos = {
   aoReceberModoRapido: (estado: ModoRapido) => void
   /** Evento marcado num ensaio aberto (só para ADMIN e TECNICO). */
   aoReceberEventoMarcado?: (evento: EventoMarcadoSse) => void
+  /** Alerta aberto, piorado, normalizado, reconhecido, suprimido ou encerrado. */
+  aoReceberAlerta?: (evento: AlertaSse) => void
+  /** Ordem de serviço aberta, assumida ou concluída. */
+  aoReceberOrdemServico?: (evento: OrdemServicoSse) => void
+  /** Janelas antigas reenviadas pelo dispositivo depois de uma queda (de, ate, quantidade). */
+  aoReceberRecuperacao?: (evento: RecuperacaoSse) => void
   aoMudarEstado: (estado: EstadoEventos) => void
 }
 
@@ -133,6 +142,9 @@ function entregar(nome: string, dados: string, opcoes: OpcoesDeEventos) {
   else if (nome === 'ensaio') opcoes.aoReceberEnsaio(corpo as EnsaioEvento)
   else if (nome === 'modo_rapido') opcoes.aoReceberModoRapido(corpo as ModoRapido)
   else if (nome === 'evento_marcado') opcoes.aoReceberEventoMarcado?.(corpo as EventoMarcadoSse)
+  else if (nome === 'alerta') opcoes.aoReceberAlerta?.(corpo as AlertaSse)
+  else if (nome === 'os') opcoes.aoReceberOrdemServico?.(corpo as OrdemServicoSse)
+  else if (nome === 'recuperacao') opcoes.aoReceberRecuperacao?.(corpo as RecuperacaoSse)
 }
 
 function dormir(ms: number, sinal: AbortSignal): Promise<void> {

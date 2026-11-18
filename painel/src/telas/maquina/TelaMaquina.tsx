@@ -12,7 +12,9 @@ import {
   consultaPontos,
   consultaSerieRecente,
 } from '@/api/consultas'
+import { consultaAvaliacao, consultaLimites } from '@/api/adaptadores/referencia'
 import type { Janela, Ponto } from '@/api/tipos'
+import { EstadoDoPonto } from '@/componentes/instrumento/EstadoDoPonto'
 import { EsquemaTorno, type MarcadorNoTorno } from '@/componentes/instrumento/EsquemaTorno'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '@/componentes/instrumento/Estados'
 import { MarcaDeIdade } from '@/componentes/instrumento/Idade'
@@ -32,7 +34,7 @@ import { Sparkline } from '@/componentes/instrumento/Sparkline'
 import { Button, buttonVariants } from '@/componentes/ui/button'
 import { Explica } from '@/componentes/ui/explica'
 import { ToggleGroup, ToggleGroupItem } from '@/componentes/ui/toggle-group'
-import { estadoDaMaquina } from '@/dominio/estado'
+import { desvioDoZ, estadoDaMaquina, reguaEmZ, resumoDosPontos } from '@/dominio/estado'
 import {
   formatarCurtose,
   formatarDataHora,
@@ -115,10 +117,16 @@ export function TelaMaquina({ maquinaId, periodoDoMapa }: Props) {
               <span className="valor text-13 font-medium">{janela.ensaio_codigo}</span>
             </span>
           ) : null}
-          <span className="flex items-center gap-1">
-            <SeloAvaliacao avaliacao="sem_referencia" />
-            <Explica chave="referencia" />
-          </span>
+          {velho || !janela ? (
+            <span className="flex items-center gap-1">
+              <SeloAvaliacao avaliacao="sem_referencia" />
+              <Explica chave="referencia" />
+            </span>
+          ) : (
+            <EstadoDoPonto
+              avaliacao={resumoDosPontos(Object.values(janela.pontos).map((p) => p.avaliacao))}
+            />
+          )}
           <PlacaEstado estado={estado} matriz={false} className="w-44" />
         </div>
       </header>
@@ -468,6 +476,12 @@ function ModuloDoPonto({
 }: PropsDoModuloDoPonto) {
   const medida = janela?.pontos[ponto.codigo]
   const velho = frescor !== 'vivo'
+  const limites = useQuery(consultaLimites()).data?.alarme
+  const detalhe = useQuery(consultaAvaliacao(maquinaId, simulado)).data
+  const avaliado = detalhe?.pontos.find((p) => p.ponto === ponto.codigo)
+  const z = medida?.avaliacao?.z ?? {}
+  const desvio = (nome: string) => desvioDoZ(z[nome], limites)
+  const tipicoRms = avaliado?.medidas.find((m) => m.medida === 'rms_g')?.tipico
   const tendencia = useMemo(
     () =>
       recentes.filter((j) => j.modo === 'normal').map((j) => j.pontos[ponto.codigo]?.rms_g ?? null),
@@ -504,6 +518,7 @@ function ModuloDoPonto({
               valor={formatarG(medida?.rms_g)}
               unidade="g"
               tamanho="destaque"
+              desvio={desvio('rms_g')}
               velho={velho}
               className="col-span-3"
             />
@@ -511,6 +526,7 @@ function ModuloDoPonto({
               rotulo="Pico"
               explica="pico"
               valor={formatarG(medida?.pico_g)}
+              desvio={desvio('pico_g')}
               unidade="g"
               tamanho="grande"
               velho={velho}
@@ -527,6 +543,7 @@ function ModuloDoPonto({
               rotulo="1X"
               explica="ordens"
               valor={formatarG(medida?.o1x)}
+              desvio={desvio('o1x')}
               unidade="g"
               tamanho="grande"
               velho={velho}
@@ -534,6 +551,7 @@ function ModuloDoPonto({
             <Leitura
               rotulo="2X"
               valor={formatarG(medida?.o2x)}
+              desvio={desvio('o2x')}
               unidade="g"
               tamanho="grande"
               velho={velho}
@@ -541,6 +559,7 @@ function ModuloDoPonto({
             <Leitura
               rotulo="3X"
               valor={formatarG(medida?.o3x)}
+              desvio={desvio('o3x')}
               unidade="g"
               tamanho="grande"
               velho={velho}
@@ -554,11 +573,36 @@ function ModuloDoPonto({
         ) : null}
         <div className="grid grid-cols-1 items-end gap-3 @min-[26rem]:grid-cols-[minmax(0,1fr)_auto]">
           <div>
-            <span className="flex items-center gap-1">
-              <span className="rotulo">Desvio do RMS</span>
-              <Explica chave="desvio" />
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="flex items-center gap-1">
+                <span className="rotulo">Desvio do RMS</span>
+                <Explica chave="desvio" />
+              </span>
+              <EstadoDoPonto avaliacao={velho ? null : medida?.avaliacao} />
             </span>
-            <ReguaDesvio valor={medida?.rms_g} referencia={null} velho={velho} className="mt-1" />
+            <ReguaDesvio
+              valor={z.rms_g}
+              referencia={
+                limites && !velho && z.rms_g !== undefined && tipicoRms !== undefined
+                  ? reguaEmZ(limites)
+                  : null
+              }
+              velho={velho}
+              textoSemReferencia={
+                velho ? 'sem dado vivo' : 'sem referência para este ponto nesta marcha'
+              }
+              escala={{
+                formatar: (v) => `z ${formatarNumero(v, 0)}`,
+                rotuloCentro: `típico ${formatarG(tipicoRms)} g`,
+                descricao: `z ${formatarNumero(z.rms_g, 1)} em relação ao típico de ${formatarG(tipicoRms)} g`,
+              }}
+              className="mt-1"
+            />
+            {!velho && z.rms_g !== undefined ? (
+              <span className="valor mt-1 block text-12 text-apoio">
+                z {formatarNumero(z.rms_g, 1)} · típico {formatarG(tipicoRms)} g
+              </span>
+            ) : null}
           </div>
           {/* sem nenhum valor nos últimos 15 min, nem o rótulo do minigráfico aparece */}
           {tendencia.some((v) => v !== null) ? (
@@ -618,10 +662,10 @@ function SecaoDoMapa({
     if (!dados) return { intervalos: [] as IntervaloDoMapa[], linhas: [] as LinhaDoMapa[] }
     const pontos = ordenarCodigos(codigos.length > 0 ? codigos : dados.pontos)
     const grandezas = [
-      { rotulo: 'RMS', chave: 'rms_media_g' },
-      { rotulo: '1X', chave: 'o1x_media' },
-      { rotulo: '2X', chave: 'o2x_media' },
-      { rotulo: '3X', chave: 'o3x_media' },
+      { rotulo: 'RMS', chave: 'rms_media_g', medida: 'rms_g' },
+      { rotulo: '1X', chave: 'o1x_media', medida: 'o1x' },
+      { rotulo: '2X', chave: 'o2x_media', medida: 'o2x' },
+      { rotulo: '3X', chave: 'o3x_media', medida: 'o3x' },
     ] as const
     return {
       intervalos: dados.intervalos.map((i) => ({
@@ -637,7 +681,8 @@ function SecaoDoMapa({
           ponto,
           grandeza: g.rotulo,
           valores: dados.intervalos.map((i) => i.pontos[ponto]?.[g.chave] ?? null),
-          // A referência (faixa normal) ainda não existe na API: sem âmbar nem vermelho
+          // maior z do intervalo contra a referência (API); sem avaliação, nulo
+          zs: dados.intervalos.map((i) => i.pontos[ponto]?.z_max?.[g.medida] ?? null),
           referencia: null,
         })),
       ),
@@ -645,12 +690,18 @@ function SecaoDoMapa({
   }, [serie.data, codigos])
 
   const temDado = intervalos.some((i) => i.janelas > 0)
+  const limitesDoMapa = useQuery(consultaLimites()).data?.alarme ?? null
+  const comReferencia = linhas.some((l) => l.zs?.some((z) => z !== null))
 
   return (
     <Modulo
       rotulo="Mapa de ordens"
       explica="mapa"
-      detalhe="cada célula comparada com o típico da própria linha, na mesma marcha"
+      detalhe={
+        comReferencia
+          ? 'com referência: âmbar e vermelho onde o z passou dos limites; tom pelo típico da linha'
+          : 'cada célula comparada com o típico da própria linha, na mesma marcha'
+      }
       simulado={simulado && temDado}
       className="xl:col-span-12"
       acoes={
@@ -690,6 +741,7 @@ function SecaoDoMapa({
             codigo: e.codigo,
             etapa: e.etapa,
           }))}
+          limites={limitesDoMapa}
           simulado={simulado}
           ultimaJanelaVelha={ultimaJanelaVelha}
         />

@@ -676,58 +676,51 @@ proteção da placa fica fechada.
    rever no **Replay** e **Exportar CSV** para o treino. Recarregar a página no meio de uma gravação
    não perde nada: a tela volta gravando, e a sessão fica guardada no navegador.
 
-## Contrato esperado para alarmes, OS e referência
+## Alarmes, OS e referência (parte A, implantada)
 
-Proposta para o prompt que vai implantar a regra de alarme na API. Parte das tabelas que já existem
-desde a migração `V1` (`baseline`, `alerta`, `ordem_servico`) e diz o que acrescentar. No painel, as
-telas só conversam com dois adaptadores: [`api/adaptadores/alarmes.ts`](../painel/src/api/adaptadores/alarmes.ts)
-e [`api/adaptadores/referencia.ts`](../painel/src/api/adaptadores/referencia.ts). Hoje eles devolvem
-"indisponível" sem chamar rota; ligar a API será trocar o corpo das funções.
+O contrato proposto antes foi substituído pela implementação descrita em [`docs/alarmes.md`](alarmes.md).
+As telas só falam com dois adaptadores, [`api/adaptadores/alarmes.ts`](../painel/src/api/adaptadores/alarmes.ts)
+e [`api/adaptadores/referencia.ts`](../painel/src/api/adaptadores/referencia.ts), que chamam as rotas reais
+(contrato em `painel/openapi.json`). Nada de dado de exemplo fora da galeria.
 
-**Referência (`baseline`).** Hoje: `ponto_medicao_id`, `condicao`, `rotacao_rpm`, `metrica`, `media`,
-`desvio_padrao`, `n_amostras`, `versao`. Acrescentar:
+- **Estado e cor.** NORMAL, ATENÇÃO e ALARME (cor + forma + texto) só onde a API comparou o ponto com a
+  referência; senão selo neutro que diz por quê, cada um com o seu "?": sem referência, sem referência
+  completa, calibração diferente, não avaliável. "Referência genérica" acompanha o estado no corte. Valores em
+  desvio (z acima dos limites da API) ficam âmbar ou vermelho com forma e texto para leitor de tela; o resto
+  continua neutro. A régua do desvio é em z e mostra o típico.
+- **Mapa de ordens.** Com referência, âmbar e vermelho só nas células cujo maior z passou dos limites
+  (`z_max` da série); o tom continua a comparação com o típico do período, e a legenda diz qual está em uso.
+- **Eventos.** `alerta`, `os` e `recuperacao` entram no cliente SSE. `recuperacao` invalida as consultas do
+  agora e as de período que cruzam o intervalo recuperado (`afetadaPelaRecuperacao`).
+- **Glossário.** Onze termos novos; os limites citados nos textos vêm de `GET /alarmes/limites`, nunca à mão.
+- **Telas.** Alarmes (lista ao vivo, filtros, reconhecer segurando, suprimir inline só ADMIN, OS assumir e
+  concluir com retorno), Coleta (módulo Referência: recalcular e cobertura por marcha e etapa), Diagnóstico
+  (limites, indicadores, severidade, deriva, piso de ruído, calibração).
+- **Testes.** Vitest (`dominio/alarme.test.ts`), `e2e/alarmes.spec.ts` (fluxo completo com o perfil
+  `tempos-curtos` da API), `e2e/acessibilidade-alarmes.spec.ts` (axe nos dois temas, 10 casos, sem violação
+  séria ou crítica). A suíte `acessibilidade.spec.ts` antiga mede páginas com o Vite em modo de
+  desenvolvimento e estoura o tempo de 90 s nas telas da máquina e do ponto; rodou sem falha com o build de
+  produção (`vite preview`) só nas outras telas. Isso já acontecia antes desta parte (conferido no commit
+  anterior) e não foi corrigido aqui.
 
-| Campo | Para quê |
-|---|---|
-| `etapa` | T0, T1 e T3 têm faixas normais diferentes (desligado, em vazio, cortando). |
-| `material_id`, `ferramenta_id`, `avanco_alvo`, `profundidade_corte_mm` (nulos fora do T3) | No corte (T3) a vibração muda com a receita: a referência do corte deve poder ser separada por receita. T0 e T1 não dependem de receita; T2 usa a de T1. |
-| `limite_atencao`, `limite_alarme` (ou o múltiplo do desvio-padrão usado) | O painel desenha a régua de desvio e as cores do mapa a partir deles (`Referencia` em `dominio/estado.ts`). |
-| `limite_volta` (histerese) | Valor menor que o de disparo, para o alarme só voltar ao normal abaixo dele (ISA-18.2, contra alarme que liga e desliga). |
-| `janelas_para_disparar` (atraso) | Quantas janelas seguidas acima do limite antes de disparar (ISA-18.2). |
-| `aprendida_de` (lista de ensaios), `criada_em` | Rastreabilidade: de quais gravações normais a faixa saiu. |
+### Revisão de design da parte A
 
-Rota sugerida: `GET /api/v1/pontos/{id}/referencia?metrica=&rotacao_rpm=&etapa=&material_id=...`,
-devolvendo `{centro, tolerancia, atencao, alarme, volta, janelas_para_disparar, versao}` ou 404 quando
-não há referência (o painel mostra SEM REFERÊNCIA).
+**Rodada A1 (feita por quem construiu).** Defeito: em OS aberta, o formulário de conclusão aparecia sempre
+aberto, repetido em cada linha. Corrigido: botão "Concluir OS…" abre o formulário sob demanda.
 
-**Alerta (`alerta`).** Hoje: máquina, janela, ponto ou canal, baseline, métrica, valor, desvio,
-`severidade`, `classificacao_falha`, `confianca`, `versao_modelo`, `retorno_tecnico`, `criado_em`,
-`reconhecido_em`. Acrescentar:
+**Rodada A2 (revisor independente, só com prints, direção e lista "não fazer").** Defeitos aceitos e
+corrigidos: (1) ícone de alarme que já voltou ao normal estava âmbar/vermelho; agora fica cinza; (2) bloco da
+ação recomendada nas OS era um cartão dentro de cartão em fonte grande; agora é uma linha de 1 px com texto de
+15 px; (3) módulo Referência da Coleta ficava espremido em uma coluna; agora ocupa a largura toda. Não
+aceitos: valores de cobertura como "26/3" (matriz de coleta antiga, fora desta parte); tabela do Diagnóstico a
+390 px (rola dentro do próprio módulo, a página não rola de lado); "carregando" no módulo Qualidade
+(já existente). Ficou anotado, sem correção: a leitura PICO, 1X, 2X e 3X a 390 px da tela da máquina corta com
+reticências quando os quatro valores estão em desvio, por causa da forma ao lado do número.
 
-| Campo | Para quê |
-|---|---|
-| `prioridade` (`atencao` ou `alarme`) | O que o painel mostra (âmbar ou vermelho, com forma e texto). |
-| `estado` (`nao_reconhecido`, `reconhecido`, `normalizado_sem_reconhecimento`, `suprimido`) | Estados da ISA-18.2 que o componente `LinhaAlarme` já desenha. |
-| `normalizado_em`, `reconhecido_por`, `suprimido_ate`, `motivo_supressao` | Ciclo de vida completo. |
-| `acao_recomendada` (texto, obrigatório) | Uma frase do que fazer. Na ISA-18.2, alarme sem ação definida é evento, não alarme. |
-| `versao_firmware`, `versao_calibracao`, `versao_modelo` | Versões gravadas em cada alerta, para saber depois com que firmware, calibração do sensor e modelo ele nasceu. |
-
-Rotas sugeridas: `GET /api/v1/alertas?maquina_id=&estado=` (paginado, não reconhecidos primeiro),
-`POST /api/v1/alertas/{id}/reconhecer` (o painel pede segurando o botão), evento SSE `alerta` no fluxo
-da máquina.
-
-**Ordem de serviço (`ordem_servico`).** Hoje: máquina, alerta, componente, responsável, número,
-`status`, `tipo_falha`, `severidade_acumulada`, `peca_sugerida`, `versao_modelo`, `retorno_tecnico`,
-`aberta_em`, `concluida_em`. Acrescentar `acao_recomendada` (texto, obrigatório, em destaque no
-`LinhaOrdemServico`) e `observacao_tecnico` (o que o técnico achou ao confirmar ou rejeitar). Rotas:
-`GET /api/v1/ordens-servico`, `POST /api/v1/ordens-servico/{id}/retorno` com `confirmada` ou
-`rejeitada` (realimenta o modelo).
-
-**Indicadores de desempenho do alarme (para o Diagnóstico).** `GET /api/v1/maquinas/{id}/alarmes/indicadores?de=&ate=`
-com alarmes por hora (média e pico; a ISA-18.2 recomenda poucos por hora por operador) e alarmes
-repetitivos (o mesmo ponto e métrica disparando várias vezes no período), para ajustar atraso e
-histerese.
-
+Evidências: [`docs/evidencias/painel/`](evidencias/painel/) (16 prints novos, 1920 e 390, dois temas, das
+telas Alarmes, máquina, Diagnóstico, Coleta e ponto; os antigos das mesmas telas foram substituídos). Os
+prints foram tirados com o simulador em modo severo, para aparecerem atenção, alarme e OS: dado simulado,
+prova o encadeamento, não a detecção real.
 ## Publicação
 
 O painel é publicado no Render como site estático (`predictspin-painel` no [`render.yaml`](../render.yaml));
