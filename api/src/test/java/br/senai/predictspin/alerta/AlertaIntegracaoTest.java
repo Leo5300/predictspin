@@ -72,6 +72,15 @@ class AlertaIntegracaoTest extends AlarmeIntegracaoBase {
         assertThat(piorou.get("historico").get(0).get("acao").asText()).isEqualTo("abriu");
         assertThat(piorou.get("historico").get(1).get("acao").asText()).isEqualTo("piorou");
 
+        // melhora para ATENÇÃO: a prioridade acompanha o nível atual; o pior alcançado continua guardado
+        // (z ≈ 3,5: abaixo de z-alarme − histerese = 4 e acima de z-atencao = 3)
+        t = enviarSequencia(t, 4, 1120, new double[] {0.1645, CORTE[1], CORTE[2]});
+        JsonNode melhorou = corpo(mvc.perform(comToken(get("/api/v1/alertas/" + id), token))).get("alerta");
+        assertThat(melhorou.get("nivel").asText()).isEqualTo("atencao");
+        assertThat(melhorou.get("prioridade").asText()).isEqualTo("baixa");
+        assertThat(melhorou.get("pior_nivel").asText()).isEqualTo("alarme");
+        assertThat(melhorou.get("pior_z").asDouble()).isGreaterThan(melhorou.get("z").asDouble());
+
         // reconhecer não apaga; segunda vez é conflito
         String operador = tokenDe("OPERADOR");
         assertThat(acao(operador, id, "reconhecer", null, 200).get("estado").asText()).isEqualTo("ativo_reconhecido");

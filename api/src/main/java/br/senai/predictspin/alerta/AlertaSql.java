@@ -115,12 +115,15 @@ public class AlertaSql {
         return "maquina".equals(tipo) && nivel == Nivel.ALARME ? "alta" : "baixa";
     }
 
-    /** Nova medição do alerta de máquina: nível atual, pior nível, z, explicação e ação. */
+    /**
+     * Nova medição do alerta de máquina: nível atual, pior nível, z, explicação e ação. A prioridade segue o
+     * nível ATUAL (volta a baixa quando o ponto cai de alarme para atenção); o pior nível alcançado fica em
+     * pior_nivel e o maior z em pior_z.
+     */
     public void atualizarMedicao(long id, Nivel nivel, String metrica, double valor, Double z, String explicacao,
                                  String acao, Instant agora) {
         jdbc.update("""
-                UPDATE alerta SET nivel = ?, severidade = CASE WHEN ? = 'alarme' OR severidade = 'alta' THEN 'alta'
-                                                                ELSE 'baixa' END,
+                UPDATE alerta SET nivel = ?, severidade = CASE WHEN ? = 'alarme' THEN 'alta' ELSE 'baixa' END,
                        pior_nivel = CASE WHEN ? = 'alarme' THEN 'alarme' ELSE pior_nivel END,
                        metrica = ?, valor = ?, desvio_sigma = ?, pior_z = greatest(coalesce(pior_z, ?), ?),
                        explicacao = coalesce(?, explicacao), acao_recomendada = ?, atualizado_em = ?,
