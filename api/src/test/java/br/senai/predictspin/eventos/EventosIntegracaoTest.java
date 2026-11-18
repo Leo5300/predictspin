@@ -29,9 +29,16 @@ import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.apache.coyote.http11.Http11Nio2Protocol;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
+import org.springframework.boot.web.embedded.tomcat.TomcatWebServer;
+import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext;
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 
@@ -55,6 +62,23 @@ import br.senai.predictspin.IntegracaoBase;
         "predictspin.eventos.intervalo-recuperacao=1s"})
 class EventosIntegracaoTest extends IntegracaoBase {
 
+    /**
+     * Servidor deste teste com o conector NIO2 do Tomcat (canais assíncronos) em vez do NIO (poller com
+     * seletor). Motivo, medido no Windows de desenvolvimento: de vez em quando (1 em 20 execuções da classe)
+     * o pedido de abrir o 2º fluxo chegava numa conexão já aceita e o poller NIO não o via; nenhuma thread
+     * do Tomcat pegava o pedido e o servidor fechava a conexão aos 20 s (connectionTimeout padrão), com o
+     * cliente parado esperando os cabeçalhos. Despejo de threads na falha: as 10 threads do Tomcat ociosas,
+     * aceitador e poller em espera; com socket cru, conexão em 14 ms e fechamento sem resposta aos ~20 s.
+     * O NIO2 não usa esse poller. A produção (Linux, Render) segue com o conector padrão.
+     */
+    @TestConfiguration(proxyBeanMethods = false)
+    static class ConectorNio2 {
+        @Bean
+        WebServerFactoryCustomizer<TomcatServletWebServerFactory> conectorNio2() {
+            return fabrica -> fabrica.setProtocol(Http11Nio2Protocol.class.getName());
+        }
+    }
+
     private static final Duration ESPERA = Duration.ofSeconds(10);
 
     @LocalServerPort
@@ -62,6 +86,9 @@ class EventosIntegracaoTest extends IntegracaoBase {
 
     @Autowired
     private EventosService eventos;
+
+    @Autowired
+    private ServletWebServerApplicationContext servidor;
 
     private final HttpClient http = HttpClient.newHttpClient();
 
@@ -190,6 +217,9 @@ class EventosIntegracaoTest extends IntegracaoBase {
     void recebeAJanelaDepoisDaIngestaoEReenvioNaoGeraEvento() throws Exception {
         Fluxo fluxo = new Fluxo(tokenDe("OPERADOR"), "?simulado=true");
         assertThat(fluxo.status()).isEqualTo(200);
+        assertThat(servidor.getWebServer().getPort()).isEqualTo(porta);
+        assertThat(((TomcatWebServer) servidor.getWebServer()).getTomcat().getConnector().getProtocolHandler())
+                .isInstanceOf(Http11Nio2Protocol.class);
         assertThat(fluxo.resposta.headers().firstValue("Content-Type").orElse("")).startsWith("text/event-stream");
         assertThat(fluxo.resposta.headers().firstValue("Cache-Control")).contains("no-cache");
         assertThat(fluxo.resposta.headers().firstValue("X-Accel-Buffering")).contains("no");
