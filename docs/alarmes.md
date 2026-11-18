@@ -24,8 +24,13 @@ janela (POST /telemetria) ─► filtro de qualidade ─► avaliação contra a
    gravada junto                         alerta ISA-18.2 ─► ordem de serviço ─► retorno do técnico
 ```
 
-Tudo acontece na mesma transação da ingestão (evento síncrono `JanelaRecebida`): se a avaliação falhar,
-a janela também não fica gravada. Os eventos ao vivo (`alerta`, `os`) saem depois do commit.
+A janela é gravada primeiro, na transação da ingestão. A avaliação (estado, alerta, OS) roda logo depois
+do commit, ainda na thread do pedido, em transação própria (`JanelaRecebida` com
+`@TransactionalEventListener(AFTER_COMMIT)`): se ela falhar, a transação dela é desfeita inteira, a janela
+continua gravada, a resposta do `POST /api/v1/telemetria` é a mesma (201) e o erro vai para o log e para o
+contador "Janelas sem avaliação" do Diagnóstico (`falhas_avaliacao`, desde que a API subiu). A janela que
+ficou sem avaliação não é reavaliada depois; a seguinte é avaliada normalmente. Os eventos ao vivo
+(`alerta`, `os`) saem depois do commit da avaliação.
 
 ## Filtro de qualidade
 

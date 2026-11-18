@@ -16,6 +16,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.senai.predictspin.alarme.AvaliacaoService;
 import br.senai.predictspin.alarme.PropriedadesAlarme;
 import br.senai.predictspin.alerta.dto.DiagnosticoAlarmeResposta;
 import br.senai.predictspin.alerta.dto.LimitesResposta;
@@ -47,13 +48,15 @@ public class DiagnosticoAlarmeService {
     private final JdbcTemplate jdbc;
     private final AlertaService alertas;
     private final ReferenciaService referencias;
+    private final AvaliacaoService avaliacoes;
     private final MaquinaRepository maquinas;
     private final LimitesResposta limites;
     private final Clock relogio;
 
     public DiagnosticoAlarmeService(JdbcTemplate jdbc, AlertaService alertas, ReferenciaService referencias,
                                     MaquinaRepository maquinas, PropriedadesReferencia ref, PropriedadesAlarme alarme,
-                                    PropriedadesOs os, Clock relogio) {
+                                    PropriedadesOs os, Clock relogio, AvaliacaoService avaliacoes) {
+        this.avaliacoes = avaliacoes;
         this.jdbc = jdbc;
         this.alertas = alertas;
         this.referencias = referencias;
@@ -163,7 +166,8 @@ public class DiagnosticoAlarmeService {
         return new DiagnosticoAlarmeResposta(simulado, limites,
                 new DiagnosticoAlarmeResposta.Indicadores(ind.alertasPorHora(), ind.piorDezMinutos(),
                         ind.pontosRepetitivos(), ind.parados(), ind.suprimidos()),
-                !pisos.isEmpty(), ref.map(ReferenciaAtiva::numero).orElse(null), pontos, avisos);
+                !pisos.isEmpty(), ref.map(ReferenciaAtiva::numero).orElse(null), pontos, avisos,
+                avaliacoes.falhasDeAvaliacao());
     }
 
     private static OffsetDateTime utc(Instant instante) {

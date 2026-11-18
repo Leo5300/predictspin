@@ -15,7 +15,9 @@ public record DiagnosticoAlarmeResposta(
         boolean pisoRuidoMedido,
         @Schema(description = "Número da versão da referência em uso; nulo sem referência") @Nullable Integer referenciaVersao,
         List<Ponto> pontos,
-        @Schema(description = "Avisos prontos (sem piso de ruído, recalcular a referência...)") List<String> avisos) {
+        @Schema(description = "Avisos prontos (sem piso de ruído, recalcular a referência...)") List<String> avisos,
+        @Schema(description = "Janelas que ficaram sem avaliação por erro desde que a API subiu (a janela "
+                + "foi gravada; o erro está no log)") long falhasAvaliacao) {
 
     @Schema(name = "IndicadoresAlarme", description = "Últimas 24 h, sem os alertas de ensaio de condição")
     public record Indicadores(

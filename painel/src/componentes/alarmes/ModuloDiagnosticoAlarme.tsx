@@ -98,6 +98,9 @@ export function ModuloDiagnosticoAlarme({
             </Par>
             <Par rotulo="Parados há mais de 24 h">{d.indicadores.parados}</Par>
             <Par rotulo="Suprimidos">{d.indicadores.suprimidos}</Par>
+            <Par rotulo="Janelas sem avaliação (erro, desde que a API subiu)">
+              {d.falhas_avaliacao}
+            </Par>
           </dl>
           <p className="mt-1 text-12 text-apoio">
             Referência de leitura: a EEMUA 191 e a ISA-18.2 citam cerca de 6 alarmes por hora por

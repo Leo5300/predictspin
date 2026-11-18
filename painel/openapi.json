@@ -803,6 +803,11 @@
             },
             "type": "array"
           },
+          "falhas_avaliacao": {
+            "description": "Janelas que ficaram sem avaliação por erro desde que a API subiu (a janela foi gravada; o erro está no log)",
+            "format": "int64",
+            "type": "integer"
+          },
           "indicadores": {
             "$ref": "#/components/schemas/IndicadoresAlarme"
           },
@@ -833,6 +838,7 @@
         },
         "required": [
           "avisos",
+          "falhas_avaliacao",
           "indicadores",
           "limites",
           "piso_ruido_medido",

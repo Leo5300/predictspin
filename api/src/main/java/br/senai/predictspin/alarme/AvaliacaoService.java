@@ -9,12 +9,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.event.EventListener;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import br.senai.predictspin.alarme.AvaliacaoRepository.EnsaioDaJanela;
 import br.senai.predictspin.alarme.AvaliacaoRepository.LinhaAvaliacao;
@@ -38,7 +47,7 @@ import br.senai.predictspin.telemetria.JanelaRecebida;
 import br.senai.predictspin.telemetria.ModoJanela;
 
 /**
- * Avalia cada janela nova contra a referência, na mesma transação da ingestão: z de cada medida, estado
+ * Avalia cada janela nova contra a referência, logo depois do commit da ingestão: z de cada medida, estado
  * do ponto com atraso e histerese, alerta de instrumento e severidade acumulada. Grava UMA linha de
  * avaliação por janela e ponto (só quando há referência) e atualiza a linha de estado de cada ponto.
  * <ul>
@@ -52,6 +61,8 @@ import br.senai.predictspin.telemetria.ModoJanela;
 @Service
 public class AvaliacaoService {
 
+    private static final Logger log = LoggerFactory.getLogger(AvaliacaoService.class);
+
     private final AvaliacaoRepository repositorio;
     private final ReferenciaService referencias;
     private final ReferenciaRepository celulas;
@@ -59,12 +70,17 @@ public class AvaliacaoService {
     private final PropriedadesReferencia propRef;
     private final PropriedadesAlarme prop;
     private final ApplicationEventPublisher anuncios;
+    private final TransactionTemplate transacao;
+    private final AtomicLong falhas = new AtomicLong();
     private final Map<Long, List<Integer>> marchasPorMaquina = new ConcurrentHashMap<>();
 
     public AvaliacaoService(AvaliacaoRepository repositorio, ReferenciaService referencias,
                             ReferenciaRepository celulas, MaquinaRepository maquinas, PropriedadesReferencia propRef,
-                            PropriedadesAlarme prop, ApplicationEventPublisher anuncios) {
+                            PropriedadesAlarme prop, ApplicationEventPublisher anuncios,
+                            PlatformTransactionManager transacoes) {
         this.anuncios = anuncios;
+        this.transacao = new TransactionTemplate(transacoes);
+        this.transacao.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.repositorio = repositorio;
         this.referencias = referencias;
         this.celulas = celulas;
@@ -88,9 +104,26 @@ public class AvaliacaoService {
         return ensaio != null && !"normal".equals(ensaio.condicao());
     }
 
-    @EventListener
+    /**
+     * Roda DEPOIS do commit da janela, numa transação própria, antes de a janela ir ao fluxo ao vivo (ordem
+     * mais alta). Falha na avaliação nunca derruba a ingestão: a janela já está gravada, a resposta do POST
+     * continua a mesma, e a falha vai para o log e para o contador do Diagnóstico.
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     public void aoReceber(JanelaRecebida janela) {
-        avaliar(janela);
+        try {
+            transacao.executeWithoutResult(status -> avaliar(janela));
+        } catch (RuntimeException e) {
+            falhas.incrementAndGet();
+            log.error("Falha ao avaliar a janela {} da máquina {}: a janela está gravada, sem avaliação",
+                    janela.janelaId(), janela.maquinaId(), e);
+        }
+    }
+
+    /** Janelas que ficaram sem avaliação por erro desde que a API subiu. */
+    public long falhasDeAvaliacao() {
+        return falhas.get();
     }
 
     /** Avalia e grava; devolve o resultado (para os alertas). */

@@ -124,7 +124,7 @@ public class IngestaoService {
             ingestao.inserirLeituras(janelaId, leituras);
         }
         boolean aoVivo = !medidoEm.isBefore(agora.minus(LIMITE_AO_VIVO));
-        // Avaliação contra a referência: escuta síncrona, grava na mesma transação da janela
+        // Avaliação contra a referência: roda depois do commit, em transação própria; falha nela não muda a resposta
         anuncios.publishEvent(new JanelaRecebida(dispositivo.maquinaId(), dispositivo.simulado(), janelaId, medidoEm,
                 aoVivo, req.rotacaoRpm(), req.saturou(), req.modoOuNormal(), req.amostras(), req.amostrasEsperadas(),
                 rastreio.firmwareVersao(), rastreio.calibracao(), ensaioId, pontoPorCodigo, linhas));

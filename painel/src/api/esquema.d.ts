@@ -1182,6 +1182,11 @@ export interface components {
         DiagnosticoAlarmeResposta: {
             /** @description Avisos prontos (sem piso de ruído, recalcular a referência...) */
             avisos: string[];
+            /**
+             * Format: int64
+             * @description Janelas que ficaram sem avaliação por erro desde que a API subiu (a janela foi gravada; o erro está no log)
+             */
+            falhas_avaliacao: number;
             indicadores: components["schemas"]["IndicadoresAlarme"];
             limites: components["schemas"]["LimitesResposta"];
             /** @description false: não há T0 gravado; o σ efetivo usa só a fração mínima da mediana */
