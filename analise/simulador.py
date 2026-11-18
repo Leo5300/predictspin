@@ -366,6 +366,13 @@ class Cliente:
                 return maquina["id"]
         raise ErroApi(f"máquina {codigo} não encontrada na API")
 
+    def id_da_ferramenta(self, nome):
+        """Id da ferramenta do catálogo com esse nome; cria se não existir (409 traz a existente)."""
+        resposta = self._chamar("POST", "/api/v1/ferramentas", json={"nome": nome}, headers=self._jwt())
+        if resposta.status_code == 409:
+            return self._exigir(resposta, 409)["existente"]["id"]
+        return self._exigir(resposta, 201)["id"]
+
     def abrir_ensaio(self, maquina_id, dados):
         resposta = self._chamar("POST", f"/api/v1/maquinas/{maquina_id}/ensaios", json=dados, headers=self._jwt())
         return self._exigir(resposta, 201)
@@ -427,10 +434,12 @@ def executar_continuo(cliente, rng, modo, rotacao, etapa, condicao, intervalo_s,
     return enviadas
 
 
-def executar_roteiro(cliente, rng, maquina_id, roteiro, janelas, inicio, material=None, escrever=print):
+def executar_roteiro(cliente, rng, maquina_id, roteiro, janelas, inicio, material=None, escrever=print,
+                     ferramenta_id=None):
     """Para cada item do roteiro: abre o ensaio, envia as janelas, encerra. Devolve o total enviado.
 
-    Os medido_em avançam 5 s por janela a partir de inicio, sem esperar o tempo real passar.
+    material (texto) e ferramenta_id (do catálogo) vão em todos os ensaios; no T3 os dois formam a
+    receita do corte. Os medido_em avançam 5 s por janela a partir de inicio, sem esperar o tempo real passar.
     Se a API disser que uma janela já existia, o período escolhido cruza com um envio anterior:
     o ensaio é descartado e o roteiro para, para não deixar ensaio vazio contando como válido.
     """
@@ -442,6 +451,8 @@ def executar_roteiro(cliente, rng, maquina_id, roteiro, janelas, inicio, materia
         pedido["observacao"] = "Dados simulados por analise/simulador.py; não é medição."
         if material:
             pedido["material"] = material
+        if ferramenta_id is not None:
+            pedido["ferramenta_id"] = ferramenta_id
         ensaio = cliente.abrir_ensaio(maquina_id, pedido)
         try:
             for medido_em in instantes(relogio, janelas):
@@ -524,6 +535,9 @@ def criar_argumentos():
     r.add_argument("--rotacoes", type=_lista, default=["400", "800", "1200"], help="ex.: 400,800,1200")
     r.add_argument("--repeticoes", type=int, default=1)
     r.add_argument("--material", default=None)
+    r.add_argument("--ferramenta", default=None,
+                   help="nome da ferramenta do catálogo (criada se não existir); com --material, forma a "
+                        "receita do T3")
     r.add_argument("--inicio", type=_instante,
                    help="medido_em da primeira janela (ISO-8601). Padrão: agora menos a duração do roteiro")
     return p
@@ -564,7 +578,9 @@ def main(argv=None):
                   f"{formatar_instante(inicio)} a {formatar_instante(inicio + duracao)}")
             cliente.entrar(a.email, a.senha)
             maquina_id = cliente.id_da_maquina(a.maquina)
-            total = executar_roteiro(cliente, rng, maquina_id, roteiro, a.janelas, inicio, a.material)
+            ferramenta_id = cliente.id_da_ferramenta(a.ferramenta) if a.ferramenta else None
+            total = executar_roteiro(cliente, rng, maquina_id, roteiro, a.janelas, inicio, a.material,
+                                     ferramenta_id=ferramenta_id)
     except KeyboardInterrupt:
         print("\nInterrompido.")
         return 130

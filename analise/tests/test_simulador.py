@@ -351,6 +351,19 @@ def test_roteiro_abre_envia_e_encerra_cada_ensaio():
     assert [p["medido_em"] for p in cliente.payloads] == [
         sim.formatar_instante(INICIO + timedelta(seconds=5 * i)) for i in range(6)]
     assert len(linhas) == 2
+    assert "ferramenta_id" not in pedido
+
+
+def test_roteiro_com_ferramenta_manda_o_id_em_cada_ensaio():
+    cliente = ClienteFalso()
+    roteiro = sim.montar_roteiro(("T1", "T3"), ("normal",), (1120,))
+
+    sim.executar_roteiro(cliente, random.Random(1), 1, roteiro, 1, INICIO, "aço 1045", lambda _: None,
+                         ferramenta_id=7)
+
+    pedidos = [c[2] for c in cliente.chamadas if c[0] == "abrir"]
+    assert [(p["etapa"], p["material"], p["ferramenta_id"]) for p in pedidos] == [
+        ("T1", "aço 1045", 7), ("T3", "aço 1045", 7)]
 
 
 def test_roteiro_descarta_o_ensaio_e_para_se_a_janela_ja_existia():
@@ -415,6 +428,26 @@ def test_cliente_mostra_a_mensagem_de_erro_da_api():
     cliente = sim.Cliente("http://api.local", "ps-sim-01", "errada", sessao)
     with pytest.raises(sim.ErroApi, match="401.*Credencial"):
         cliente.enviar({})
+
+
+def test_cliente_cria_a_ferramenta_ou_usa_a_que_ja_existe():
+    sessao = SessaoFalsa([
+        RespostaFalsa(200, {"token": "abc"}),
+        RespostaFalsa(201, {"id": 5, "nome": "bit HSS"}),
+        RespostaFalsa(409, {"mensagem": "já existe", "existente": {"id": 3, "nome": "Bit HSS"}}),
+        RespostaFalsa(400, {"mensagem": "nome é obrigatório"}),
+    ])
+    cliente = sim.Cliente("http://api.local", "ps-sim-01", "segredo", sessao)
+    cliente.entrar("admin@x.com", "senha")
+
+    assert cliente.id_da_ferramenta("bit HSS") == 5
+    assert cliente.id_da_ferramenta("Bit HSS") == 3
+    with pytest.raises(sim.ErroApi, match="400"):
+        cliente.id_da_ferramenta("")
+    metodo, url, kwargs = sessao.pedidos[1]
+    assert (metodo, url) == ("POST", "http://api.local/api/v1/ferramentas")
+    assert kwargs["json"] == {"nome": "bit HSS"}
+    assert kwargs["headers"] == {"Authorization": "Bearer abc"}
 
 
 def test_cliente_entra_e_usa_o_token_para_achar_a_maquina():

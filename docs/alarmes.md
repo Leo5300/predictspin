@@ -270,8 +270,8 @@ referência gravada numa rotação acusaria desvio em outra. Contra o compose lo
 (sem o perfil de teste), a partir de um banco vazio (`docker compose down -v; docker compose up -d --build`):
 
 ```powershell
-# 1. ensaios normais de T0, T1 e T3 a 1120 rpm, 30 janelas cada, T3 com material
-python analise/simulador.py roteiro --etapas T0,T1,T3 --condicoes normal --rotacoes 1120 --janelas 30 --material "aço 1045"
+# 1. ensaios normais de T0, T1 e T3 a 1120 rpm, 30 janelas cada, com material e ferramenta (receita do T3)
+python analise/simulador.py roteiro --etapas T0,T1,T3 --condicoes normal --rotacoes 1120 --janelas 30 --material "aço 1045" --ferramenta "bit de metal duro"
 # 2. recalcular a referência (painel: Coleta → Referência → Recalcular referência; ou a rota)
 POST /api/v1/maquinas/1/referencias/recalcular?simulado=true
 # 3. uso normal por 5 min: tudo NORMAL, nenhum alerta
@@ -281,8 +281,8 @@ python analise/simulador.py continuo --modo severo --rotacao 1120
 # 5. voltar ao normal (de novo o comando do passo 3): normaliza; reconhecer encerra
 ```
 
-O simulador não tem opção de ferramenta (só `--material`); no T3 a célula da receita usa o material, e a
-ferramenta fica vazia.
+`--ferramenta` procura a ferramenta pelo nome no catálogo (cria se não existir) e manda o id em cada
+ensaio; com `--material`, o T3 ganha a célula da receita (material + ferramenta) além da T3 genérica.
 
 **O que foi visto (execução de 18/11/2026, máquina local, relógio medido pelo script):**
 
