@@ -52,6 +52,10 @@ public record SerieAgregadaResposta(
             @JsonInclude(JsonInclude.Include.NON_NULL) Double velRmsMediaMmS,
             @Schema(description = "Maior velocidade RMS (mm/s) no intervalo; só aparece se alguma janela trouxe",
                     requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-            @JsonInclude(JsonInclude.Include.NON_NULL) Double velRmsMaxMmS) {
+            @JsonInclude(JsonInclude.Include.NON_NULL) Double velRmsMaxMmS,
+            @Schema(description = "Maior z de cada medida no intervalo (rms_g, o1x, o2x, o3x), só das janelas "
+                    + "avaliadas contra a referência; só aparece quando alguma foi avaliada",
+                    requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+            @JsonInclude(JsonInclude.Include.NON_EMPTY) Map<String, Double> zMax) {
     }
 }

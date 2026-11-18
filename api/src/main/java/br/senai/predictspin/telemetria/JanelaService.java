@@ -40,15 +40,25 @@ public class JanelaService {
     private final MaquinaRepository maquinas;
     private final EnsaioRepository ensaios;
     private final Clock relogio;
+    private final AvaliacoesDasJanelas avaliacoes;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public JanelaService(JanelaRepository janelas, TelemetriaRepository telemetrias, LeituraRepository leituras,
-                         MaquinaRepository maquinas, EnsaioRepository ensaios, Clock relogio) {
+                         MaquinaRepository maquinas, EnsaioRepository ensaios, Clock relogio,
+                         AvaliacoesDasJanelas avaliacoes) {
         this.janelas = janelas;
         this.telemetrias = telemetrias;
         this.leituras = leituras;
         this.maquinas = maquinas;
         this.ensaios = ensaios;
         this.relogio = relogio;
+        this.avaliacoes = avaliacoes;
+    }
+
+    /** Sem avaliação das janelas (testes de unidade). */
+    public JanelaService(JanelaRepository janelas, TelemetriaRepository telemetrias, LeituraRepository leituras,
+                         MaquinaRepository maquinas, EnsaioRepository ensaios, Clock relogio) {
+        this(janelas, telemetrias, leituras, maquinas, ensaios, relogio, AvaliacoesDasJanelas.NENHUMA);
     }
 
     /** Janelas da máquina entre "de" (inclusivo) e "ate" (exclusivo), na ordem pedida. */
@@ -91,13 +101,15 @@ public class JanelaService {
             return List.of();
         }
         List<Long> ids = lista.stream().map(Janela::getId).toList();
+        Map<Long, Map<Long, UltimaJanelaResposta.Avaliacao>> avaliadas = avaliacoes.das(ids);
         Map<Long, Map<String, UltimaJanelaResposta.Ponto>> pontos = new HashMap<>();
         for (Telemetria t : telemetrias.dasJanelas(ids)) {
             var p = t.getPonto();
             pontos.computeIfAbsent(t.getJanela().getId(), id -> new LinkedHashMap<>())
                     .put(p.getCodigo(), new UltimaJanelaResposta.Ponto(p.getId(), p.getPapel().valor(),
                             p.getDescricao(), t.getRmsG(), t.getPicoG(), t.getCurtose(), t.getOrdem1x(),
-                            t.getOrdem2x(), t.getOrdem3x(), t.getVelRmsMmS()));
+                            t.getOrdem2x(), t.getOrdem3x(), t.getVelRmsMmS(),
+                            avaliadas.getOrDefault(t.getJanela().getId(), Map.of()).get(p.getId())));
         }
         Map<Long, Map<String, UltimaJanelaResposta.Canal>> canais = new HashMap<>();
         for (Leitura l : leituras.dasJanelas(ids)) {

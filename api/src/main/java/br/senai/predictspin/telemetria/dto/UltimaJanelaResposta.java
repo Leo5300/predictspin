@@ -35,7 +35,33 @@ public record UltimaJanelaResposta(
                         double o1x, double o2x, double o3x,
                         @Schema(description = "Velocidade RMS em mm/s; só aparece quando o dispositivo mandou",
                                 requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-                        @JsonInclude(JsonInclude.Include.NON_NULL) Double velRmsMmS) {
+                        @JsonInclude(JsonInclude.Include.NON_NULL) Double velRmsMmS,
+                        @Schema(description = "Avaliação do ponto contra a referência; só aparece quando a janela "
+                                + "foi avaliada (há referência calculada)",
+                                requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+                        @JsonInclude(JsonInclude.Include.NON_NULL) Avaliacao avaliacao) {
+
+        /** Sem avaliação (janela sem referência). */
+        public Ponto(Long pontoId, String papel, String descricao, double rmsG, double picoG, double curtose,
+                     double o1x, double o2x, double o3x, Double velRmsMmS) {
+            this(pontoId, papel, descricao, rmsG, picoG, curtose, o1x, o2x, o3x, velRmsMmS, null);
+        }
+    }
+
+    /**
+     * Avaliação compacta de um ponto numa janela (o detalhe com típico e % está em GET
+     * /maquinas/{id}/avaliacao).
+     */
+    @Schema(name = "JanelaPontoAvaliacao")
+    public record Avaliacao(
+            @Schema(description = "avaliada, sem_referencia, sem_referencia_completa, calibracao_diferente ou "
+                    + "nao_avaliavel", example = "avaliada") String situacao,
+            @Schema(description = "normal, atencao ou alarme (com atraso e histerese); nulo quando não avaliada",
+                    example = "normal") @Nullable String estado,
+            @Schema(description = "Etapa da referência usada (T0, T1 ou T3)") @Nullable String etapaRef,
+            boolean generica,
+            @Schema(description = "z de cada medida avaliada, pelo nome da medida (rms_g, o1x...)")
+            Map<String, Double> z) {
     }
 
     @Schema(name = "JanelaCanal", description = "Leitura de um canal auxiliar na janela")

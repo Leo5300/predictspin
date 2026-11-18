@@ -65,7 +65,11 @@ public class OpenApiConfig {
     private static final String EXTENSAO_NULO = "x-nulo";
 
     /** ErroResposta omite o que está vazio (JsonInclude na classe): só "campos" fica vazio na prática. */
-    private static final Map<String, Set<String>> OMITIDAS_QUANDO_VAZIAS = Map.of("ErroResposta", Set.of("campos"));
+    private static final Map<String, Set<String>> OMITIDAS_QUANDO_VAZIAS = Map.of("ErroResposta", Set.of("campos"),
+            // objeto ($ref) que só vem quando a janela foi avaliada: a marca de opcional iria para o componente
+            "JanelaPonto", Set.of("avaliacao"),
+            // mapa omitido quando vazio: a marca de opcional iria para o valor do mapa
+            "SeriePonto", Set.of("z_max"));
 
     private static final Map<String, String> DESCRICAO_PADRAO = Map.of(
             "400", "Requisição inválida",
@@ -152,12 +156,27 @@ public class OpenApiConfig {
      * que a API omite de propósito. Os esquemas de requisição ficam como a validação os descreve.
      */
     private static void marcarObrigatorias(String nome, Schema<?> esquema) {
+        // num campo que é $ref a marca vai parar no componente (não na propriedade): retirada aqui
+        if (esquema.getExtensions() != null) {
+            esquema.getExtensions().remove(EXTENSAO_OPCIONAL);
+            esquema.getExtensions().remove(EXTENSAO_NULO);
+            if (esquema.getExtensions().isEmpty()) {
+                esquema.setExtensions(null);
+            }
+        }
         if (nome.endsWith("Requisicao") || esquema.getProperties() == null) {
             return;
         }
         Set<String> omitidasNoEsquema = OMITIDAS_QUANDO_VAZIAS.getOrDefault(nome, Set.of());
         List<String> obrigatorias = new ArrayList<>();
         esquema.getProperties().forEach((propriedade, definicao) -> {
+            if (definicao.getAdditionalProperties() instanceof Schema<?> valores && valores.getExtensions() != null) {
+                valores.getExtensions().remove(EXTENSAO_OPCIONAL);
+                valores.getExtensions().remove(EXTENSAO_NULO);
+                if (valores.getExtensions().isEmpty()) {
+                    valores.setExtensions(null);
+                }
+            }
             Map<String, Object> extensoes = definicao.getExtensions();
             boolean opcional = extensoes != null && extensoes.remove(EXTENSAO_OPCIONAL) != null;
             if (extensoes != null && extensoes.remove(EXTENSAO_NULO) != null) {

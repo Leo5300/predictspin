@@ -32,16 +32,26 @@ public class ConsultaTelemetriaService {
     private final PontoMedicaoRepository pontos;
     private final MaquinaRepository maquinas;
     private final Clock relogio;
+    private final AvaliacoesDasJanelas avaliacoes;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public ConsultaTelemetriaService(TelemetriaRepository telemetrias, JanelaRepository janelas,
                                      LeituraRepository leituras, PontoMedicaoRepository pontos,
-                                     MaquinaRepository maquinas, Clock relogio) {
+                                     MaquinaRepository maquinas, Clock relogio, AvaliacoesDasJanelas avaliacoes) {
         this.telemetrias = telemetrias;
         this.janelas = janelas;
         this.leituras = leituras;
         this.pontos = pontos;
         this.maquinas = maquinas;
         this.relogio = relogio;
+        this.avaliacoes = avaliacoes;
+    }
+
+    /** Sem avaliação das janelas (testes de unidade). */
+    public ConsultaTelemetriaService(TelemetriaRepository telemetrias, JanelaRepository janelas,
+                                     LeituraRepository leituras, PontoMedicaoRepository pontos,
+                                     MaquinaRepository maquinas, Clock relogio) {
+        this(telemetrias, janelas, leituras, pontos, maquinas, relogio, AvaliacoesDasJanelas.NENHUMA);
     }
 
     /** Série de um ponto entre "de" (inclusivo) e "ate" (exclusivo), mais recente primeiro. */
@@ -67,12 +77,14 @@ public class ConsultaTelemetriaService {
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Nenhuma janela recebida para a máquina " + maquinaId));
 
+        Map<Long, UltimaJanelaResposta.Avaliacao> avaliadas = avaliacoes.das(java.util.List.of(janela.getId()))
+                .getOrDefault(janela.getId(), Map.of());
         Map<String, UltimaJanelaResposta.Ponto> porPonto = new LinkedHashMap<>();
         for (Telemetria t : telemetrias.daJanela(janela.getId())) {
             var p = t.getPonto();
             porPonto.put(p.getCodigo(), new UltimaJanelaResposta.Ponto(p.getId(), p.getPapel().valor(),
                     p.getDescricao(), t.getRmsG(), t.getPicoG(), t.getCurtose(), t.getOrdem1x(), t.getOrdem2x(),
-                    t.getOrdem3x(), t.getVelRmsMmS()));
+                    t.getOrdem3x(), t.getVelRmsMmS(), avaliadas.get(p.getId())));
         }
         Map<String, UltimaJanelaResposta.Canal> porCanal = new LinkedHashMap<>();
         for (Leitura l : leituras.daJanela(janela.getId())) {

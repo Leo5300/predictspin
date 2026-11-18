@@ -1331,6 +1331,7 @@ export interface components {
         };
         /** @description Características de vibração de um ponto na janela */
         JanelaPonto: {
+            avaliacao?: components["schemas"]["JanelaPontoAvaliacao"];
             /** Format: double */
             curtose: number;
             descricao: string;
@@ -1352,6 +1353,26 @@ export interface components {
              * @description Velocidade RMS em mm/s; só aparece quando o dispositivo mandou
              */
             vel_rms_mm_s?: number;
+        };
+        /** @description Avaliação do ponto contra a referência; só aparece quando a janela foi avaliada (há referência calculada) */
+        JanelaPontoAvaliacao: {
+            /**
+             * @description normal, atencao ou alarme (com atraso e histerese); nulo quando não avaliada
+             * @example normal
+             */
+            estado: string | null;
+            /** @description Etapa da referência usada (T0, T1 ou T3) */
+            etapa_ref: string | null;
+            generica: boolean;
+            /**
+             * @description avaliada, sem_referencia, sem_referencia_completa, calibracao_diferente ou nao_avaliavel
+             * @example avaliada
+             */
+            situacao: string;
+            /** @description z de cada medida avaliada, pelo nome da medida (rms_g, o1x...) */
+            z: {
+                [key: string]: number;
+            };
         };
         JanelaResposta: {
             /**
@@ -2092,6 +2113,10 @@ export interface components {
              * @description Média da velocidade RMS (mm/s) das janelas que a trouxeram; só aparece se alguma trouxe
              */
             vel_rms_media_mm_s?: number;
+            /** @description Maior z de cada medida no intervalo (rms_g, o1x, o2x, o3x), só das janelas avaliadas contra a referência; só aparece quando alguma foi avaliada */
+            z_max?: {
+                [key: string]: number;
+            };
         };
         SseEmitter: {
             /** Format: int64 */

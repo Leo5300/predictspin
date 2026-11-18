@@ -1,0 +1,10 @@
+# Perfil de TESTE com tempos curtos (Playwright do fluxo de alarme). Nunca em produção.
+# Ativar no compose local: $env:PERFIL_API = "tempos-curtos"; docker compose up -d api
+ps:
+  alarme:
+    atraso-s: 10
+    saida-s: 10
+    instrumento-s: 10
+    verificar-supressao: 5s
+  os:
+    alarme-continuo-s: 20

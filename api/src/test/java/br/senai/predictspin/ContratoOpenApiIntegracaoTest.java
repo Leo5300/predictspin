@@ -217,6 +217,19 @@ class ContratoOpenApiIntegracaoTest extends AlarmeIntegracaoBase {
         enviarSequencia(Instant.now().truncatedTo(ChronoUnit.SECONDS), 3, 1120, SEVERO);
         conferir("/api/v1/maquinas/{id}/avaliacao", "get", 200, mvc.perform(comToken(get("/api/v1/maquinas/"
                 + maquinaId + "/avaliacao?simulado=true"), admin)));
+        ResultActions ultima = mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId
+                + "/ultima-janela?simulado=true"), admin));
+        conferir("/api/v1/maquinas/{id}/ultima-janela", "get", 200, ultima);
+        assertThat(corpo(ultima).at("/pontos/A/avaliacao/estado").asText()).isEqualTo("alarme");
+        ResultActions janelas = mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId
+                + "/janelas?simulado=true&size=3"), admin));
+        conferir("/api/v1/maquinas/{id}/janelas", "get", 200, janelas);
+        assertThat(corpo(janelas).at("/conteudo/0/pontos/B/avaliacao/situacao").asText()).isEqualTo("avaliada");
+        Instant agora = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        ResultActions serie = mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId + "/serie?simulado=true&de="
+                + agora.minusSeconds(60) + "&ate=" + agora.plusSeconds(120) + "&baldes=10"), admin));
+        conferir("/api/v1/maquinas/{id}/serie", "get", 200, serie);
+        assertThat(corpo(serie).toString()).contains("\"z_max\":{\"rms_g\":");
         ResultActions lista = mvc.perform(comToken(get("/api/v1/alertas?simulado=true"), admin));
         conferir("/api/v1/alertas", "get", 200, lista);
         long id = corpo(lista).get("conteudo").get(0).get("id").asLong();

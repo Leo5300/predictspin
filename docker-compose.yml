@@ -30,6 +30,8 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
       PORT: "8080"
+      # vazio = limites normais; "tempos-curtos" só para o Playwright do fluxo de alarme
+      SPRING_PROFILES_ACTIVE: ${PERFIL_API:-}
     ports:
       - "8080:8080"
 

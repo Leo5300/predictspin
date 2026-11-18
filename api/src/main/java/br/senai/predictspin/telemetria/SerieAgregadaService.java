@@ -71,7 +71,7 @@ public class SerieAgregadaService {
                 codigos.add(linha.ponto());
                 acumulado.pontos.put(linha.ponto(), new PontoAgregado(linha.rmsMedia(), linha.rmsMax(),
                         linha.picoMax(), linha.curtoseMedia(), linha.o1xMedia(), linha.o2xMedia(), linha.o3xMedia(),
-                        linha.velMedia(), linha.velMax()));
+                        linha.velMedia(), linha.velMax(), linha.zMax()));
             }
         }
 

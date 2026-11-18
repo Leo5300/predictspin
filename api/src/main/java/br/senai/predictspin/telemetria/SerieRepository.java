@@ -37,15 +37,20 @@ public class SerieRepository {
                        avg(t.rms_g) AS rms_media, max(t.rms_g) AS rms_max, max(t.pico_g) AS pico_max,
                        avg(t.curtose) AS curtose_media,
                        avg(t.ordem_1x) AS o1x_media, avg(t.ordem_2x) AS o2x_media, avg(t.ordem_3x) AS o3x_media,
-                       avg(t.vel_rms_mm_s) AS vel_media, max(t.vel_rms_mm_s) AS vel_max
+                       avg(t.vel_rms_mm_s) AS vel_media, max(t.vel_rms_mm_s) AS vel_max,
+                       max(a.z_rms) AS z_rms_max, max(a.z_o1x) AS z_o1x_max, max(a.z_o2x) AS z_o2x_max,
+                       max(a.z_o3x) AS z_o3x_max
                 FROM jb
                 JOIN telemetria t ON t.janela_id = jb.id
                 JOIN ponto_medicao pm ON pm.id = t.ponto_medicao_id
+                -- maior z de cada medida no intervalo, só das janelas avaliadas contra a referência
+                LEFT JOIN avaliacao a ON a.janela_id = jb.id AND a.ponto_medicao_id = t.ponto_medicao_id
+                                     AND a.situacao = 0
                 GROUP BY jb.balde, pm.codigo
             )
             SELECT b.balde, b.janelas, b.rotacao_media, b.saturou, p.codigo,
                    p.rms_media, p.rms_max, p.pico_max, p.curtose_media, p.o1x_media, p.o2x_media, p.o3x_media,
-                   p.vel_media, p.vel_max
+                   p.vel_media, p.vel_max, p.z_rms_max, p.z_o1x_max, p.z_o2x_max, p.z_o3x_max
             FROM b
             LEFT JOIN p ON p.balde = b.balde
             ORDER BY b.balde, p.codigo
@@ -72,19 +77,37 @@ public class SerieRepository {
                 rs.getString("codigo"), rs.getDouble("rms_media"), rs.getDouble("rms_max"), rs.getDouble("pico_max"),
                 rs.getDouble("curtose_media"), rs.getDouble("o1x_media"), rs.getDouble("o2x_media"),
                 rs.getDouble("o3x_media"), rs.getObject("vel_media", Double.class),
-                rs.getObject("vel_max", Double.class)));
+                rs.getObject("vel_max", Double.class), zMax(rs)));
     }
 
-    /** Uma linha agregada; a velocidade é nula quando nenhuma janela do intervalo a trouxe. */
+    /** Maior z de cada medida no intervalo (rms_g, o1x, o2x, o3x); vazio se nenhuma janela foi avaliada. */
+    private static java.util.Map<String, Double> zMax(java.sql.ResultSet rs) throws java.sql.SQLException {
+        java.util.Map<String, Double> z = new java.util.LinkedHashMap<>();
+        String[][] colunas = {{"rms_g", "z_rms_max"}, {"o1x", "z_o1x_max"}, {"o2x", "z_o2x_max"},
+                {"o3x", "z_o3x_max"}};
+        for (String[] c : colunas) {
+            Object valor = rs.getObject(c[1]);
+            if (valor != null) {
+                z.put(c[0], ((Number) valor).doubleValue());
+            }
+        }
+        return z;
+    }
+
+    /**
+     * Uma linha agregada; a velocidade é nula quando nenhuma janela do intervalo a trouxe; {@code zMax}
+     * fica vazio quando nenhuma janela do intervalo foi avaliada contra a referência.
+     */
     public record Linha(int balde, long janelas, double rotacaoMedia, boolean saturou, String ponto,
                         double rmsMedia, double rmsMax, double picoMax, double curtoseMedia,
-                        double o1xMedia, double o2xMedia, double o3xMedia, Double velMedia, Double velMax) {
+                        double o1xMedia, double o2xMedia, double o3xMedia, Double velMedia, Double velMax,
+                        java.util.Map<String, Double> zMax) {
 
         public Linha(int balde, long janelas, double rotacaoMedia, boolean saturou, String ponto, double rmsMedia,
                      double rmsMax, double picoMax, double curtoseMedia, double o1xMedia, double o2xMedia,
                      double o3xMedia) {
             this(balde, janelas, rotacaoMedia, saturou, ponto, rmsMedia, rmsMax, picoMax, curtoseMedia, o1xMedia,
-                    o2xMedia, o3xMedia, null, null);
+                    o2xMedia, o3xMedia, null, null, java.util.Map.of());
         }
     }
 }

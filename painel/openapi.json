@@ -1276,6 +1276,9 @@
       "JanelaPonto": {
         "description": "Características de vibração de um ponto na janela",
         "properties": {
+          "avaliacao": {
+            "$ref": "#/components/schemas/JanelaPontoAvaliacao"
+          },
           "curtose": {
             "format": "double",
             "type": "number"
@@ -1326,6 +1329,50 @@
           "pico_g",
           "ponto_id",
           "rms_g"
+        ]
+      },
+      "JanelaPontoAvaliacao": {
+        "description": "Avaliação do ponto contra a referência; só aparece quando a janela foi avaliada (há referência calculada)",
+        "properties": {
+          "estado": {
+            "description": "normal, atencao ou alarme (com atraso e histerese); nulo quando não avaliada",
+            "example": "normal",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "etapa_ref": {
+            "description": "Etapa da referência usada (T0, T1 ou T3)",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "generica": {
+            "type": "boolean"
+          },
+          "situacao": {
+            "description": "avaliada, sem_referencia, sem_referencia_completa, calibracao_diferente ou nao_avaliavel",
+            "example": "avaliada",
+            "type": "string"
+          },
+          "z": {
+            "additionalProperties": {
+              "description": "z de cada medida avaliada, pelo nome da medida (rms_g, o1x...)",
+              "format": "double",
+              "type": "number"
+            },
+            "description": "z de cada medida avaliada, pelo nome da medida (rms_g, o1x...)",
+            "type": "object"
+          }
+        },
+        "required": [
+          "estado",
+          "etapa_ref",
+          "generica",
+          "situacao",
+          "z"
         ]
       },
       "JanelaResposta": {
@@ -3224,6 +3271,15 @@
             "description": "Média da velocidade RMS (mm/s) das janelas que a trouxeram; só aparece se alguma trouxe",
             "format": "double",
             "type": "number"
+          },
+          "z_max": {
+            "additionalProperties": {
+              "description": "Maior z de cada medida no intervalo (rms_g, o1x, o2x, o3x), só das janelas avaliadas contra a referência; só aparece quando alguma foi avaliada",
+              "format": "double",
+              "type": "number"
+            },
+            "description": "Maior z de cada medida no intervalo (rms_g, o1x, o2x, o3x), só das janelas avaliadas contra a referência; só aparece quando alguma foi avaliada",
+            "type": "object"
           }
         },
         "required": [
