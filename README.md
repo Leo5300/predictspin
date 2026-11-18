@@ -75,7 +75,7 @@ Situação em 16/11/2026.
 | Classificação da condição | **Não iniciada.** |
 | Firmware (`firmware/`) | Reescrito para 3 ADXL345 e o FC-51: aquisição no núcleo 1 (FIFO a 1600 Hz), características em fluxo, envio HTTPS à API com fila em RAM e LittleFS, modo rápido, tela, LEDs e sinal bruto binário pela serial. Segunda rodada (17/11): calibração de ganho e offset por sensor pela serial, velocidade RMS em mm/s (10 Hz a ~800 Hz, sem comparação com a ISO 20816), versão do firmware e calibração em cada janela, reenvio da fila em ritmo controlado e largura do pulso do FC-51 no diagnóstico. Compila e passa em 77 testes nativos; **nada foi testado em hardware**. Roteiro de bancada, com as medições que viram número para o artigo, em [`docs/teste-bancada-firmware.md`](docs/teste-bancada-firmware.md). |
 | Análise (`analise/`) | Captura da serial (`captura.py`, binário de 3 sensores e texto antigo de 1), espectro com janela de Hann e ordens (`espectro.py`), simulador de telemetria (`simulador.py`, que obedece ao modo rápido e manda velocidade estimada e rastreabilidade) e contas de bancada (`bancada.py`: piso de ruído, teste-reteste e banda acima de 800 Hz). |
-| Painel web (`painel/`) | **Partes A e B prontas:** leitura (visão geral, máquina com mapa de ordens comparado ao típico de cada linha, ponto com tendência e AO VIVO), coleta de ensaios pelo celular (receita com catálogos, checagem antes de gravar, REC, fita, eventos marcados, sessão T0 → T1 → T2 → T3, matriz de cobertura, exportação CSV), replay de ensaio gravado, diagnóstico (dispositivos, qualidade, catálogos, usuários), alarmes e OS com estado vazio honesto, paleta de comandos (Ctrl+K) e explicações "?". Testado localmente com dados simulados, sem celular real; site estático descrito no `render.yaml`, **não publicado** ([`docs/painel.md`](docs/painel.md)). |
+| Painel web (`painel/`) | **Partes A e B prontas:** leitura (visão geral, máquina com mapa de ordens comparado ao típico de cada linha, ponto com tendência e AO VIVO), coleta de ensaios pelo celular (receita com catálogos, checagem antes de gravar, REC, fita, eventos marcados, sessão T0 → T1 → T2 → T3, matriz de cobertura, exportação CSV), replay de ensaio gravado, diagnóstico (dispositivos, qualidade, catálogos, usuários), alarmes (ISA-18.2), ordens de serviço com retorno do técnico, referência aprendida e diagnóstico da regra de alarme, paleta de comandos (Ctrl+K) e explicações "?". Testado localmente com dados simulados, sem celular real; site estático descrito no `render.yaml`, **não publicado** ([`docs/painel.md`](docs/painel.md)). |
 | Aplicativo (`mobile/`) | **Não iniciado.** |
 | Integração contínua | Workflow em `.github/workflows/ci.yml` (API, `analise/` e painel: lint, tipos, testes e build); o resultado no GitHub não foi conferido nesta atualização. Os testes nativos do firmware e os de ponta a ponta do painel não estão no CI. |
 | Publicação no Render | `render.yaml` (API, banco e painel como site estático) e roteiro escritos; segundo o responsável, a API está publicada (não conferido nesta atualização). O painel ainda não foi publicado. |
@@ -233,7 +233,7 @@ A descrição completa, com exemplos, está no Swagger (`/swagger-ui`). O docume
 | `GET /maquinas/{id}/ultima-janela` | autenticado | última janela recebida da máquina |
 | `GET /maquinas/{id}/janelas` | autenticado | janelas completas (envio, pontos e canais), paginadas; filtros `de`, `ate`, `simulado`, `modo` e `ordem` |
 | `GET /maquinas/{id}/serie` | autenticado | série agregada: o período dividido em `baldes` intervalos iguais (até 600), com média e máximo por ponto; janelas rápidas ficam fora e intervalo sem janela volta vazio |
-| `GET /maquinas/{id}/eventos` | autenticado | eventos ao vivo (SSE): `janela`, `ensaio` e `evento_marcado` (só ADMIN e TECNICO) e `modo_rapido`; token no cabeçalho `Authorization` |
+| `GET /maquinas/{id}/eventos` | autenticado | eventos ao vivo (SSE): `janela`, `recuperacao`, `alerta`, `os`, `ensaio` e `evento_marcado` (só ADMIN e TECNICO) e `modo_rapido`; token no cabeçalho `Authorization` |
 | `POST /maquinas/{id}/ensaios` | ADMIN, TECNICO | abre um ensaio rotulado (etapa, condição, rotação) com a receita do corte opcional (material, ferramenta, avanço, profundidade, diâmetro, fluido) |
 | `GET /maquinas/{id}/ensaios` | ADMIN, TECNICO | lista os ensaios da máquina; filtros etapa, condição, simulado, aberto, descartado, `material_id` e `ferramenta_id` |
 | `GET /ensaios/{id}` | ADMIN, TECNICO | detalhe de um ensaio |
@@ -252,6 +252,17 @@ A descrição completa, com exemplos, está no Swagger (`/swagger-ui`). O docume
 | `POST /materiais`, `POST /ferramentas` | ADMIN, TECNICO | cria um item; nome repetido pelo nome normalizado responde 409 com o item existente |
 | `PATCH /materiais/{id}`, `PATCH /ferramentas/{id}` | ADMIN | renomeia ou troca a descrição |
 | `POST /materiais/{id}/desativar`, `POST /ferramentas/{id}/desativar` | ADMIN | desativa o item (some da escolha; os ensaios continuam apontando para ele) |
+| `GET /maquinas/{id}/avaliacao` | autenticado | avaliação da última janela contra a referência: estado, z, típico e % de cada medida, explicação (`simulado`) |
+| `GET /maquinas/{id}/referencias` | autenticado | referência em uso: versão, células e cobertura por marcha e etapa (`simulado`) |
+| `POST /maquinas/{id}/referencias/recalcular` | ADMIN, TECNICO | gera uma versão nova e imutável da referência (`simulado`) |
+| `GET /maquinas/{id}/referencias/versoes` | autenticado | versões da referência, mais recente primeiro |
+| `GET /alertas`, `GET /alertas/{id}` | autenticado | alertas ISA-18.2 (filtros máquina, estado, ponto, prioridade, tipo, simulado, período) e detalhe com histórico |
+| `POST /alertas/{id}/reconhecer` | autenticado | reconhece o alerta ("eu vi"); não o apaga |
+| `POST /alertas/{id}/suprimir`, `POST /alertas/{id}/cancelar-supressao` | ADMIN | silencia com motivo e prazo; volta sozinho ao fim do prazo |
+| `GET /alarmes/limites` | autenticado | limites em uso da referência, do alarme e da OS (todos proposta a confirmar) |
+| `GET /maquinas/{id}/alarmes/diagnostico` | autenticado | indicadores de desempenho do alarme, severidade, deriva, piso de ruído e calibração por ponto |
+| `GET /ordens-servico`, `GET /ordens-servico/{id}` | autenticado | ordens de serviço abertas pela regra; filtros máquina, status, ponto, simulado |
+| `POST /ordens-servico/{id}/assumir`, `POST /ordens-servico/{id}/concluir` | ADMIN, TECNICO | assume a OS e conclui com o retorno do técnico (`confirmada` ou `rejeitada`) e comentário |
 | `GET /actuator/health` | público | situação da API |
 | `GET /swagger-ui`, `GET /v3/api-docs` | público | documentação |
 
@@ -401,6 +412,7 @@ Etapas do protocolo de ensaios, como o simulador as representa:
 | Documento | Conteúdo |
 |---|---|
 | [`docs/arquitetura.md`](docs/arquitetura.md) | camadas, fluxo de ingestão, decisões |
+| [`docs/alarmes.md`](docs/alarmes.md) | filtro de qualidade, referência, regra de alarme, ISA-18.2, OS, indicadores e roteiro de demonstração |
 | [`docs/painel.md`](docs/painel.md) | painel web: como rodar, decisões, direção visual, tokens, eventos e AO VIVO, revisão, Parte B |
 | [`docs/der.md`](docs/der.md) | modelo de dados |
 | [`docs/payload.md`](docs/payload.md) | contrato de `POST /api/v1/telemetria` e modo rápido |

@@ -106,18 +106,19 @@ sequenceDiagram
         A-->>D: 200, janela existente (nada é duplicado)
     else janela nova
         A->>A: grava JANELA (com o ensaio aberto, se houver), TELEMETRIA por ponto e LEITURA por canal
-        A->>B: compara métricas com baseline da condição (etapa futura)
-        opt desvio acima do critério (etapa futura)
-            A->>A: classifica tipo de falha e atualiza severidade
-            A->>O: abre ordem com máquina, falha, severidade e peça sugerida
+        A->>B: avalia cada ponto contra a referência (z por medida, estado com atraso e histerese)
+        opt ponto em ATENÇÃO ou ALARME depois do atraso
+            A->>A: abre ou atualiza o alerta ISA-18.2 e soma a severidade acumulada
+            A->>O: ALARME contínuo ou severidade acima do limite: abre a ordem com ação recomendada
         end
         A-->>D: 201, janela criada
     end
 ```
 
-Hoje a API grava a janela e responde; a comparação com baseline, a classificação e a abertura de
-ordem de serviço ainda não estão implementadas (tabelas `BASELINE`, `ALERTA` e `ORDEM_SERVICO` já
-existem). O contrato do payload está em [`payload.md`](payload.md). A resposta da ingestão também é
+A avaliação contra a referência, o alerta e a abertura de ordem de serviço acontecem na mesma
+transação da gravação (regra estatística em Java, sem modelo de aprendizado de máquina; detalhes em
+[`alarmes.md`](alarmes.md)). Janela antiga reenviada pela fila do dispositivo é avaliada e gravada, mas não abre
+alerta ao vivo nem OS. O contrato do payload está em [`payload.md`](payload.md). A resposta da ingestão também é
 o canal de volta para o dispositivo: enquanto a máquina estiver em modo rápido, ela traz
 `modo_rapido_ate`.
 
@@ -282,10 +283,10 @@ tiver a regra, só eles mudam. Detalhes, decisões e revisão em [`painel.md`](p
 |---|---|---|---|
 | DA · Aquisição de dados | leitura sincronizada dos 3 acelerômetros e do sensor de rotação; calibração de ganho e offset por sensor; largura do pulso do FC-51 | firmware (ESP32) | 1 sensor medido em bancada (firmware antigo); firmware de 3 sensores compilado e com testes nativos, **não testado em hardware**; calibração implementada e **não testada em hardware** |
 | DM · Manipulação de dados | RMS, pico, curtose, ordens 1X–3X e velocidade RMS em mm/s (10 Hz a ~800 Hz) por janela, com a versão do firmware e a calibração de cada ponto | firmware (borda) | no simulador (velocidade estimada das ordens); no firmware compilado, **não testado em hardware**; velocidade em mm/s implementada e **não testada em hardware**, sem comparação com zonas da ISO 20816 |
-| SD · Detecção de estado | comparação com a referência por ponto e rotação (NORMAL, ATENÇÃO, ALARME) | API | próximo prompt |
-| HA · Avaliação de saúde | detecção de anomalia e classificação da condição; componente provável | API | próximo prompt |
-| PA · Avaliação de prognóstico | tendência e severidade acumulada | API | preparado e desabilitado; trabalho futuro |
-| AG · Geração de recomendação | ordem de serviço com ação recomendada | API, painel e app | contrato definido; implementação no próximo prompt |
+| SD · Detecção de estado | referência aprendida por ponto, medida, marcha, etapa e receita (mediana e 1,4826·MAD); z por medida; NORMAL, ATENÇÃO e ALARME com atraso e histerese em segundos; alerta de instrumento | API | **implementada** com dado simulado e testes; limites são proposta, a confirmar com o torno ([larmes.md](alarmes.md)) |
+| HA · Avaliação de saúde | alertas no padrão ISA-18.2 (estados, prioridade, supressão), explicação, componente provável e indicadores de desempenho do alarme; classificação por aprendizado de máquina fica na parte B | API | **implementada** (regra estatística); classificação da condição: parte B |
+| PA · Avaliação de prognóstico | tendência e vida útil restante (a severidade acumulada já é gravada por ponto e dia, mas não é prognóstico) | API | **trabalho futuro** |
+| AG · Geração de recomendação | ordem de serviço com ação recomendada e retorno do técnico (rótulo para o treino) | API e painel | **implementada** com dado simulado; aplicativo móvel fora do escopo |
 
 A apresentação (ISO 13374-4) é o painel, desenhado pela ISA-101; a integração vertical do trabalho é
 esse caminho do bloco DA ao AG.

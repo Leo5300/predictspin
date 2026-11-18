@@ -1,6 +1,6 @@
 # Modelo de dados — DER v3
 
-Data: 10/11/2026, com as migrações V3 (11/11/2026), V4 (12/11/2026), V5 (14/11/2026) e V6 (17/11/2026) · PostgreSQL 16 · Implementado em
+Data: 10/11/2026, com as migrações V3 (11/11/2026), V4 (12/11/2026), V5 (14/11/2026), V6 (17/11/2026) e V7 (18/11/2026) · PostgreSQL 16 · Implementado em
 [`api/src/main/resources/db/migration`](../api/src/main/resources/db/migration) (Flyway)
 
 ## O que mudou da v2 para a v3
@@ -98,6 +98,32 @@ o envio antigo (tudo anulável; janelas anteriores ficam com nulo):
   (`{"A":"A-20261117T143200Z","B":"nominal"}` e `{"A":"z","B":"z"}`). Ficam na janela, e não em
   `TELEMETRIA`, porque chegam num objeto só por envio; a exportação abre o valor do ponto de cada
   linha com o operador `->>` do PostgreSQL.
+
+## O que mudou com a migração V7 (18/11/2026)
+
+A migração `V7__referencia_alarme_os.sql` traz a referência aprendida, a avaliação de cada janela, os alertas
+no padrão ISA-18.2 e a ordem de serviço (parte A da inteligência). A tabela `BASELINE` da V1 nunca foi
+usada e fica como está; a referência vive em tabelas novas. Todos os limites numéricos ficam em
+`application.yml` (`ps.referencia`, `ps.alarme`, `ps.os`), não no banco.
+
+- **`REFERENCIA_VERSAO`** (máquina, `simulado`, número, data, autor, janelas usadas e de deriva, excluídas por
+  motivo em `jsonb`, parâmetros em `jsonb`): versão imutável; a anterior fica guardada.
+- **`REFERENCIA_CELULA`** (versão, ponto, medida, marcha, etapa T0, T1 ou T3, receita opcional por
+  `material_id` e `ferramenta_id`, n, mediana, σ = 1,4826·MAD, p95, piso de ruído, σ efetivo, suficiente,
+  calibração e versões de firmware das janelas usadas).
+- **`AVALIACAO`** (chave `janela_id` + `ponto_medicao_id`): uma linha por janela e ponto, com a situação, o
+  estado, a etapa da referência, a marca de genérica e o z de cada medida em `real` (67 bytes por linha, medido).
+- **`ESTADO_PONTO`** (chave ponto + `simulado`): memória da regra (atraso, histerese, instrumento, severidade
+  desde a última OS); uma linha por ponto, atualizada, não cresce.
+- **`SEVERIDADE_ACUMULADA`** ganha `ponto_medicao_id` e `simulado` (soma em z·s por ponto e dia).
+- **`COMPONENTE`** ganha `ponto_medicao_id` (componente provável de cada ponto, semeado) e nasce
+  **`ACAO_RECOMENDADA`** (texto por tipo, papel do ponto e medida dominante).
+- **`ALERTA`** ganha tipo (máquina ou instrumento), estado ISA-18.2, nível atual e pior, z, explicação, ação,
+  componente, versão da referência, firmware, calibração, ensaio e condição, `simulado`, reconhecimento,
+  normalização, encerramento e supressão; um índice único permite um alerta em aberto por ponto, tipo e tipo de
+  dado. **`ALERTA_HISTORICO`** guarda cada mudança de estado.
+- **`ORDEM_SERVICO`** ganha ponto, motivo de abertura, explicação, ação, versões, `simulado`, assumida em e
+  comentário do técnico; um índice único permite uma OS aberta por ponto e tipo de dado.
 
 ## Diagrama
 

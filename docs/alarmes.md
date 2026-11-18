@@ -246,8 +246,40 @@ produção. Os testes da API não precisam dele: eles controlam o `medido_em` da
 
 ## Roteiro de demonstração com o simulador
 
-(preenchido na ETAPA 6)
+Prova o **encadeamento** (gravar → referência → avaliação → alerta → OS → retorno) com dado SIMULADO; não
+prova detecção real. Use a MESMA rotação em tudo (1120 rpm): o nível de vibração cresce com a rotação e uma
+referência gravada numa rotação acusaria desvio em outra. Contra o compose local, com os tempos normais
+(sem o perfil de teste), a partir de um banco vazio (`docker compose down -v; docker compose up -d --build`):
 
+```powershell
+# 1. ensaios normais de T0, T1 e T3 a 1120 rpm, 30 janelas cada, T3 com material
+python analise/simulador.py roteiro --etapas T0,T1,T3 --condicoes normal --rotacoes 1120 --janelas 30 --material "aço 1045"
+# 2. recalcular a referência (painel: Coleta → Referência → Recalcular referência; ou a rota)
+POST /api/v1/maquinas/1/referencias/recalcular?simulado=true
+# 3. uso normal por 5 min: tudo NORMAL, nenhum alerta
+python analise/simulador.py continuo --rotacao 1120
+# 4. severo: atenção e alarme, depois OS
+python analise/simulador.py continuo --modo severo --rotacao 1120
+# 5. voltar ao normal (de novo o comando do passo 3): normaliza; reconhecer encerra
+```
+
+O simulador não tem opção de ferramenta (só `--material`); no T3 a célula da receita usa o material, e a
+ferramenta fica vazia.
+
+**O que foi visto (execução de 18/11/2026, máquina local, relógio medido pelo script):**
+
+| Passo | Resultado |
+|---|---|
+| 1 e 2 | 90 janelas gravadas em 10 s; referência versão 1 com 90 janelas usadas, 75 de 75 células com janelas suficientes |
+| 3 | 5 min (316 s de observação a cada 10 s): máquina e os 3 pontos NORMAL em todas as leituras, 0 alertas. Nenhuma correção foi necessária |
+| 4 | alarme não reconhecido em A, B e C aos 16 s do início do severo (15 s de atraso + a janela de 5 s). A **OS abriu aos 5 s por severidade acumulada** (671 z·s, ponto A), não aos 120 s de ALARME contínuo |
+| 5 | máquina NORMAL 15 s depois da volta ao normal (histerese de 15 s); os 3 alertas ficaram "normalizado, não reconhecido"; reconhecer os encerrou (resposta `encerrado`) |
+
+**Sobre a OS no passo 4.** O prompt esperava a OS "depois de 2 min". O limite de severidade (600 z·s) foi
+pensado para z ≈ 5 (cerca de 5 min); o modo severo do simulador produz z da ordem de dezenas no 1X e 3X,
+então 600 z·s passa em segundos. Os limites não foram mexidos para esconder isso: o caso do alarme contínuo
+de 120 s é coberto no teste de integração `alarmeContinuoAbreOsEOTecnicoConcluiRejeitada` (z ≈ 5,5, com o
+relógio das janelas controlado). Com dado real, a severidade só se acumula depressa se o desvio for enorme.
 ## Limitações
 
 - Nenhum número desta página foi confirmado com o torno: são todos proposta. Os testes provam a lógica
