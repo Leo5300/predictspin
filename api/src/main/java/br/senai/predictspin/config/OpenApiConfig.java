@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import br.senai.predictspin.comum.ErroResposta;
 import br.senai.predictspin.eventos.dto.EnsaioEvento;
+import br.senai.predictspin.eventos.dto.RecuperacaoEvento;
 import io.swagger.v3.core.converter.ModelConverters;
 import io.swagger.v3.core.jackson.ModelResolver;
 import io.swagger.v3.oas.models.Components;
@@ -52,7 +53,8 @@ public class OpenApiConfig {
     private static final String ROTA_INGESTAO = "/api/v1/telemetria";
 
     /** Esquemas que não são corpo de nenhuma rota JSON, mas que o cliente precisa conhecer. */
-    private static final List<Class<?>> ESQUEMAS_EXTRAS = List.of(ErroResposta.class, EnsaioEvento.class);
+    private static final List<Class<?>> ESQUEMAS_EXTRAS = List.of(ErroResposta.class, EnsaioEvento.class,
+            RecuperacaoEvento.class);
 
     /** Marca interna de propriedade que pode não vir no JSON; é retirada antes de o documento sair. */
     private static final String EXTENSAO_OPCIONAL = "x-opcional";

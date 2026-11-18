@@ -9,6 +9,7 @@ import br.senai.predictspin.maquina.ModoRapidoAlterado;
 import br.senai.predictspin.telemetria.EnsaioAlterado;
 import br.senai.predictspin.telemetria.EventoMarcadoGravado;
 import br.senai.predictspin.telemetria.JanelaGravada;
+import br.senai.predictspin.telemetria.JanelaRecuperada;
 
 /**
  * Leva ao fluxo ao vivo o que os serviços anunciam, sempre DEPOIS do commit: evento de algo que foi
@@ -27,6 +28,11 @@ class OuvinteDeEventos {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     void aoGravarJanela(JanelaGravada evento) {
         eventos.publicarJanela(evento.maquinaId(), evento.janelaId());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    void aoRecuperarJanela(JanelaRecuperada evento) {
+        eventos.acumularRecuperacao(evento.maquinaId(), evento.simulado(), evento.medidoEm());
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)

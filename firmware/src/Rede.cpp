@@ -14,6 +14,7 @@
 #include "Estado.h"
 #include "FilaJanelas.h"
 #include "Protocolo.h"
+#include "RitmoEnvio.h"
 
 #if __has_include("segredos.h")
 #include "segredos.h"
@@ -104,8 +105,9 @@ ps::AlertaLocal alertas[3] = {
 
 char url[160];
 char corpo[1200];
-uint32_t falhasSeguidas = 0;
-uint32_t proximaTentativaMs = 0;
+// Quando a próxima janela pode sair: logo depois da resposta; em recuperação (frente da fila com mais
+// de 30 s), pelo menos 250 ms depois; com erro, a espera crescente
+ps::RitmoEnvio ritmo(cfg::REENVIO_INTERVALO_MIN_MS, (uint64_t)cfg::RECUPERACAO_IDADE_S * 1000000ULL);
 uint32_t ultimaTentativaWifiMs = 0;
 bool ntpIniciado = false;
 bool chaveInvalida = false;
@@ -167,7 +169,8 @@ void imprimirJanela(const JanelaPronta& j) {
     }
   }
   linha += " | amostras=" + String(j.dados.amostras) + "/" + String(j.dados.amostrasEsperadas) +
-           " fila=" + String(fila.tamanho()) + " rede=" + textoRede() + " http=" + String(ultimoCodigo);
+           " fila=" + String(fila.tamanho()) + " rede=" + textoRede() + " http=" + String(ultimoCodigo) +
+           (ritmo.recuperando() ? " envio=recuperacao" : "");
   Serial.println(linha);
 
   const Diagnostico& d = j.diag;
@@ -250,11 +253,10 @@ void enviarProxima() {
   estado::painel.ultimoEnvioMs = millis();
   portEXIT_CRITICAL(&estado::trava);
 
-  switch (ps::decidir(codigo)) {
+  ps::Decisao decisao = ps::decidir(codigo);
+  switch (decisao) {
     case ps::Decisao::SUCESSO: {
       fila.removerFrente();
-      falhasSeguidas = 0;
-      proximaTentativaMs = 0;
       uint64_t ate = 0;
       estado::definirModoRapidoAte(ps::lerModoRapidoAte(resposta.c_str(), &ate) ? ate : 0);
       break;
@@ -274,14 +276,18 @@ void enviarProxima() {
       }
       break;
     case ps::Decisao::REENVIAR:
-      falhasSeguidas++;
-      proximaTentativaMs = millis() + ps::esperaReenvioMs(falhasSeguidas);
       if (!estado::brutoLigado) {
         Serial.printf("#envio falhou (%d), nova tentativa em %lu s\n", codigo,
-                      (unsigned long)(ps::esperaReenvioMs(falhasSeguidas) / 1000));
+                      (unsigned long)(ps::esperaReenvioMs(ritmo.falhas() + 1) / 1000));
       }
       break;
   }
+  // idade da janela que ficou na frente da fila: define se a próxima sai já ou no ritmo de recuperação
+  ps::DadosJanela frente;
+  bool temFrente = fila.frente(&frente);
+  uint64_t agoraUs = (uint64_t)time(nullptr) * 1000000ULL;
+  uint64_t idade = temFrente && agoraUs > frente.inicioUs ? agoraUs - frente.inicioUs : 0;
+  ritmo.registrar(decisao, millis(), temFrente, idade);
 }
 
 void tarefa(void*) {
@@ -313,7 +319,7 @@ void tarefa(void*) {
     JanelaPronta j;
     // espera curta por janela nova; com algo a enviar, não espera
     bool podeEnviar = !chaveInvalida && WiFi.status() == WL_CONNECTED && horaOk() && fila.tamanho() > 0 &&
-                      (int32_t)(millis() - proximaTentativaMs) >= 0;
+                      ritmo.podeEnviar(millis());
     TickType_t espera = podeEnviar ? 0 : pdMS_TO_TICKS(100);
     while (xQueueReceive(estado::janelas, &j, espera) == pdTRUE) {
       tratarJanela(j);

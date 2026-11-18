@@ -1632,6 +1632,40 @@
           }
         }
       },
+      "RecuperacaoEvento": {
+        "properties": {
+          "ate": {
+            "description": "medido_em da janela mais recente recebida no período",
+            "format": "date-time",
+            "type": "string"
+          },
+          "de": {
+            "description": "medido_em da janela mais antiga recebida no período",
+            "format": "date-time",
+            "type": "string"
+          },
+          "maquina_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "quantidade": {
+            "description": "Quantas janelas antigas chegaram no período",
+            "format": "int64",
+            "type": "integer"
+          },
+          "simulado": {
+            "description": "true quando as janelas vieram de dispositivo simulado",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ate",
+          "de",
+          "maquina_id",
+          "quantidade",
+          "simulado"
+        ]
+      },
       "RefCatalogo": {
         "description": "Item do catálogo (material ou ferramenta): id e nome",
         "properties": {
@@ -4231,7 +4265,7 @@
     },
     "/api/v1/maquinas/{id}/eventos": {
       "get": {
-        "description": "Fluxo text/event-stream. O token vai no cabeçalho Authorization, nunca na URL. Eventos:\n\n- `janela`: janela nova gravada, com o corpo de JanelaResposta (reenvio não gera evento);\n- `ensaio`: ensaio aberto, encerrado ou descartado, com o corpo de EnsaioEvento (só ADMIN e TECNICO);\n- `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o primeiro evento de toda conexão, com o estado atual.\n\nLinhas de comentário (`:batimento`) chegam a cada 15 s sem evento. A conexão é encerrada pelo servidor depois de 30 min; o cliente deve reconectar. Cliente que não consome é descartado.\n",
+        "description": "Fluxo text/event-stream. O token vai no cabeçalho Authorization, nunca na URL. Eventos:\n\n- `janela`: janela nova gravada com medido_em de até 30 s atrás, com o corpo de JanelaResposta (reenvio não gera evento);\n- `recuperacao`: janelas mais antigas que 30 s (a fila do dispositivo sendo esvaziada depois de uma queda de rede), juntadas no máximo a cada 5 s por máquina, com o corpo de RecuperacaoEvento (de, ate, quantidade); as janelas estão gravadas e aparecem nas consultas;\n- `ensaio`: ensaio aberto, encerrado ou descartado, com o corpo de EnsaioEvento (só ADMIN e TECNICO);\n- `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o primeiro evento de toda conexão, com o estado atual.\n\nLinhas de comentário (`:batimento`) chegam a cada 15 s sem evento. A conexão é encerrada pelo servidor depois de 30 min; o cliente deve reconectar. Cliente que não consome é descartado.\n",
         "operationId": "eventos",
         "parameters": [
           {

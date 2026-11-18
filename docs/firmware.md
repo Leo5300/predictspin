@@ -296,6 +296,29 @@ em ordem:
 **Capacidade real:** 120 lotes de 32 janelas mais 64 na RAM = **3904 janelas**, ou seja
 **5 h 25 min** a uma janela a cada 5 s. A exigência era aguentar pelo menos 30 min sem rede.
 
+**Reenvio em ritmo controlado** ([`lib/envio/RitmoEnvio.cpp`](../firmware/lib/envio/RitmoEnvio.cpp)).
+Despejar a fila inteira de uma vez na volta da rede faria a API publicar milhares de eventos ao vivo
+em minutos e derrubaria os painéis abertos. Por isso:
+
+- enquanto a janela da **frente** da fila tiver mais de **30 s** de idade (`RECUPERACAO_IDADE_S`), o
+  firmware espera pelo menos **250 ms** (`REENVIO_INTERVALO_MIN_MS`) entre uma resposta e o próximo
+  envio, no máximo 4 janelas por segundo; a linha `janela` da serial mostra `envio=recuperacao`;
+- a ordem continua a cronológica da fila;
+- erro que pede reenvio (5xx, tempo esgotado, falha de conexão) usa a espera crescente de 1, 2, 4...
+  até 60 s, que **prevalece** sobre o intervalo;
+- quando a frente da fila volta a ser uma janela recente (ou a fila esvazia), o envio volta ao ritmo
+  normal, logo depois de cada resposta.
+
+**Durante a recuperação o dado ao vivo do painel fica atrasado:** as janelas novas entram na fila
+atrás das antigas e só saem depois delas. A fila cheia (3904 janelas) a 4 por segundo leva cerca de
+**16 min** para esvaziar (mais o tempo de resposta de cada envio). Do lado da API, janela com mais de
+30 s não vira evento `janela` ao vivo: vira o evento `recuperacao`, no máximo um a cada 5 s por
+máquina (ver [`arquitetura.md`](arquitetura.md#eventos-ao-vivo-sse)).
+
+Os testes nativos (`test_envio`) esvaziam uma fila de 360 janelas antigas com resposta 201 imediata e
+conferem o intervalo mínimo entre cada resposta e o envio seguinte, a ordem, a espera crescente com 503
+no meio da recuperação e a volta ao ritmo normal quando as antigas acabam.
+
 - **Espaço no flash:** cada lote tem 3.848 bytes (cabeçalho de 8 + 32 x 120), num bloco de 4 KB
   do LittleFS. Os 120 lotes usam cerca de 480 KB da partição de 917.504 bytes (`huge_app.csv`). O
   registro de 120 bytes não tem preenchimento (a presença dos pontos vai em bits) e um teste nativo
@@ -463,6 +486,8 @@ o do WinLibs (`winget install BrechtSanders.WinLibs.POSIX.UCRT`).
 - **Portal cativo:** não funciona.
 - **Fila:** até 64 janelas na RAM se perdem num reinício sem rede.
 - **Chave recusada:** com 401, o envio para até reiniciar o ESP32.
+- **Recuperação da fila:** até ~16 min de dado ao vivo atrasado depois de uma queda longa; o ritmo de
+  4 janelas por segundo não foi medido contra o Render.
 - **Sinal bruto:**
   - o `ir` vai um por tick (2 ms), o que limita a resolução da rotação vista no sinal bruto;
   - o `t_us` de cada amostra é estimado;

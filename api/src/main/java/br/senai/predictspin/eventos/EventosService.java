@@ -1,11 +1,15 @@
 package br.senai.predictspin.eventos;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -25,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import br.senai.predictspin.comum.LimiteDeConexoesException;
 import br.senai.predictspin.eventos.dto.EnsaioEvento;
+import br.senai.predictspin.eventos.dto.RecuperacaoEvento;
 import br.senai.predictspin.maquina.dto.ModoRapidoResposta;
 import br.senai.predictspin.telemetria.JanelaService;
 
@@ -37,6 +42,11 @@ import br.senai.predictspin.telemetria.JanelaService;
  * a mensagem à fila de cada assinante. Cada assinante tem a própria thread de envio; se a fila dele
  * enche (cliente lento) ou a escrita falha (cliente caído), ele é descartado. Sem evento por um
  * intervalo, a thread de envio manda um comentário de batimento, para o proxy não fechar a conexão.
+ *
+ * <p>Janela antiga (reenvio da fila do dispositivo depois de uma queda de rede) não vira evento
+ * "janela": as que chegam num intervalo viram um evento "recuperacao" só, com o período e a
+ * quantidade. Sem isso, milhares de janelas reenviadas em minutos encheriam a fila de cada assinante e
+ * derrubariam os painéis abertos.
  */
 @Service
 public class EventosService implements SmartLifecycle {
@@ -45,6 +55,7 @@ public class EventosService implements SmartLifecycle {
     public static final String EVENTO_ENSAIO = "ensaio";
     public static final String EVENTO_MODO_RAPIDO = "modo_rapido";
     public static final String EVENTO_MARCADO = "evento_marcado";
+    public static final String EVENTO_RECUPERACAO = "recuperacao";
 
     private static final Logger log = LoggerFactory.getLogger(EventosService.class);
     private static final int FILA_DA_DIFUSAO = 256;
@@ -59,6 +70,10 @@ public class EventosService implements SmartLifecycle {
     private final Object trava = new Object();
     private int total;
     private final ThreadPoolExecutor difusor;
+    /** Fecha as recuperações no fim de cada intervalo. */
+    private final ScheduledExecutorService agendador;
+    /** Janelas antigas acumuladas por máquina e tipo de dado, até o fim do intervalo. */
+    private final Map<ChaveRecuperacao, Recuperacao> recuperacoes = new ConcurrentHashMap<>();
     private volatile boolean rodando;
 
     @Autowired
@@ -80,6 +95,11 @@ public class EventosService implements SmartLifecycle {
                     return thread;
                 },
                 (tarefa, executor) -> log.warn("Fila de difusão de eventos cheia: evento descartado"));
+        this.agendador = Executors.newSingleThreadScheduledExecutor(tarefa -> {
+            Thread thread = new Thread(tarefa, "eventos-recuperacao");
+            thread.setDaemon(true);
+            return thread;
+        });
     }
 
     /**
@@ -175,6 +195,45 @@ public class EventosService implements SmartLifecycle {
                 () -> distribuir(estado.maquinaId(), mensagem(EVENTO_MODO_RAPIDO, estado), a -> true));
     }
 
+    /**
+     * Janela antiga gravada: entra no acumulado da máquina. A primeira de um período agenda o evento
+     * "recuperacao" para o fim do intervalo; as seguintes só somam. Assim sai no máximo um evento por
+     * intervalo, por máquina e tipo de dado (real ou simulado).
+     */
+    public void acumularRecuperacao(Long maquinaId, boolean simulado, Instant medidoEm) {
+        if (!temAssinantes(maquinaId)) {
+            return;
+        }
+        ChaveRecuperacao chave = new ChaveRecuperacao(maquinaId, simulado);
+        recuperacoes.compute(chave, (k, atual) -> {
+            if (atual == null) {
+                agendar(k);
+                return new Recuperacao(medidoEm, medidoEm, 1);
+            }
+            return atual.somar(medidoEm);
+        });
+    }
+
+    private void agendar(ChaveRecuperacao chave) {
+        try {
+            agendador.schedule(() -> fecharRecuperacao(chave), propriedades.intervaloRecuperacao().toMillis(),
+                    TimeUnit.MILLISECONDS);
+        } catch (RejectedExecutionException e) {
+            log.debug("Serviço de eventos encerrando: recuperação não agendada");
+        }
+    }
+
+    private void fecharRecuperacao(ChaveRecuperacao chave) {
+        Recuperacao acumulada = recuperacoes.remove(chave);
+        if (acumulada == null) {
+            return;
+        }
+        RecuperacaoEvento evento = new RecuperacaoEvento(chave.maquinaId(), chave.simulado(), acumulada.de(),
+                acumulada.ate(), acumulada.quantidade());
+        difundir(EVENTO_RECUPERACAO, () -> distribuir(chave.maquinaId(), mensagem(EVENTO_RECUPERACAO, evento),
+                a -> a.aceita(chave.simulado())));
+    }
+
     /** Entrega a tarefa à thread de difusão; falha em um evento não derruba os seguintes. */
     private void difundir(String evento, Runnable tarefa) {
         difusor.execute(() -> {
@@ -268,6 +327,8 @@ public class EventosService implements SmartLifecycle {
     public void stop() {
         rodando = false;
         porMaquina.values().stream().flatMap(Set::stream).toList().forEach(this::encerrar);
+        agendador.shutdownNow();
+        recuperacoes.clear();
         difusor.shutdownNow();
     }
 
@@ -279,6 +340,17 @@ public class EventosService implements SmartLifecycle {
     // ------------------------------------------------------------------ tipos internos
 
     private record Mensagem(String nome, String dados) {
+    }
+
+    private record ChaveRecuperacao(Long maquinaId, boolean simulado) {
+    }
+
+    /** Período de janelas antigas: a mais antiga, a mais nova e quantas chegaram. */
+    private record Recuperacao(Instant de, Instant ate, long quantidade) {
+        private Recuperacao somar(Instant medidoEm) {
+            return new Recuperacao(medidoEm.isBefore(de) ? medidoEm : de, medidoEm.isAfter(ate) ? medidoEm : ate,
+                    quantidade + 1);
+        }
     }
 
     private static final class Assinante {

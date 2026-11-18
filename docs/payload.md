@@ -164,6 +164,12 @@ Erro padronizado:
   resposta indica a associação.
 - Grava 1 linha em `JANELA`, 1 em `TELEMETRIA` por ponto e 1 em `LEITURA` por canal, na mesma
   transação.
+- **Evento ao vivo:** janela nova com `medido_em` de até **30 s** atrás (relógio do servidor) vira o
+  evento `janela` para os painéis abertos. Mais antiga que isso (reenvio da fila do dispositivo depois
+  de uma queda de rede) não vira `janela`: entra no evento `recuperacao`, no máximo um a cada 5 s por
+  máquina, com `de`, `ate` e `quantidade`. Reenvio já gravado (200) não gera evento. A gravação, o
+  ensaio, o `ultimo_contato` e as consultas são iguais nos dois casos (ver
+  [`arquitetura.md`](arquitetura.md#eventos-ao-vivo-sse)).
 
 ## Modo rápido (ao vivo)
 
@@ -184,6 +190,8 @@ esse instante e volta sozinho a 5 s. O painel é avisado pelo evento `modo_rapid
 ## Recomendações para o firmware
 
 - Reenvie com o **mesmo** `medido_em` em caso de falha de rede: a API não duplica.
+- Depois de uma queda, reenvie a fila em ritmo controlado (o firmware espera 250 ms entre uma resposta
+  e o próximo envio enquanto a janela da frente tiver mais de 30 s).
 - Trate 2xx (200 e 201) como sucesso e descarte a janela do buffer. Trate 400/403 como erro de
   programação (não reenvie em laço). Reenvie em 5xx e em falha de conexão, com espera crescente.
 - Sincronize o relógio por NTP antes de medir.

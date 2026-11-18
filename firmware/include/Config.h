@@ -71,6 +71,11 @@ constexpr const char* NTP_2 = "a.st1.ntp.br";
 constexpr uint32_t HTTP_TEMPO_CONEXAO_MS = 10000;
 constexpr uint32_t HTTP_TEMPO_RESPOSTA_MS = 20000;
 constexpr uint32_t WIFI_INTERVALO_TENTATIVA_MS = 5000;
+// Reenvio depois de uma queda de rede: enquanto a janela da frente da fila tiver mais de
+// RECUPERACAO_IDADE_S, espera pelo menos REENVIO_INTERVALO_MIN_MS entre uma resposta e o próximo envio
+// (3904 janelas a 4 por segundo: cerca de 16 min). A espera crescente de erro prevalece.
+constexpr uint32_t REENVIO_INTERVALO_MIN_MS = 250;
+constexpr uint32_t RECUPERACAO_IDADE_S = 30;
 // LittleFS: 120 lotes de 32 janelas (3,9 KB cada) + 64 na RAM = 3904 janelas = 5 h 25 min a 5 s
 constexpr uint16_t FILA_MAX_LOTES = 120;
 

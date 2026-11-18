@@ -51,7 +51,8 @@ import br.senai.predictspin.IntegracaoBase;
 @TestPropertySource(properties = {
         "predictspin.eventos.max-por-usuario=2",
         "predictspin.eventos.max-total=3",
-        "predictspin.eventos.batimento=300ms"})
+        "predictspin.eventos.batimento=300ms",
+        "predictspin.eventos.intervalo-recuperacao=1s"})
 class EventosIntegracaoTest extends IntegracaoBase {
 
     private static final Duration ESPERA = Duration.ofSeconds(10);
@@ -80,7 +81,9 @@ class EventosIntegracaoTest extends IntegracaoBase {
         }
     }
     private final List<Fluxo> abertos = new ArrayList<>();
-    private final Instant base = Instant.now().truncatedTo(ChronoUnit.SECONDS).minus(5, ChronoUnit.MINUTES);
+    // janelas ao vivo: medido_em até 30 s atrás (as mais antigas viram "recuperacao"); com +10 s nos
+    // testes, todas ficam entre 10 s atrás e agora mesmo
+    private final Instant base = Instant.now().truncatedTo(ChronoUnit.SECONDS).minusSeconds(10);
 
     @AfterEach
     void fecharFluxos() {
@@ -217,6 +220,70 @@ class EventosIntegracaoTest extends IntegracaoBase {
         assertThat(segunda.get("medido_em").asText()).isEqualTo(base.plusSeconds(10).toString());
         pausa(400);
         assertThat(fluxo.quantos("janela")).isEqualTo(2);
+    }
+
+    @Test
+    void janelaDe10sVaiAoVivoEDe10MinViraRecuperacao() throws Exception {
+        Fluxo fluxo = new Fluxo(tokenDe("OPERADOR"), "?simulado=true");
+        fluxo.evento("modo_rapido", 1);
+        Instant agora = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+
+        enviarSimulado(agora.minusSeconds(10)).andExpect(status().isCreated());
+        assertThat(fluxo.evento("janela", 1).get("medido_em").asText()).isEqualTo(agora.minusSeconds(10).toString());
+
+        Instant antiga = agora.minus(10, ChronoUnit.MINUTES);
+        enviarSimulado(antiga).andExpect(status().isCreated());
+        JsonNode recuperacao = fluxo.evento("recuperacao", 1);
+        assertThat(recuperacao.get("quantidade").asLong()).isEqualTo(1);
+        assertThat(recuperacao.get("de").asText()).isEqualTo(antiga.toString());
+        assertThat(recuperacao.get("ate").asText()).isEqualTo(antiga.toString());
+        assertThat(recuperacao.get("simulado").asBoolean()).isTrue();
+        assertThat(fluxo.quantos("janela")).isEqualTo(1);
+        // a janela antiga foi gravada como qualquer outra
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM janela WHERE medido_em = ?", Long.class,
+                antiga.atOffset(java.time.ZoneOffset.UTC))).isEqualTo(1);
+    }
+
+    @Test
+    void cemJanelasAntigasEmSequenciaGeramPoucasRecuperacoesENinguemCai() throws Exception {
+        Fluxo operador = new Fluxo(tokenDe("OPERADOR"), "?simulado=true");
+        Fluxo tecnico = new Fluxo(tokenDe("TECNICO"), "");
+        operador.evento("modo_rapido", 1);
+        tecnico.evento("modo_rapido", 1);
+        int conexoes = eventos.conexoes();
+
+        Instant inicio = Instant.now().truncatedTo(ChronoUnit.SECONDS).minus(2, ChronoUnit.HOURS);
+        long comeco = System.nanoTime();
+        for (int i = 0; i < 100; i++) {
+            enviarSimulado(inicio.plusSeconds(5L * i)).andExpect(status().isCreated());
+        }
+        long duracaoS = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - comeco);
+
+        esperar(() -> somaDasRecuperacoes(operador) == 100 && somaDasRecuperacoes(tecnico) == 100);
+        // um evento por intervalo de 1 s (propriedade deste teste), mais o que fecha depois da última
+        assertThat(operador.quantos("recuperacao")).isBetween(1L, duracaoS + 2);
+        assertThat(operador.quantos("janela")).isZero();
+        assertThat(eventos.conexoes()).isEqualTo(conexoes);
+
+        // os dois continuam assinantes: a próxima janela ao vivo chega
+        enviarSimulado(Instant.now().truncatedTo(ChronoUnit.SECONDS)).andExpect(status().isCreated());
+        operador.evento("janela", 1);
+        tecnico.evento("janela", 1);
+    }
+
+    private long somaDasRecuperacoes(Fluxo fluxo) {
+        long soma = 0;
+        for (int i = 1; i <= fluxo.quantos("recuperacao"); i++) {
+            String dados = fluxo.dados("recuperacao", i);
+            if (dados != null) {
+                try {
+                    soma += json.readTree(dados).get("quantidade").asLong();
+                } catch (IOException e) {
+                    throw new AssertionError(e);
+                }
+            }
+        }
+        return soma;
     }
 
     @Test

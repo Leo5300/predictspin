@@ -290,9 +290,10 @@ class EventosServiceTest {
      * Quantas mensagens um assinante pode receber de uma vez? Por janela recebida, uma ("janela", que já
      * leva todos os pontos e canais); alarme não existe como evento. O que acompanha a janela são mudanças
      * de estado: ensaio aberto/encerrado/descartado, evento marcado e modo rápido, mais a mensagem inicial
-     * da conexão. No mesmo instante dá no máximo 5. Um reenvio de janelas acumuladas pelo dispositivo (o
-     * simulador em roteiro faz isso) publica uma mensagem por janela em seguida. Por isso a fila de produção
-     * é de 64 (application.yml), mais de 12 vezes o pico de coincidência; a de 2 só existe nos testes que
+     * da conexão. No mesmo instante dá no máximo 5. O reenvio de janelas acumuladas pelo dispositivo (a
+     * fila do firmware depois de uma queda de rede) não publica uma mensagem por janela: janela com mais
+     * de 30 s vira o evento "recuperacao", no máximo um a cada 5 s (testes abaixo). A fila de produção é
+     * de 64 (application.yml), mais de 12 vezes o pico de coincidência; a de 2 só existe nos testes que
      * querem o descarte rápido.
      */
     @Test
@@ -336,6 +337,115 @@ class EventosServiceTest {
         esperar(() -> servico.conexoes() == 1);
         assertThat(parado.completo).isTrue();
         assertThat(atrasado.completo).isFalse();
+    }
+
+    // ------------------------------------------------------------------ recuperação
+
+    private static final Instant ANTIGA = Instant.parse("2026-11-12T10:00:00Z");
+
+    private void iniciarComRecuperacaoDe(Duration intervalo, int fila) {
+        parar();
+        emissores.clear();
+        iniciar(new PropriedadesEventos(4, 20, Duration.ofSeconds(30), fila, Duration.ofMinutes(30), intervalo));
+    }
+
+    private static List<String> recuperacoes(EmissorDeTeste emissor) {
+        return emissor.enviados.stream().filter(e -> e.contains("event:recuperacao")).toList();
+    }
+
+    @Test
+    void cemJanelasAntigasViramUmEventoSoEAFilaPequenaNaoEnche() {
+        iniciarComRecuperacaoDe(Duration.ofMillis(300), 4);
+        EmissorDeTeste painel = assinar(1, false, null);
+        esperar(() -> recebeu(painel, "event:modo_rapido"));
+
+        // 100 janelas de 5 s reenviadas em sequência: uma a uma, estourariam a fila de 4 do assinante
+        for (int i = 0; i < 100; i++) {
+            servico.acumularRecuperacao(MAQUINA, true, ANTIGA.plusSeconds(5L * i));
+        }
+
+        esperar(() -> recebeu(painel, "event:recuperacao"));
+        assertThat(recuperacoes(painel)).singleElement().satisfies(e -> assertThat(e)
+                .contains("\"quantidade\":100").contains("\"de\":\"2026-11-12T10:00:00Z\"")
+                .contains("\"ate\":\"2026-11-12T10:08:15Z\"").contains("\"simulado\":true")
+                .contains("\"maquina_id\":" + MAQUINA));
+        assertThat(servico.conexoes()).isEqualTo(1);
+        verify(janelas, never()).buscar(anyLong());  // nada é lido do banco para a recuperação
+    }
+
+    @Test
+    void recuperacaoContinuaSaiNoMaximoUmaVezPorIntervaloSemPerderJanela() throws InterruptedException {
+        iniciarComRecuperacaoDe(Duration.ofMillis(200), 64);
+        EmissorDeTeste painel = assinar(1, false, null);
+        esperar(() -> recebeu(painel, "event:modo_rapido"));
+
+        // ~1 s de janelas antigas chegando a cada 10 ms (o ritmo do firmware é de uma a cada 250 ms)
+        long inicio = System.nanoTime();
+        int enviadas = 0;
+        while (System.nanoTime() - inicio < TimeUnit.MILLISECONDS.toNanos(1000)) {
+            servico.acumularRecuperacao(MAQUINA, true, ANTIGA.plusSeconds(5L * enviadas++));
+            Thread.sleep(10);
+        }
+        long duracaoMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - inicio);
+        int total = enviadas;
+        esperar(() -> recuperacoes(painel).stream().mapToLong(EventosServiceTest::quantidade).sum() == total);
+
+        // um evento por intervalo de 200 ms, mais o que fecha depois da última janela
+        assertThat(recuperacoes(painel)).hasSizeBetween(2, (int) (duracaoMs / 200) + 2);
+        assertThat(servico.conexoes()).isEqualTo(1);
+    }
+
+    private static long quantidade(String evento) {
+        int i = evento.indexOf("\"quantidade\":") + "\"quantidade\":".length();
+        int fim = i;
+        while (fim < evento.length() && Character.isDigit(evento.charAt(fim))) {
+            fim++;
+        }
+        return Long.parseLong(evento.substring(i, fim));
+    }
+
+    @Test
+    void recuperacaoRespeitaOFiltroDeSimuladoESemAssinanteNaoAcumula() {
+        iniciarComRecuperacaoDe(Duration.ofMillis(100), 4);
+        servico.acumularRecuperacao(MAQUINA, true, ANTIGA);  // ninguém assinando: nada fica guardado
+        EmissorDeTeste soReal = assinar(1, false, false);
+        EmissorDeTeste soSimulado = assinar(2, false, true);
+        esperar(() -> recebeu(soReal, "event:modo_rapido") && recebeu(soSimulado, "event:modo_rapido"));
+
+        servico.acumularRecuperacao(MAQUINA, true, ANTIGA.plusSeconds(5));
+        servico.acumularRecuperacao(MAQUINA, false, ANTIGA.plusSeconds(60));
+
+        esperar(() -> recebeu(soReal, "event:recuperacao") && recebeu(soSimulado, "event:recuperacao"));
+        // real e simulado acumulam separados; a janela anterior à assinatura não entra
+        assertThat(recuperacoes(soSimulado)).singleElement().satisfies(e -> assertThat(e)
+                .contains("\"quantidade\":1").contains("\"de\":\"2026-11-12T10:00:05Z\""));
+        assertThat(recuperacoes(soReal)).singleElement().satisfies(e -> assertThat(e)
+                .contains("\"simulado\":false").contains("\"de\":\"2026-11-12T10:01:00Z\""));
+    }
+
+    @Test
+    void naRecuperacaoOClienteParadoNaoCaiMasNoAoVivoContinuaSendoDescartado() throws InterruptedException {
+        iniciarComRecuperacaoDe(Duration.ofMillis(100), 2);
+        EmissorDeTeste parado = assinar(1, false, null);
+        esperar(() -> recebeu(parado, "event:modo_rapido"));
+        parado.travado = true;
+
+        for (int i = 0; i < 300; i++) {
+            servico.acumularRecuperacao(MAQUINA, true, ANTIGA.plusSeconds(5L * i));
+        }
+        // 300 janelas antigas viram um evento só (o intervalo de 100 ms passa várias vezes nesta espera):
+        // cabe na fila de 2 do cliente parado
+        Thread.sleep(400);
+        assertThat(servico.conexoes()).isEqualTo(1);
+        assertThat(parado.completo).isFalse();
+        when(janelas.buscar(anyLong())).thenAnswer(i -> Optional.of(janela(i.<Long>getArgument(0), true)));
+
+        // já janelas ao vivo, uma a uma, enchem a fila dele: continua sendo descartado
+        for (int i = 0; i < 5; i++) {
+            servico.publicarJanela(MAQUINA, 100 + i);
+        }
+        esperar(() -> servico.conexoes() == 0);
+        assertThat(parado.completo).isTrue();
     }
 
     @Test

@@ -320,6 +320,42 @@ class IngestaoServiceTest {
     }
 
     @Test
+    void janelaAntigaViraRecuperacaoENaoJanelaAoVivo() {
+        janelaNova(100L);
+        Instant antiga = AGORA.minusSeconds(600);
+
+        var resultado = servico.receber(SIMULADOR, requisicao("ps-sim-01", antiga, null));
+
+        // gravação e resposta iguais às de uma janela ao vivo
+        assertThat(resultado.criada()).isTrue();
+        verify(ingestao).inserirTelemetrias(eq(100L), any());
+        verify(dispositivos).registrarContato(20L, AGORA, AGORA.minusSeconds(10));
+        verify(anuncios).publishEvent(new JanelaRecuperada(MAQUINA, true, antiga));
+        verify(anuncios, never()).publishEvent(any(JanelaGravada.class));
+    }
+
+    @Test
+    void limiteDoAoVivoEhDe30Segundos() {
+        janelaNova(100L);
+        servico.receber(SIMULADOR, requisicao("ps-sim-01", AGORA.minusSeconds(10), null));
+        servico.receber(SIMULADOR, requisicao("ps-sim-01", AGORA.minusSeconds(30), null));
+        verify(anuncios, org.mockito.Mockito.times(2)).publishEvent(any(JanelaGravada.class));
+        servico.receber(SIMULADOR, requisicao("ps-sim-01", AGORA.minusSeconds(31), null));
+        verify(anuncios).publishEvent(new JanelaRecuperada(MAQUINA, true, AGORA.minusSeconds(31)));
+    }
+
+    @Test
+    void reenvioDeJanelaAntigaNaoAnunciaNada() {
+        when(ingestao.inserirJanela(anyLong(), any(), any(), any(), anyDouble(), anyBoolean(), any(), any()))
+                .thenReturn(Optional.empty());
+        Instant antiga = AGORA.minusSeconds(600);
+        when(ingestao.buscarJanela(20L, antiga)).thenReturn(Optional.of(new IngestaoRepository.JanelaExistente(9L, null)));
+
+        assertThat(servico.receber(SIMULADOR, requisicao("ps-sim-01", antiga, null)).criada()).isFalse();
+        verify(anuncios, never()).publishEvent(any());
+    }
+
+    @Test
     void janelaNovaEhAnunciadaEReenvioNao() {
         janelaNova(100L);
         servico.receber(SIMULADOR, requisicao("ps-sim-01", MEDIDO, null));

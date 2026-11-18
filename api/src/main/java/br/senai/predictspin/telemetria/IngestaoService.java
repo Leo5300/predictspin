@@ -38,8 +38,12 @@ import br.senai.predictspin.telemetria.dto.TelemetriaRequisicao;
  *   <li>reenvio do mesmo (dispositivo, medido_em) não grava nada e devolve a janela existente;</li>
  *   <li>se houver ensaio aberto na máquina, do mesmo tipo (real ou simulado) do dispositivo,
  *       a janela é gravada com ele;</li>
- *   <li>janela nova é anunciada ({@link JanelaGravada}) para o fluxo de eventos ao vivo; reenvio não.</li>
+ *   <li>janela nova é anunciada ({@link JanelaGravada}) para o fluxo de eventos ao vivo; reenvio não;</li>
+ *   <li>janela nova com medido_em mais antigo que {@link #LIMITE_AO_VIVO} (a fila do dispositivo sendo
+ *       esvaziada depois de uma queda de rede) é anunciada como {@link JanelaRecuperada}: o fluxo ao
+ *       vivo junta essas num evento "recuperacao" em vez de mandar uma a uma.</li>
  * </ul>
+ * Gravação, ensaio, último contato e consultas são iguais para as duas.
  */
 @Service
 public class IngestaoService {
@@ -53,6 +57,9 @@ public class IngestaoService {
      * (medição em docs/teste-de-carga.md); com o intervalo, só uma janela a cada 10 s trava a linha.
      */
     static final Duration INTERVALO_CONTATO = Duration.ofSeconds(10);
+
+    /** Janela mais antiga que isto, em relação ao relógio do servidor, não vai ao vivo como "janela". */
+    static final Duration LIMITE_AO_VIVO = Duration.ofSeconds(30);
 
     private final IngestaoRepository ingestao;
     private final PontoMedicaoRepository pontos;
@@ -117,7 +124,11 @@ public class IngestaoService {
             ingestao.inserirLeituras(janelaId, leituras);
         }
         // Só anuncia: quem escuta age depois do commit e fora desta thread (eventos ao vivo do painel)
-        anuncios.publishEvent(new JanelaGravada(dispositivo.maquinaId(), janelaId));
+        if (medidoEm.isBefore(agora.minus(LIMITE_AO_VIVO))) {
+            anuncios.publishEvent(new JanelaRecuperada(dispositivo.maquinaId(), dispositivo.simulado(), medidoEm));
+        } else {
+            anuncios.publishEvent(new JanelaGravada(dispositivo.maquinaId(), janelaId));
+        }
         return new Resultado(new IngestaoResposta(janelaId, false, ensaioId, medidoEm, modoRapidoAte));
     }
 

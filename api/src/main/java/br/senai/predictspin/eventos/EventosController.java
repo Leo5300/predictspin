@@ -42,7 +42,11 @@ public class EventosController {
             description = """
                     Fluxo text/event-stream. O token vai no cabeçalho Authorization, nunca na URL. Eventos:
 
-                    - `janela`: janela nova gravada, com o corpo de JanelaResposta (reenvio não gera evento);
+                    - `janela`: janela nova gravada com medido_em de até 30 s atrás, com o corpo de JanelaResposta \
+                    (reenvio não gera evento);
+                    - `recuperacao`: janelas mais antigas que 30 s (a fila do dispositivo sendo esvaziada depois de \
+                    uma queda de rede), juntadas no máximo a cada 5 s por máquina, com o corpo de RecuperacaoEvento \
+                    (de, ate, quantidade); as janelas estão gravadas e aparecem nas consultas;
                     - `ensaio`: ensaio aberto, encerrado ou descartado, com o corpo de EnsaioEvento (só ADMIN e TECNICO);
                     - `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o \
                     primeiro evento de toda conexão, com o estado atual.

@@ -3,11 +3,14 @@ package br.senai.predictspin.eventos;
 import java.time.Duration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
  * Limites do fluxo de eventos ao vivo (SSE). Os padrões são pensados para a instância pequena de
  * produção (0,1 CPU e 512 MB): cada conexão custa uma thread de envio e uma fila.
+ * {@code intervaloRecuperacao}: no máximo um evento "recuperacao" por máquina (e tipo de dado) nesse
+ * intervalo, com as janelas antigas que chegaram nele.
  */
 @ConfigurationProperties("predictspin.eventos")
 public record PropriedadesEventos(
@@ -15,5 +18,17 @@ public record PropriedadesEventos(
         @DefaultValue("20") int maxTotal,
         @DefaultValue("15s") Duration batimento,
         @DefaultValue("64") int filaPorAssinante,
-        @DefaultValue("30m") Duration duracaoMaxima) {
+        @DefaultValue("30m") Duration duracaoMaxima,
+        @DefaultValue("5s") Duration intervaloRecuperacao) {
+
+    /** Construtor usado na ligação das propriedades (o record tem dois). */
+    @ConstructorBinding
+    public PropriedadesEventos {
+    }
+
+    /** Sem o intervalo da recuperação: 5 s. */
+    public PropriedadesEventos(int maxPorUsuario, int maxTotal, Duration batimento, int filaPorAssinante,
+                               Duration duracaoMaxima) {
+        this(maxPorUsuario, maxTotal, batimento, filaPorAssinante, duracaoMaxima, Duration.ofSeconds(5));
+    }
 }

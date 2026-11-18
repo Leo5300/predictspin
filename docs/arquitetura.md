@@ -184,10 +184,16 @@ com o JWT no cabeçalho `Authorization`; token na URL é recusado (401). O parâ
 
 | Evento | Corpo | Quando |
 |---|---|---|
-| `janela` | `JanelaResposta` (o item das listagens de janelas) | janela nova gravada; reenvio (200) não gera evento |
+| `janela` | `JanelaResposta` (o item das listagens de janelas) | janela nova gravada com `medido_em` de até 30 s atrás; reenvio (200) não gera evento |
+| `recuperacao` | `RecuperacaoEvento` (`maquina_id`, `simulado`, `de`, `ate`, `quantidade`) | janelas novas com `medido_em` mais antigo que 30 s (a fila do dispositivo sendo esvaziada depois de uma queda de rede), juntadas: no máximo um evento a cada 5 s por máquina e tipo de dado |
 | `ensaio` | `EnsaioEvento` (`acao`: `aberto`, `encerrado` ou `descartado`; `ensaio`: `EnsaioResposta`) | só para ADMIN e TECNICO |
 | `modo_rapido` | `ModoRapidoResposta` | modo rápido ligado ou desligado; é também o primeiro evento de toda conexão, com o estado atual |
 | `evento_marcado` | `EventoMarcadoResposta` | o técnico marcou um evento (pancada, cavaco, máquina vizinha, outro) no ensaio aberto; só para ADMIN e TECNICO |
+
+O painel ignora evento de nome que não conhece (sem erro e sem derrubar a conexão): o `recuperacao`
+não muda nenhuma tela. A conferência de 15 s da tela do ponto olha só os últimos 90 s com o AO VIVO
+ligado; ela **não** cobre as janelas recuperadas, que aparecem nas consultas por período (tendência,
+replay, exportação) quando a tela as busca de novo.
 
 ```mermaid
 sequenceDiagram
@@ -211,6 +217,16 @@ Regras do fluxo:
   para os clientes acontece em outras threads. Sem cliente conectado na máquina, nada é feito.
 - **Cliente lento ou caído é descartado.** Cada cliente tem uma fila de 64 mensagens; fila cheia ou
   falha de escrita encerra a conexão dele e libera a vaga.
+- **Reenvio em massa não derruba o painel.** Depois de uma queda de rede o firmware pode ter até
+  3904 janelas na fila (5 h 25 min). Se cada uma virasse um evento `janela`, a fila de 64 de cada
+  painel encheria em segundos e todos seriam descartados. Por isso janela com `medido_em` mais antigo
+  que **30 s** em relação ao relógio do servidor não gera `janela`: entra num acumulado da máquina, e
+  no fim de cada intervalo de **5 s** sai um único evento `recuperacao` com o período (`de`, `ate`) e a
+  `quantidade`. Gravação, ensaio, `ultimo_contato` e consultas não mudam; o reenvio já gravado (200)
+  não gera nada. Do lado do firmware, o reenvio tem ritmo: com a janela da frente da fila mais velha
+  que 30 s, espera pelo menos 250 ms entre uma resposta e o próximo envio (as 3904 janelas levam cerca
+  de 16 min), e durante esse tempo o dado ao vivo do painel fica atrasado, porque as janelas novas
+  entram na fila atrás das antigas.
 - **Batimento.** Sem evento por 15 s, vai uma linha de comentário (`:batimento`), para o proxy não
   fechar a conexão. Os cabeçalhos `Cache-Control: no-cache` e `X-Accel-Buffering: no` impedem o
   proxy de segurar o fluxo.

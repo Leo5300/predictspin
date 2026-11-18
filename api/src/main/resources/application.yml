@@ -65,6 +65,8 @@ predictspin:
     max-total: ${EVENTOS_MAX_TOTAL:20}
     batimento: 15s
     fila-por-assinante: 64
+    # no máximo um evento "recuperacao" (janelas antigas reenviadas) por máquina a cada 5 s
+    intervalo-recuperacao: 5s
     duracao-maxima: 30m
   carga-inicial:
     maquina-codigo: TORNO-01

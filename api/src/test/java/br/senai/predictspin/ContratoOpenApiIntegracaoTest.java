@@ -257,6 +257,8 @@ class ContratoOpenApiIntegracaoTest extends IntegracaoBase {
         JsonNode esquemas = documento.at("/components/schemas");
         assertThat(esquemas.has("JanelaResposta")).isTrue();
         assertThat(esquemas.has("ModoRapidoResposta")).isTrue();
+        assertThat(valores(esquemas.at("/RecuperacaoEvento/required")))
+                .containsExactlyInAnyOrder("maquina_id", "simulado", "de", "ate", "quantidade");
         assertThat(valores(esquemas.at("/EnsaioEvento/properties/acao/enum")))
                 .containsExactly("aberto", "encerrado", "descartado");
         assertThat(esquemas.at("/EnsaioEvento/properties/ensaio/$ref").asText())
