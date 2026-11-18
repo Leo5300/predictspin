@@ -19,6 +19,7 @@ import { EsquemaTorno, type MarcadorNoTorno } from '@/componentes/instrumento/Es
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '@/componentes/instrumento/Estados'
 import { MarcaDeIdade } from '@/componentes/instrumento/Idade'
 import { Leitura } from '@/componentes/instrumento/Leitura'
+import { LeiturasDoPonto } from '@/componentes/instrumento/LeiturasDoPonto'
 import {
   MapaOrdens,
   type IntervaloDoMapa,
@@ -36,7 +37,6 @@ import { Explica } from '@/componentes/ui/explica'
 import { ToggleGroup, ToggleGroupItem } from '@/componentes/ui/toggle-group'
 import { desvioDoZ, estadoDaMaquina, reguaEmZ, resumoDosPontos } from '@/dominio/estado'
 import {
-  formatarCurtose,
   formatarDataHora,
   formatarG,
   formatarHora,
@@ -511,60 +511,7 @@ function ModuloDoPonto({
       <div className="flex flex-col gap-3">
         <div className="flex items-start gap-3">
           <MarcadorPonto codigo={ponto.codigo} className="mt-1" />
-          <div className="grid min-w-0 flex-1 grid-cols-3 gap-x-3 gap-y-2">
-            <Leitura
-              rotulo="RMS"
-              explica="rms"
-              valor={formatarG(medida?.rms_g)}
-              unidade="g"
-              tamanho="destaque"
-              desvio={desvio('rms_g')}
-              velho={velho}
-              className="col-span-3"
-            />
-            <Leitura
-              rotulo="Pico"
-              explica="pico"
-              valor={formatarG(medida?.pico_g)}
-              desvio={desvio('pico_g')}
-              unidade="g"
-              tamanho="grande"
-              velho={velho}
-            />
-            <Leitura
-              rotulo="Curt"
-              explica="curtose"
-              titulo="curtose"
-              valor={formatarCurtose(medida?.curtose)}
-              tamanho="grande"
-              velho={velho}
-            />
-            <Leitura
-              rotulo="1X"
-              explica="ordens"
-              valor={formatarG(medida?.o1x)}
-              desvio={desvio('o1x')}
-              unidade="g"
-              tamanho="grande"
-              velho={velho}
-            />
-            <Leitura
-              rotulo="2X"
-              valor={formatarG(medida?.o2x)}
-              desvio={desvio('o2x')}
-              unidade="g"
-              tamanho="grande"
-              velho={velho}
-            />
-            <Leitura
-              rotulo="3X"
-              valor={formatarG(medida?.o3x)}
-              desvio={desvio('o3x')}
-              unidade="g"
-              tamanho="grande"
-              velho={velho}
-            />
-          </div>
+          <LeiturasDoPonto medida={medida} desvio={desvio} velho={velho} />
         </div>
         {janela && !medida ? (
           <p className="border border-dashed border-linha-forte px-2 py-1 text-12 text-texto">

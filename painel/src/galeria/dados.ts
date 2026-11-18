@@ -179,6 +179,19 @@ export const PICO_TENDENCIA: (number | null)[] = serieExemplo(120, 0.19, 0.03, 1
 export const NOME_MUITO_LONGO = 'TORNO-CNC-ROMI-GL-280-LINHA-DE-USINAGEM-PESADA-SETOR-B-POSICAO-14'
 export const NUMERO_ENORME = 987_654_321.123
 
+/**
+ * Pior caso da tela da máquina a 390 px: valores com dois dígitos inteiros e pico, 1X, 2X e 3X em
+ * desvio (a forma do estado ocupa largura ao lado do número). Valores de exemplo, não medidos.
+ */
+export const LEITURAS_EM_DESVIO = {
+  rms_g: 12.345,
+  pico_g: 15.987,
+  curtose: 12.34,
+  o1x: 10.876,
+  o2x: 18.765,
+  o3x: 17.654,
+}
+
 /** Rotações nominais de exemplo (as mesmas da placa do torno, para o tacômetro da galeria). */
 export const NOMINAIS_EXEMPLO = [
   45, 71, 90, 112, 140, 180, 224, 265, 280, 355, 450, 560, 710, 900, 1120, 1400, 1800, 2240,

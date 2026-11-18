@@ -97,6 +97,59 @@ test('valores no limite do contrato cabem inteiros no ponto, a 390 px', async ({
   await semRolagemLateral(page)
 })
 
+/** Valores de dois dígitos e pico, 1X, 2X e 3X em desvio (a forma do estado vai ao lado do número). */
+function emDesvio(corpo: unknown): unknown {
+  const janela = (j: Json) => {
+    if (typeof j.medido_em !== 'string' || typeof j.pontos !== 'object' || j.pontos === null) return
+    for (const ponto of Object.values(j.pontos as Record<string, Json>)) {
+      Object.assign(ponto, {
+        rms_g: 12.345,
+        pico_g: 15.987,
+        curtose: 12.34,
+        o1x: 10.876,
+        o2x: 18.765,
+        o3x: 17.654,
+        avaliacao: {
+          estado: 'alarme',
+          etapa_ref: 'T3',
+          generica: true,
+          situacao: 'avaliada',
+          z: { rms_g: 40, pico_g: 40, o1x: 40, o2x: 4, o3x: 40 },
+        },
+      })
+    }
+  }
+  if (Array.isArray(corpo)) {
+    for (const j of corpo) janela(j as Json)
+  } else if (corpo && typeof corpo === 'object') {
+    const c = corpo as Json
+    if (Array.isArray(c.conteudo)) {
+      for (const j of c.conteudo) janela(j as Json)
+    } else janela(c)
+  }
+  return corpo
+}
+
+test('tela da máquina a 390 px: pico, 1X, 2X e 3X em desvio cabem sem cortar', async ({ page }) => {
+  await usarFonte(page, 'simulado')
+  await entrarPelaTela(page)
+  await trocarRespostas(page, (_url, corpo) => emDesvio(corpo))
+  await page.goto('/maquinas/1')
+  const leituras = page.getByTestId('leituras-do-ponto').first()
+  await expect(leituras.getByText('18,765', { exact: true })).toBeVisible()
+  // as quatro leituras de baixo estão em desvio (forma do estado ao lado do número)
+  await expect(leituras.locator('[data-estado]')).toHaveCount(5)
+  const cortados = await page
+    .getByTestId('leituras-do-ponto')
+    .locator('.valor')
+    .evaluateAll(
+      (els) =>
+        els.filter((el) => el.scrollWidth > el.clientWidth + 1 && /\d/.test(el.textContent)).length,
+    )
+  expect(cortados).toBe(0)
+  await semRolagemLateral(page)
+})
+
 test('nome da máquina e código do ponto no limite do banco', async ({ page }) => {
   const codigo = 'TORNO-CNC-ROMI-GL280-LINHA-USINAGEM-0001'
   await usarFonte(page, 'simulado')

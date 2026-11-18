@@ -714,8 +714,12 @@ ação recomendada nas OS era um cartão dentro de cartão em fonte grande; agor
 15 px; (3) módulo Referência da Coleta ficava espremido em uma coluna; agora ocupa a largura toda. Não
 aceitos: valores de cobertura como "26/3" (matriz de coleta antiga, fora desta parte); tabela do Diagnóstico a
 390 px (rola dentro do próprio módulo, a página não rola de lado); "carregando" no módulo Qualidade
-(já existente). Ficou anotado, sem correção: a leitura PICO, 1X, 2X e 3X a 390 px da tela da máquina corta com
-reticências quando os quatro valores estão em desvio, por causa da forma ao lado do número.
+(já existente). A leitura PICO, 1X, 2X e 3X a 390 px da tela da máquina cortava com reticências quando os
+quatro valores estavam em desvio, por causa da forma ao lado do número. Corrigido depois da revisão: a grade
+das leituras (`LeiturasDoPonto`) fica em 2 colunas quando o módulo tem menos de 28rem e em 3 acima disso;
+teste `e2e/piores-casos.spec.ts` ("tela da máquina a 390 px: pico, 1X, 2X e 3X em desvio cabem sem
+cortar", valores de dois dígitos e as cinco leituras em desvio; com a grade antiga acusava 12 valores
+cortados) e caso na galeria. Prints `l2-vivo-*-390.png` refeitos com o simulador em modo severo.
 
 Evidências: [`docs/evidencias/painel/`](evidencias/painel/) (16 prints novos, 1920 e 390, dois temas, das
 telas Alarmes, máquina, Diagnóstico, Coleta e ponto; os antigos das mesmas telas foram substituídos). Os

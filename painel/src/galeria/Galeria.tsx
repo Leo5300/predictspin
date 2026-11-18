@@ -11,6 +11,7 @@ import {
 import { GraficoTendencia } from '@/componentes/instrumento/GraficoTendencia'
 import { MarcaDeIdade } from '@/componentes/instrumento/Idade'
 import { Leitura } from '@/componentes/instrumento/Leitura'
+import { LeiturasDoPonto } from '@/componentes/instrumento/LeiturasDoPonto'
 import { LinhaAlarme, LinhaOrdemServico } from '@/componentes/alarmes/LinhasDeAlarme'
 import { MapaOrdens } from '@/componentes/instrumento/MapaOrdens'
 import { Explica } from '@/componentes/ui/explica'
@@ -38,6 +39,7 @@ import {
   ALARMES_EXEMPLO,
   ENSAIOS_MAPA_EXEMPLO,
   EVENTOS_MAPA_EXEMPLO,
+  LEITURAS_EM_DESVIO,
   MAPA_ABAIXO,
   MAPA_B_FUGINDO,
   MAPA_LACUNA_E_SATURACAO,
@@ -197,6 +199,18 @@ export function Galeria() {
               unidade="rpm"
               tamanho="grande"
             />
+          </Caso>
+          <Caso titulo="ponto com pico, 1X, 2X e 3X em desvio (pior caso)">
+            <Modulo rotulo="Ponto B" className="self-stretch">
+              <div className="flex items-start gap-3" data-testid="ponto-em-desvio">
+                <MarcadorPonto codigo="B" className="mt-1" />
+                <LeiturasDoPonto
+                  medida={LEITURAS_EM_DESVIO}
+                  desvio={(nome) => (nome === 'o2x' ? 'atencao' : 'alarme')}
+                  velho={false}
+                />
+              </div>
+            </Modulo>
           </Caso>
         </Secao>
 
