@@ -296,7 +296,7 @@ ensaio; com `--material`, o T3 ganha a célula da receita (material + ferramenta
 |---|---|
 | 1 e 2 | 90 janelas gravadas em 10 s; referência versão 1 com 90 janelas usadas, 75 de 75 células com janelas suficientes |
 | 3 | 5 min (316 s de observação a cada 10 s): máquina e os 3 pontos NORMAL em todas as leituras, 0 alertas. Nenhuma correção foi necessária |
-| 4 | alarme não reconhecido em A, B e C aos 16 s do início do severo (15 s de atraso + a janela de 5 s). A **OS abriu aos 5 s por severidade acumulada** (671 z·s, ponto A), não aos 120 s de ALARME contínuo |
+| 4 | alarme não reconhecido em A, B e C aos 16 s do início do severo (15 s de atraso + a janela de 5 s). Primeira execução (regra antiga): a OS abriu aos 5 s, antes do alarme. **Repetido depois da correção** (banco limpo, tempos normais, roteiro com `--ferramenta`; o passo 3 durou 60 s, 0 alertas): alarme aos 16 s; OS-2026-0001 por severidade (648 z·s, ponto A) com origem no alerta 1 (A, máquina, alarme), aberta 0,23 s depois de o alerta ser criado (sondagem do script a cada 5 s: vista aos 17 s) |
 | 5 | máquina NORMAL 15 s depois da volta ao normal (histerese de 15 s); os 3 alertas ficaram "normalizado, não reconhecido"; reconhecer os encerrou (resposta `encerrado`) |
 
 **Sobre a OS no passo 4.** O prompt esperava a OS "depois de 2 min". O limite de severidade (600 z·s) foi
