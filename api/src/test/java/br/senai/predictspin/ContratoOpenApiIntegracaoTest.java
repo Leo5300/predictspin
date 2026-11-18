@@ -214,7 +214,8 @@ class ContratoOpenApiIntegracaoTest extends AlarmeIntegracaoBase {
         conferir("/api/v1/maquinas/{id}/referencias/versoes", "get", 200,
                 mvc.perform(comToken(get(rotaRef + "/versoes?simulado=true"), admin)));
 
-        enviarSequencia(Instant.now().truncatedTo(ChronoUnit.SECONDS), 3, 1120, SEVERO);
+        // 4 janelas: a 3ª entra em ALARME (alerta) e a 4ª passa a severidade de 600 z·s (OS)
+        enviarSequencia(Instant.now().truncatedTo(ChronoUnit.SECONDS), 4, 1120, SEVERO);
         conferir("/api/v1/maquinas/{id}/avaliacao", "get", 200, mvc.perform(comToken(get("/api/v1/maquinas/"
                 + maquinaId + "/avaliacao?simulado=true"), admin)));
         ResultActions ultima = mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId

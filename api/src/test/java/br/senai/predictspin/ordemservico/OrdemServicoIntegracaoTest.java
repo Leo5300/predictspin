@@ -89,15 +89,22 @@ class OrdemServicoIntegracaoTest extends AlarmeIntegracaoBase {
     void severidadeAcumuladaAbreOsEZeraOContador() throws Exception {
         String token = tokenAdmin();
         prepararReferencia(token);
-        // SEVERO: z ≈ 66 no 1X do A, ≈ 313 z·s por janela: passa de 600 na segunda janela, antes do ALARME
-        enviarSequencia(Instant.now().truncatedTo(ChronoUnit.SECONDS), 2, 1120, SEVERO);
+        // SEVERO: z ≈ 66 no 1X do A, ≈ 313 z·s por janela. Durante o atraso (2 janelas) nada conta para a OS;
+        // a 3ª janela entra em ALARME, abre o alerta e soma 313; a 4ª passa de 600
+        Instant t = enviarSequencia(Instant.now().truncatedTo(ChronoUnit.SECONDS), 3, 1120, SEVERO);
+        assertThat(contar("ordem_servico")).isZero();
+        enviarSequencia(t, 1, 1120, SEVERO);
         JsonNode lista = listar(token, "&ponto=A");
         assertThat(lista.get("total_elementos").asLong()).isEqualTo(1);
         JsonNode os = lista.get("conteudo").get(0);
         assertThat(os.get("motivo_abertura").asText()).isEqualTo("severidade");
         assertThat(os.get("severidade_acumulada").asDouble()).isGreaterThan(600);
-        // ainda sem alerta (o atraso de 15 s não passou): a explicação vem da própria janela
-        assertThat(os.get("alerta_id").isNull()).isTrue();
+        // o alerta de origem é o alerta de máquina do ponto, aberto na 3ª janela
+        long alertaDoA = jdbc.queryForObject("""
+                SELECT a.id FROM alerta a JOIN ponto_medicao pm ON pm.id = a.ponto_medicao_id
+                WHERE pm.codigo = 'A' AND a.tipo = 'maquina'
+                """, Long.class);
+        assertThat(os.get("alerta_id").asLong()).isEqualTo(alertaDoA);
         assertThat(os.get("explicacao").asText()).contains("A·");
         // concluir direto, sem assumir: quem conclui vira o responsável
         JsonNode concluida = acao(token, os.get("id").asLong(), "concluir", Map.of("retorno", "confirmada"), 200);
@@ -107,6 +114,52 @@ class OrdemServicoIntegracaoTest extends AlarmeIntegracaoBase {
                 SELECT e.severidade_desde_os FROM estado_ponto e JOIN ponto_medicao pm ON pm.id = e.ponto_medicao_id
                 WHERE pm.codigo = 'A' AND e.simulado
                 """, Double.class)).isZero();
+    }
+
+    @Test
+    void severidadeAltaDuranteOAtrasoNaoAbreOsNemSemAlerta() throws Exception {
+        String token = tokenAdmin();
+        prepararReferencia(token);
+        // 2 janelas severas (10 s, abaixo do atraso de 15 s) e volta ao normal: ≈ 626 z·s no histórico do dia,
+        // nenhum alerta, nenhuma OS e nada no contador que dispara OS
+        Instant t = enviarSequencia(Instant.now().truncatedTo(ChronoUnit.SECONDS), 2, 1120, SEVERO);
+        enviarSequencia(t, 4, 1120, CORTE);
+        assertThat(contar("alerta")).isZero();
+        assertThat(contar("ordem_servico")).isZero();
+        assertThat(jdbc.queryForObject("SELECT sum(valor) FROM severidade_acumulada", Double.class))
+                .isGreaterThan(600);
+        assertThat(jdbc.queryForObject("SELECT max(severidade_desde_os) FROM estado_ponto", Double.class)).isZero();
+    }
+
+    @Test
+    void alertaSuprimidoNaoAbreOs() throws Exception {
+        String token = tokenAdmin();
+        prepararReferencia(token);
+        Instant t = enviarSequencia(Instant.now().truncatedTo(ChronoUnit.SECONDS), 3, 1120, SEVERO);
+        assertThat(contar("alerta")).isEqualTo(3);
+        for (Long id : jdbc.queryForList("SELECT id FROM alerta", Long.class)) {
+            mvc.perform(comToken(post("/api/v1/alertas/" + id + "/suprimir"), token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"motivo\":\"máquina ao lado em manutenção\",\"minutos\":60}"))
+                    .andExpect(status().isOk());
+        }
+        // mais de 2 min em ALARME e severidade muito acima de 600: suprimido, nada abre
+        enviarSequencia(t, 30, 1120, SEVERO);
+        assertThat(contar("ordem_servico")).isZero();
+        assertThat(contar("alerta")).isEqualTo(3);
+    }
+
+    @Test
+    void recuperacaoLongaForaDoNormalSeguidaDeJanelaAoVivoNormalNaoAbreOs() throws Exception {
+        String token = tokenAdmin();
+        prepararReferencia(token);
+        // 40 janelas antigas (200 s) severas, vindas da fila do dispositivo: andam o estado (ALARME), mas não
+        // contam tempo de ALARME nem severidade para a OS
+        enviarSequencia(Instant.now().minus(10, ChronoUnit.MINUTES).truncatedTo(ChronoUnit.SECONDS), 40, 1120,
+                SEVERO);
+        assertThat(estadoDoPonto("A")).isEqualTo(2);
+        enviarSequencia(Instant.now().truncatedTo(ChronoUnit.SECONDS), 1, 1120, CORTE);
+        assertThat(contar("ordem_servico")).isZero();
     }
 
     @Test

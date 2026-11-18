@@ -218,15 +218,20 @@ por operador como aceitável. Isto não é afirmação de conformidade com a nor
 
 ## Ordem de serviço
 
-Abre sozinha quando:
+Toda OS nasce de um **alerta de máquina ativo e não suprimido** (o alerta de origem nunca é nulo). Com esse
+alerta, abre sozinha quando:
 
-- um alerta de **máquina** fica em ALARME por `ps.os.alarme-continuo-s` (120 s) seguidos (alerta ativo,
-  não suprimido, que ainda não gerou OS: uma OS por alerta); ou
-- a severidade acumulada do ponto passa de `ps.os.severidade-limite` (600 z·s, cerca de 5 min com
+- o ponto fica em ALARME por `ps.os.alarme-continuo-s` (120 s) seguidos, contados só em janelas ao vivo; ou
+- a severidade do ponto que dispara OS passa de `ps.os.severidade-limite` (600 z·s, cerca de 5 min com
   z = 5) desde a última OS daquele ponto (o contador recomeça).
 
-No máximo uma OS aberta (ou em andamento) por ponto e tipo de dado. Nunca a partir de janela recuperada,
-de ensaio de condição ou de alerta de instrumento. Campos: número (OS-ano-sequência), máquina, ponto,
+**Os dois contadores só andam** em janela ao vivo (nunca na recuperada, mais de 30 s de idade), fora de
+ensaio de condição, com o ponto em ATENÇÃO ou ALARME **depois do atraso** e com o alerta de máquina ativo e
+não suprimido. Fora disso o tempo de ALARME recomeça e a severidade não soma. Severidade alta durante o
+atraso (por exemplo, uma batida de 10 s) não conta para a OS. A tabela diária `severidade_acumulada`
+(histórico de saúde, no Diagnóstico) continua somando toda janela avaliada, inclusive no atraso e as
+recuperadas: são dois números diferentes, de propósito. Um alerta gera no máximo uma OS (restrição da V1);
+no máximo uma OS aberta (ou em andamento) por ponto e tipo de dado. Alerta de instrumento não abre OS. Campos: número (OS-ano-sequência), máquina, ponto,
 componente, alerta de origem, motivo, explicação, ação recomendada, severidade acumulada no momento,
 versões, simulado, responsável e o **retorno do técnico** ao concluir: `confirmada` (havia problema) ou
 `rejeitada` (falso positivo), com comentário. O retorno fica também no alerta de origem
@@ -235,8 +240,8 @@ concluida`; concluir direto de `aberta` é aceito (quem conclui vira o responsá
 `/api/v1/ordens-servico` (listar, detalhe, `assumir`, `concluir`; ADMIN e TECNICO agem, OPERADOR só vê)
 e evento SSE `os`.
 
-Com z muito alto (como no simulador severo), a severidade passa de 600 z·s em poucos segundos e a OS
-abre por severidade antes dos 120 s de ALARME contínuo.
+Com z muito alto (como no simulador severo), a severidade passa de 600 z·s poucas janelas depois do alarme e a OS
+abre por severidade antes dos 120 s de ALARME contínuo, sempre depois do alerta.
 
 ## Perfil de tempos curtos (só para teste)
 

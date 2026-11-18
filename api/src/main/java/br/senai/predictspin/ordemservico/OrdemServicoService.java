@@ -15,8 +15,9 @@ import br.senai.predictspin.alarme.AvaliacaoService;
 import br.senai.predictspin.alarme.AvaliacaoService.PontoProcessado;
 import br.senai.predictspin.alarme.AvaliacaoService.ResultadoJanela;
 import br.senai.predictspin.alarme.EstadoPonto;
-import br.senai.predictspin.alarme.Explicacao;
 import br.senai.predictspin.alarme.JanelaAvaliada;
+import br.senai.predictspin.alarme.Nivel;
+import br.senai.predictspin.alarme.PropriedadesAlarme;
 import br.senai.predictspin.alerta.AlertaSql;
 import br.senai.predictspin.alerta.RetornoTecnico;
 import br.senai.predictspin.comum.ConflitoException;
@@ -25,13 +26,13 @@ import br.senai.predictspin.comum.RecursoNaoEncontradoException;
 import br.senai.predictspin.ordemservico.dto.OrdemServicoEvento;
 import br.senai.predictspin.ordemservico.dto.OrdemServicoResposta;
 import br.senai.predictspin.referencia.CalculoReferencia;
-import br.senai.predictspin.referencia.Medida;
 
 /**
  * Ordem de serviço. Abre sozinha quando um alerta de MÁQUINA fica em ALARME por {@code alarmeContinuoS}
- * seguidos ou quando a severidade acumulada do ponto passa de {@code severidadeLimite} desde a última OS
- * do ponto. No máximo uma OS aberta por ponto (e tipo de dado). Nunca a partir de janela fora do ao vivo,
- * de ensaio de condição, de alerta suprimido nem de alerta de instrumento (que já manda conferir o sensor).
+ * seguidos ou quando a severidade do ponto, somada só enquanto há alerta de máquina ativo, passa de
+ * {@code severidadeLimite} desde a última OS do ponto. Toda OS tem alerta de origem. No máximo uma OS aberta
+ * por ponto (e tipo de dado). Nunca a partir de janela recuperada, de ensaio de condição, de alerta suprimido
+ * nem de alerta de instrumento (que já manda conferir o sensor).
  * O retorno do técnico (confirmada ou rejeitada) fica guardado como rótulo do treino da parte B.
  */
 @Service
@@ -43,73 +44,86 @@ public class OrdemServicoService {
     private final OrdemServicoSql sql;
     private final AlertaSql alertas;
     private final PropriedadesOs prop;
+    private final PropriedadesAlarme propAlarme;
     private final ApplicationEventPublisher anuncios;
     private final Clock relogio;
 
     public OrdemServicoService(OrdemServicoSql sql, AlertaSql alertas, PropriedadesOs prop,
-                               ApplicationEventPublisher anuncios, Clock relogio) {
+                               PropriedadesAlarme propAlarme, ApplicationEventPublisher anuncios, Clock relogio) {
         this.sql = sql;
         this.alertas = alertas;
         this.prop = prop;
+        this.propAlarme = propAlarme;
         this.anuncios = anuncios;
         this.relogio = relogio;
     }
 
     // ------------------------------------------------------------------ regra (depois dos alertas)
 
+    /**
+     * Regra da OS, ponto a ponto, só em janela que andou o estado do ponto. Tempo de ALARME e severidade que
+     * disparam OS só contam em janela AO VIVO, fora de ensaio de condição, com o ponto em ATENÇÃO ou ALARME
+     * (depois do atraso) e com alerta de MÁQUINA ativo e não suprimido; fora disso, o tempo de ALARME
+     * recomeça. Toda OS aponta o alerta de origem; alerta que já gerou OS não gera outra (V1).
+     */
     @EventListener
     @Order(2)
     public void aoAvaliar(JanelaAvaliada evento) {
         ResultadoJanela r = evento.resultado();
-        if (!r.janela().aoVivo() || AvaliacaoService.deCondicao(r.ensaio())) {
-            return;
-        }
+        boolean conta = r.janela().aoVivo() && !AvaliacaoService.deCondicao(r.ensaio());
         for (PontoProcessado p : r.pontos()) {
-            avaliarPonto(r, p);
+            EstadoPonto e = p.estado();
+            if (!r.janela().medidoEm().equals(e.ultimoMedidoEm())) {
+                continue; // janela fora de ordem: não mexeu no estado do ponto
+            }
+            if (!conta || e.estado() == Nivel.NORMAL) {
+                e.definirAlarmeAoVivoDesde(null);
+                continue;
+            }
+            avaliarPonto(r, p, e);
         }
     }
 
-    private void avaliarPonto(ResultadoJanela r, PontoProcessado p) {
-        EstadoPonto e = p.estado();
-        boolean alarmeContinuo = e.emAlarmeDesde() != null && segundos(e.emAlarmeDesde(), r.janela().medidoEm())
-                + r.duracaoS() >= prop.alarmeContinuoS() - 1e-9;
-        boolean severidade = e.severidadeDesdeOs() > prop.severidadeLimite();
-        if (!alarmeContinuo && !severidade) {
-            return;
-        }
+    private void avaliarPonto(ResultadoJanela r, PontoProcessado p, EstadoPonto e) {
         boolean simulado = r.janela().simulado();
-        if (sql.temAberta(p.pontoId(), simulado)) {
+        Optional<OrdemServicoSql.AlertaAtivo> ativo = sql.alertaAtivo(p.pontoId(), simulado);
+        if (ativo.isEmpty()) {
+            // sem alerta de máquina ativo (suprimido, ou o ponto só tem alerta de instrumento): nada conta
+            e.definirAlarmeAoVivoDesde(null);
             return;
         }
-        Optional<OrdemServicoSql.AlertaAtivo> alerta = sql.alertaAtivo(p.pontoId(), simulado);
-        if (!severidade && alerta.isEmpty()) {
-            // ALARME seguido, mas o alerta está suprimido ou já gerou a sua OS
+        OrdemServicoSql.AlertaAtivo alerta = ativo.get();
+        Instant t = r.janela().medidoEm();
+        if (p.resultado() != null && p.resultado().avaliada()) {
+            e.somarSeveridade(Math.max(0, p.resultado().zMax() - propAlarme.zAtencao()) * r.duracaoS());
+        }
+        if (e.estado() == Nivel.ALARME) {
+            if (e.alarmeAoVivoDesde() == null) {
+                e.definirAlarmeAoVivoDesde(t);
+            }
+        } else {
+            e.definirAlarmeAoVivoDesde(null);
+        }
+        boolean alarmeContinuo = e.alarmeAoVivoDesde() != null
+                && segundos(e.alarmeAoVivoDesde(), t) + r.duracaoS() >= prop.alarmeContinuoS() - 1e-9;
+        boolean severidade = e.severidadeDesdeOs() > prop.severidadeLimite();
+        if ((!alarmeContinuo && !severidade) || alerta.temOs() || sql.temAberta(p.pontoId(), simulado)) {
             return;
         }
-        String motivo = alarmeContinuo && alerta.isPresent() ? ALARME_CONTINUO : SEVERIDADE;
+        String explicacao = alerta.explicacao() != null ? alerta.explicacao()
+                : String.format(java.util.Locale.forLanguageTag("pt-BR"),
+                        "Severidade acumulada de %.0f z·s desde a última OS do ponto %s.", e.severidadeDesdeOs(),
+                        p.ponto());
         AlertaSql.Ponto ponto = alertas.ponto(p.pontoId());
-        String explicacao = alerta.map(OrdemServicoSql.AlertaAtivo::explicacao)
-                .orElseGet(() -> Explicacao.texto(p.itens(), false));
-        if (explicacao == null) {
-            explicacao = String.format(java.util.Locale.forLanguageTag("pt-BR"),
-                    "Severidade acumulada de %.0f z·s desde a última OS do ponto %s.", e.severidadeDesdeOs(),
-                    p.ponto());
-        }
-        String acao = alerta.map(OrdemServicoSql.AlertaAtivo::acao).orElseGet(() -> alertas.acao("maquina",
-                ponto.papel(), dominante(p).valor()));
-        Instant agora = relogio.instant();
         Optional<Long> id = sql.inserir(new OrdemServicoSql.Nova(r.janela().maquinaId(), p.pontoId(),
-                ponto.componenteId(), alerta.map(OrdemServicoSql.AlertaAtivo::id).orElse(null), motivo, explicacao,
-                acao, e.severidadeDesdeOs(), r.versaoId(), r.janela().firmwareVersao(),
-                CalculoReferencia.calibracaoDoPonto(r.janela().calibracaoJson(), p.ponto()), simulado, agora));
+                ponto.componenteId(), alerta.id(), alarmeContinuo ? ALARME_CONTINUO : SEVERIDADE, explicacao,
+                alerta.acao(), e.severidadeDesdeOs(), r.versaoId(), r.janela().firmwareVersao(),
+                CalculoReferencia.calibracaoDoPonto(r.janela().calibracaoJson(), p.ponto()), simulado,
+                relogio.instant()));
         if (id.isPresent()) {
             e.zerarSeveridade();
             anunciar("aberta", buscar(id.get()));
         }
-    }
-
-    private static Medida dominante(PontoProcessado p) {
-        return p.resultado() != null && p.resultado().dominante() != null ? p.resultado().dominante() : Medida.RMS_G;
     }
 
     private static double segundos(Instant de, Instant ate) {

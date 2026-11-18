@@ -148,7 +148,8 @@ public class AvaliacaoService {
             processados.add(new PontoProcessado(e.pontoId, codigo, r, transicao, instrumento, e, itens));
         }
 
-        // 3. severidade acumulada
+        // 3. severidade acumulada por dia (histórico de saúde: toda janela avaliada, inclusive a recuperada e a
+        //    que ainda está no atraso). O contador que abre OS é outro e quem soma é a OS (OrdemServicoService).
         List<Severidade> somas = new ArrayList<>();
         if (!deCondicao(ensaio)) {
             Instant dia = j.medidoEm().truncatedTo(ChronoUnit.DAYS);
@@ -159,7 +160,6 @@ public class AvaliacaoService {
                 double acima = p.resultado().zMax() - prop.zAtencao();
                 if (acima >= 0) {
                     double s = acima * duracao;
-                    p.estado().severidadeDesdeOs += s;
                     somas.add(new Severidade(p.pontoId(), dia, s, duracao / 3600));
                 }
             }

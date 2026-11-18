@@ -45,20 +45,21 @@ public class OrdemServicoSql {
     }
 
     /**
-     * Alerta de máquina ativo do ponto (não suprimido) que ainda não gerou OS, com a explicação e a ação.
-     * Um alerta gera no máximo uma OS (restrição da V1).
+     * Alerta de máquina ativo do ponto e não suprimido, com a explicação, a ação e se já gerou OS (um alerta
+     * gera no máximo uma OS: restrição da V1).
      */
-    public record AlertaAtivo(long id, String explicacao, String acao) {
+    public record AlertaAtivo(long id, String explicacao, String acao, boolean temOs) {
     }
 
     public Optional<AlertaAtivo> alertaAtivo(long pontoId, boolean simulado) {
         return jdbc.query("""
-                SELECT id, explicacao, acao_recomendada FROM alerta
-                WHERE ponto_medicao_id = ? AND tipo = 'maquina' AND simulado = ?
-                  AND estado IN ('ativo_nao_reconhecido', 'ativo_reconhecido')
-                  AND NOT EXISTS (SELECT 1 FROM ordem_servico os WHERE os.alerta_id = alerta.id)
-                """, (rs, i) -> new AlertaAtivo(rs.getLong(1), rs.getString(2), rs.getString(3)), pontoId, simulado)
-                .stream().findFirst();
+                SELECT a.id, a.explicacao, a.acao_recomendada,
+                       EXISTS (SELECT 1 FROM ordem_servico os WHERE os.alerta_id = a.id) AS tem_os
+                FROM alerta a
+                WHERE a.ponto_medicao_id = ? AND a.tipo = 'maquina' AND a.simulado = ?
+                  AND a.estado IN ('ativo_nao_reconhecido', 'ativo_reconhecido')
+                """, (rs, i) -> new AlertaAtivo(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getBoolean(4)),
+                pontoId, simulado).stream().findFirst();
     }
 
     public record Nova(long maquinaId, long pontoId, Long componenteId, Long alertaId, String motivo,

@@ -89,6 +89,7 @@ public class AvaliacaoRepository {
                     e.instrumentoOkDesde = instante(rs, "instrumento_ok_desde");
                     e.instrumentoAtivo = rs.getBoolean("instrumento_ativo");
                     e.severidadeDesdeOs = rs.getDouble("severidade_desde_os");
+                    e.alarmeAoVivoDesde = instante(rs, "alarme_ao_vivo_desde");
                     estados.put(e.pontoId, e);
                 }, consulta.toArray());
         return estados;
@@ -99,7 +100,8 @@ public class AvaliacaoRepository {
         jdbc.batchUpdate("""
                 UPDATE estado_ponto SET estado = ?, ultimo_medido_em = ?, atencao_desde = ?, alarme_desde = ?,
                     abaixo_desde = ?, em_alarme_desde = ?, ausente_desde = ?, sinal_baixo_desde = ?,
-                    falha_amostragem_em = ?, instrumento_ok_desde = ?, instrumento_ativo = ?, severidade_desde_os = ?
+                    falha_amostragem_em = ?, instrumento_ok_desde = ?, instrumento_ativo = ?, severidade_desde_os = ?,
+                    alarme_ao_vivo_desde = ?
                 WHERE ponto_medicao_id = ? AND simulado = ?
                 """, lista, lista.size(), (ps, e) -> {
             ps.setShort(1, e.estado.codigo());
@@ -114,8 +116,9 @@ public class AvaliacaoRepository {
             ps.setObject(10, utc(e.instrumentoOkDesde));
             ps.setBoolean(11, e.instrumentoAtivo);
             ps.setDouble(12, e.severidadeDesdeOs);
-            ps.setLong(13, e.pontoId);
-            ps.setBoolean(14, e.simulado);
+            ps.setObject(13, utc(e.alarmeAoVivoDesde));
+            ps.setLong(14, e.pontoId);
+            ps.setBoolean(15, e.simulado);
         });
     }
 

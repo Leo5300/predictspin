@@ -21,7 +21,10 @@ public final class EstadoPonto {
     Instant falhaAmostragemEm;
     Instant instrumentoOkDesde;
     boolean instrumentoAtivo;
+    /** Severidade que dispara OS; quem soma é a OS (só em janela ao vivo com alerta ativo). */
     double severidadeDesdeOs;
+    /** Início do ALARME contínuo visto em janelas ao vivo com alerta ativo (regra dos 120 s da OS). */
+    Instant alarmeAoVivoDesde;
 
     public EstadoPonto(long pontoId, boolean simulado) {
         this.pontoId = pontoId;
@@ -58,5 +61,17 @@ public final class EstadoPonto {
 
     public void zerarSeveridade() {
         severidadeDesdeOs = 0;
+    }
+
+    public void somarSeveridade(double zs) {
+        severidadeDesdeOs += zs;
+    }
+
+    public Instant alarmeAoVivoDesde() {
+        return alarmeAoVivoDesde;
+    }
+
+    public void definirAlarmeAoVivoDesde(Instant instante) {
+        alarmeAoVivoDesde = instante;
     }
 }
