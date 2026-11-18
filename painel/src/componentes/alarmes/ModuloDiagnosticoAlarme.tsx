@@ -92,7 +92,8 @@ export function ModuloDiagnosticoAlarme({
           <h3 className="rotulo mb-1">
             Últimas {alarme.indicadores_h} h (sem ensaios de condição)
           </h3>
-          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-0.5 text-13">
+          {/* rótulo na coluna que encolhe e quebra linha; o valor (curto) nunca fica sem largura */}
+          <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-0.5 text-13">
             <Par rotulo="Alertas por hora (média)">
               {formatarNumero(d.indicadores.alertas_por_hora, 2)}
             </Par>
@@ -108,7 +109,7 @@ export function ModuloDiagnosticoAlarme({
             </Par>
             <Par rotulo={`Parados há mais de ${alarme.parado_h} h`}>{d.indicadores.parados}</Par>
             <Par rotulo="Suprimidos">{d.indicadores.suprimidos}</Par>
-            <Par rotulo="Janelas sem avaliação (erro, desde que a API subiu)">
+            <Par rotulo="Sem avaliação por erro (desde que a API subiu)">
               {d.falhas_avaliacao}
             </Par>
           </dl>
