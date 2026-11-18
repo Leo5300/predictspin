@@ -1,6 +1,299 @@
 {
   "components": {
     "schemas": {
+      "AlertaDetalheResposta": {
+        "properties": {
+          "alerta": {
+            "$ref": "#/components/schemas/AlertaResposta"
+          },
+          "historico": {
+            "items": {
+              "$ref": "#/components/schemas/Mudanca"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "alerta",
+          "historico"
+        ]
+      },
+      "AlertaEvento": {
+        "properties": {
+          "acao": {
+            "description": "O que aconteceu",
+            "enum": [
+              "abriu",
+              "piorou",
+              "normalizou",
+              "reconhecido",
+              "suprimido",
+              "supressao_encerrada",
+              "encerrado"
+            ],
+            "type": "string"
+          },
+          "alerta": {
+            "$ref": "#/components/schemas/AlertaResposta"
+          }
+        },
+        "required": [
+          "acao",
+          "alerta"
+        ]
+      },
+      "AlertaResposta": {
+        "properties": {
+          "acao_recomendada": {
+            "description": "O que conferir primeiro (orientação de inspeção, não diagnóstico)",
+            "type": "string"
+          },
+          "atualizado_em": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "calibracao": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "componente": {
+            "description": "Componente provável do ponto",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "condicao_ensaio": {
+            "description": "Condição do ensaio aberto quando o alerta nasceu",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "criado_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "durante_ensaio_de_condicao": {
+            "description": "true: aberto durante ensaio de condição; não abre OS nem entra nos indicadores",
+            "type": "boolean"
+          },
+          "encerrado_em": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ensaio_id": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "estado": {
+            "enum": [
+              "ativo_nao_reconhecido",
+              "ativo_reconhecido",
+              "normalizado_nao_reconhecido",
+              "encerrado",
+              "suprimido"
+            ],
+            "type": "string"
+          },
+          "explicacao": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "firmware_versao": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "janela_id": {
+            "description": "Janela de origem",
+            "format": "int64",
+            "type": "integer"
+          },
+          "maquina": {
+            "example": "TORNO-01",
+            "type": "string"
+          },
+          "maquina_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "metrica": {
+            "description": "Medida dominante (a de maior z)",
+            "example": "rms_g",
+            "type": "string"
+          },
+          "motivo_supressao": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nivel": {
+            "description": "Severidade atual",
+            "enum": [
+              "normal",
+              "atencao",
+              "alarme"
+            ],
+            "type": "string"
+          },
+          "normalizado_em": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ordem_servico_id": {
+            "description": "OS aberta a partir deste alerta",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "pior_nivel": {
+            "description": "Pior severidade atingida",
+            "enum": [
+              "normal",
+              "atencao",
+              "alarme"
+            ],
+            "type": "string"
+          },
+          "pior_z": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "ponto": {
+            "example": "B",
+            "type": "string"
+          },
+          "prioridade": {
+            "description": "ATENÇÃO e instrumento = baixa; ALARME = alta",
+            "enum": [
+              "baixa",
+              "alta"
+            ],
+            "type": "string"
+          },
+          "reconhecido_em": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reconhecido_por": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "referencia_versao": {
+            "description": "Número da versão da referência usada",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "simulado": {
+            "type": "boolean"
+          },
+          "suprimido_ate": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "suprimido_por": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tipo": {
+            "description": "maquina: desvio da vibração; instrumento: sensor solto, caído ou com defeito",
+            "enum": [
+              "maquina",
+              "instrumento"
+            ],
+            "type": "string"
+          },
+          "valor": {
+            "format": "double",
+            "type": "number"
+          },
+          "z": {
+            "description": "z da medida dominante na última atualização",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "acao_recomendada",
+          "atualizado_em",
+          "calibracao",
+          "componente",
+          "condicao_ensaio",
+          "criado_em",
+          "durante_ensaio_de_condicao",
+          "encerrado_em",
+          "ensaio_id",
+          "estado",
+          "explicacao",
+          "firmware_versao",
+          "id",
+          "janela_id",
+          "maquina",
+          "maquina_id",
+          "metrica",
+          "motivo_supressao",
+          "nivel",
+          "normalizado_em",
+          "ordem_servico_id",
+          "pior_nivel",
+          "pior_z",
+          "ponto",
+          "prioridade",
+          "reconhecido_em",
+          "reconhecido_por",
+          "referencia_versao",
+          "simulado",
+          "suprimido_ate",
+          "suprimido_por",
+          "tipo",
+          "valor",
+          "z"
+        ]
+      },
       "AlteracaoEnsaioResposta": {
         "properties": {
           "alterado_em": {
@@ -164,7 +457,11 @@
       "CelulaReferenciaResposta": {
         "properties": {
           "calibracao": {
-            "type": "string"
+            "description": "Calibração das janelas usadas; nula quando o firmware não informava",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "etapa": {
             "example": "T3",
@@ -172,10 +469,16 @@
           },
           "ferramenta_id": {
             "format": "int64",
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ]
           },
           "firmware_versoes": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "marcha_rpm": {
             "description": "0 no T0; senão a rotação nominal da marcha",
@@ -184,7 +487,10 @@
           },
           "material_id": {
             "format": "int64",
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ]
           },
           "mediana": {
             "format": "double",
@@ -217,7 +523,10 @@
           "piso_ruido": {
             "description": "p95 da medida no T0 do ponto; nulo quando não medido",
             "format": "double",
-            "type": "number"
+            "type": [
+              "number",
+              "null"
+            ]
           },
           "ponto": {
             "example": "B",
@@ -440,6 +749,74 @@
           "mensagem",
           "status",
           "timestamp"
+        ]
+      },
+      "Deriva": {
+        "properties": {
+          "dias": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "fracao_maxima": {
+            "format": "double",
+            "type": "number"
+          },
+          "habilitada": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "dias",
+          "fracao_maxima",
+          "habilitada"
+        ]
+      },
+      "DiagnosticoAlarmeResposta": {
+        "properties": {
+          "avisos": {
+            "description": "Avisos prontos (sem piso de ruído, recalcular a referência...)",
+            "items": {
+              "description": "Avisos prontos (sem piso de ruído, recalcular a referência...)",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "indicadores": {
+            "$ref": "#/components/schemas/IndicadoresAlarme"
+          },
+          "limites": {
+            "$ref": "#/components/schemas/LimitesResposta"
+          },
+          "piso_ruido_medido": {
+            "description": "false: não há T0 gravado; o σ efetivo usa só a fração mínima da mediana",
+            "type": "boolean"
+          },
+          "pontos": {
+            "items": {
+              "$ref": "#/components/schemas/SaudePonto"
+            },
+            "type": "array"
+          },
+          "referencia_versao": {
+            "description": "Número da versão da referência em uso; nulo sem referência",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "simulado": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "avisos",
+          "indicadores",
+          "limites",
+          "piso_ruido_medido",
+          "pontos",
+          "referencia_versao",
+          "simulado"
         ]
       },
       "DispositivoResposta": {
@@ -736,6 +1113,45 @@
           "ocorrido_em"
         ]
       },
+      "IndicadoresAlarme": {
+        "description": "Últimas 24 h, sem os alertas de ensaio de condição",
+        "properties": {
+          "alertas_por_hora": {
+            "description": "Média de alertas por hora nas últimas 24 h",
+            "format": "double",
+            "type": "number"
+          },
+          "parados": {
+            "description": "Alertas ativos há mais de 24 h",
+            "format": "int64",
+            "type": "integer"
+          },
+          "pior_dez_minutos": {
+            "description": "Maior número de alertas numa janela de 10 min",
+            "format": "int64",
+            "type": "integer"
+          },
+          "pontos_repetitivos": {
+            "description": "Pontos em que o mesmo alerta reabriu 3 vezes ou mais em 10 min",
+            "items": {
+              "description": "Pontos em que o mesmo alerta reabriu 3 vezes ou mais em 10 min",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "suprimidos": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "alertas_por_hora",
+          "parados",
+          "pior_dez_minutos",
+          "pontos_repetitivos",
+          "suprimidos"
+        ]
+      },
       "IngestaoResposta": {
         "properties": {
           "duplicada": {
@@ -984,6 +1400,24 @@
           "rotacao_rpm",
           "saturou",
           "simulado"
+        ]
+      },
+      "LimitesResposta": {
+        "properties": {
+          "alarme": {
+            "$ref": "#/components/schemas/PropriedadesAlarme"
+          },
+          "os": {
+            "$ref": "#/components/schemas/PropriedadesOs"
+          },
+          "referencia": {
+            "$ref": "#/components/schemas/PropriedadesReferencia"
+          }
+        },
+        "required": [
+          "alarme",
+          "os",
+          "referencia"
         ]
       },
       "LocalResposta": {
@@ -1261,6 +1695,66 @@
           "modo_rapido_ate"
         ]
       },
+      "Mudanca": {
+        "properties": {
+          "acao": {
+            "enum": [
+              "abriu",
+              "piorou",
+              "melhorou",
+              "normalizou",
+              "reconhecido",
+              "suprimido",
+              "supressao_encerrada",
+              "encerrado"
+            ],
+            "type": "string"
+          },
+          "detalhe": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "estado": {
+            "enum": [
+              "ativo_nao_reconhecido",
+              "ativo_reconhecido",
+              "normalizado_nao_reconhecido",
+              "encerrado",
+              "suprimido"
+            ],
+            "type": "string"
+          },
+          "nivel": {
+            "enum": [
+              "normal",
+              "atencao",
+              "alarme"
+            ],
+            "type": "string"
+          },
+          "ocorrido_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "usuario": {
+            "description": "Nome de quem agiu; nulo quando foi a regra",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "acao",
+          "detalhe",
+          "estado",
+          "nivel",
+          "ocorrido_em",
+          "usuario"
+        ]
+      },
       "NovoEnsaioRequisicao": {
         "properties": {
           "avanco_alvo": {
@@ -1442,6 +1936,39 @@
           "nome",
           "papel",
           "senha"
+        ]
+      },
+      "PaginaAlertaResposta": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/AlertaResposta"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
         ]
       },
       "PaginaAlteracaoEnsaioResposta": {
@@ -1950,6 +2477,93 @@
           "papel"
         ]
       },
+      "PropriedadesAlarme": {
+        "properties": {
+          "atraso_s": {
+            "format": "double",
+            "type": "number"
+          },
+          "histerese_z": {
+            "format": "double",
+            "type": "number"
+          },
+          "instrumento_s": {
+            "format": "double",
+            "type": "number"
+          },
+          "saida_s": {
+            "format": "double",
+            "type": "number"
+          },
+          "sinal_fracao": {
+            "format": "double",
+            "type": "number"
+          },
+          "z_alarme": {
+            "format": "double",
+            "type": "number"
+          },
+          "z_atencao": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "atraso_s",
+          "histerese_z",
+          "instrumento_s",
+          "saida_s",
+          "sinal_fracao",
+          "z_alarme",
+          "z_atencao"
+        ]
+      },
+      "PropriedadesOs": {
+        "properties": {
+          "alarme_continuo_s": {
+            "format": "double",
+            "type": "number"
+          },
+          "severidade_limite": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "alarme_continuo_s",
+          "severidade_limite"
+        ]
+      },
+      "PropriedadesReferencia": {
+        "properties": {
+          "amostras_min_fracao": {
+            "format": "double",
+            "type": "number"
+          },
+          "deriva": {
+            "$ref": "#/components/schemas/Deriva"
+          },
+          "min_janelas": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "sigma_min_fracao": {
+            "format": "double",
+            "type": "number"
+          },
+          "tolerancia_marcha": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "amostras_min_fracao",
+          "deriva",
+          "min_janelas",
+          "sigma_min_fracao",
+          "tolerancia_marcha"
+        ]
+      },
       "ReceitaRequisicao": {
         "description": "Campos da receita do corte e a observação. Só os presentes no corpo mudam; null apaga.",
         "properties": {
@@ -2072,7 +2686,14 @@
             "type": "boolean"
           },
           "versao": {
-            "$ref": "#/components/schemas/VersaoReferenciaResposta"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersaoReferenciaResposta"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -2162,6 +2783,64 @@
           "rotacao_media_rpm",
           "simulado",
           "ultima_medicao"
+        ]
+      },
+      "SaudePonto": {
+        "properties": {
+          "deriva_janelas": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "deriva_pct": {
+            "description": "Diferença % entre o RMS típico das janelas NORMAL de uso das últimas 24 h (|z| abaixo do limite de atenção) e o da referência; nulo sem janelas",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "janelas_calibracao_diferente": {
+            "description": "Janelas das últimas 24 h com calibração diferente da referência",
+            "format": "int64",
+            "type": "integer"
+          },
+          "piso_ruido_rms": {
+            "description": "Piso de ruído do RMS (p95 do T0), em g; nulo quando não medido",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "ponto": {
+            "example": "B",
+            "type": "string"
+          },
+          "severidade_desde_os": {
+            "description": "Severidade desde a última OS do ponto (abre OS ao passar do limite)",
+            "format": "double",
+            "type": "number"
+          },
+          "severidade_hoje": {
+            "description": "Severidade acumulada hoje (UTC), em z·s",
+            "format": "double",
+            "type": "number"
+          },
+          "severidade_semana": {
+            "description": "Severidade acumulada nos últimos 7 dias, em z·s",
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "deriva_janelas",
+          "deriva_pct",
+          "janelas_calibracao_diferente",
+          "piso_ruido_rms",
+          "ponto",
+          "severidade_desde_os",
+          "severidade_hoje",
+          "severidade_semana"
         ]
       },
       "SerieAgregadaResposta": {
@@ -2335,6 +3014,28 @@
         },
         "required": [
           "timeout"
+        ]
+      },
+      "SupressaoRequisicao": {
+        "properties": {
+          "minutos": {
+            "description": "Prazo em minutos (1 a 10080, uma semana)",
+            "example": 60,
+            "format": "int32",
+            "maximum": 10080,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "motivo": {
+            "example": "Máquina ao lado em manutenção fazendo o C vibrar",
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string"
+          }
+        },
+        "required": [
+          "minutos",
+          "motivo"
         ]
       },
       "TelemetriaPontoResposta": {
@@ -2663,7 +3364,10 @@
         "properties": {
           "autor": {
             "description": "Nome de quem recalculou",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "celulas": {
             "format": "int32",
@@ -2748,6 +3452,531 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/alarmes/limites": {
+      "get": {
+        "operationId": "limites",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimitesResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          }
+        },
+        "summary": "Limites em uso da referência, do alarme e da OS (todos PROPOSTA a confirmar)",
+        "tags": [
+          "Alertas"
+        ]
+      }
+    },
+    "/api/v1/alertas": {
+      "get": {
+        "operationId": "listar_3",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "maquina_id",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "estado",
+            "required": false,
+            "schema": {
+              "enum": [
+                "ativo_nao_reconhecido",
+                "ativo_reconhecido",
+                "normalizado_nao_reconhecido",
+                "encerrado",
+                "suprimido"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Código do ponto (A, B, C)",
+            "in": "query",
+            "name": "ponto",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "baixa ou alta",
+            "in": "query",
+            "name": "prioridade",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "maquina ou instrumento",
+            "in": "query",
+            "name": "tipo",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Abertos a partir deste instante (ISO-8601)",
+            "in": "query",
+            "name": "de",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Abertos antes deste instante (ISO-8601)",
+            "in": "query",
+            "name": "ate",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaAlertaResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          }
+        },
+        "summary": "Lista alertas, não reconhecidos primeiro, paginado e com filtros",
+        "tags": [
+          "Alertas"
+        ]
+      }
+    },
+    "/api/v1/alertas/{id}": {
+      "get": {
+        "operationId": "detalhe",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertaDetalheResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Detalha um alerta, com o histórico de cada mudança de estado",
+        "tags": [
+          "Alertas"
+        ]
+      }
+    },
+    "/api/v1/alertas/{id}/cancelar-supressao": {
+      "post": {
+        "operationId": "cancelarSupressao",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertaResposta"
+                }
+              }
+            },
+            "description": "Supressão cancelada"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Alerta não está suprimido"
+          }
+        },
+        "summary": "Cancela a supressão antes do prazo (só ADMIN)",
+        "tags": [
+          "Alertas"
+        ]
+      }
+    },
+    "/api/v1/alertas/{id}/reconhecer": {
+      "post": {
+        "description": "Não apaga nem conserta: ativo vira reconhecido; normalizado não reconhecido vira encerrado.",
+        "operationId": "reconhecer",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertaResposta"
+                }
+              }
+            },
+            "description": "Alerta reconhecido"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Alerta já reconhecido"
+          }
+        },
+        "summary": "Reconhece um alerta (\"eu vi\"); qualquer usuário",
+        "tags": [
+          "Alertas"
+        ]
+      }
+    },
+    "/api/v1/alertas/{id}/suprimir": {
+      "post": {
+        "operationId": "suprimir",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupressaoRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertaResposta"
+                }
+              }
+            },
+            "description": "Alerta suprimido"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Alerta não está ativo"
+          }
+        },
+        "summary": "Suprime um alerta ativo, com motivo e prazo (só ADMIN)",
+        "tags": [
+          "Alertas"
+        ]
+      }
+    },
     "/api/v1/auth/eu": {
       "get": {
         "description": "Serve para o painel validar a sessão ao abrir. Token vencido ou de usuário desativado responde 401.",
@@ -4169,6 +5398,87 @@
         ]
       }
     },
+    "/api/v1/maquinas/{id}/alarmes/diagnostico": {
+      "get": {
+        "operationId": "diagnostico",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticoAlarmeResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Diagnóstico da regra de alarme: indicadores, severidade, deriva, piso e calibração",
+        "tags": [
+          "Alertas"
+        ]
+      }
+    },
     "/api/v1/maquinas/{id}/avaliacao": {
       "get": {
         "description": "Estado da máquina (pior entre os pontos) e de cada ponto, com o z, o típico e a diferença em % de cada medida. Ponto sem referência vem com situacao sem_referencia.",
@@ -4812,7 +6122,7 @@
     },
     "/api/v1/maquinas/{id}/eventos": {
       "get": {
-        "description": "Fluxo text/event-stream. O token vai no cabeçalho Authorization, nunca na URL. Eventos:\n\n- `janela`: janela nova gravada com medido_em de até 30 s atrás, com o corpo de JanelaResposta (reenvio não gera evento);\n- `recuperacao`: janelas mais antigas que 30 s (a fila do dispositivo sendo esvaziada depois de uma queda de rede), juntadas no máximo a cada 5 s por máquina, com o corpo de RecuperacaoEvento (de, ate, quantidade); as janelas estão gravadas e aparecem nas consultas;\n- `ensaio`: ensaio aberto, encerrado ou descartado, com o corpo de EnsaioEvento (só ADMIN e TECNICO);\n- `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o primeiro evento de toda conexão, com o estado atual.\n\nLinhas de comentário (`:batimento`) chegam a cada 15 s sem evento. A conexão é encerrada pelo servidor depois de 30 min; o cliente deve reconectar. Cliente que não consome é descartado.\n",
+        "description": "Fluxo text/event-stream. O token vai no cabeçalho Authorization, nunca na URL. Eventos:\n\n- `janela`: janela nova gravada com medido_em de até 30 s atrás, com o corpo de JanelaResposta (reenvio não gera evento);\n- `recuperacao`: janelas mais antigas que 30 s (a fila do dispositivo sendo esvaziada depois de uma queda de rede), juntadas no máximo a cada 5 s por máquina, com o corpo de RecuperacaoEvento (de, ate, quantidade); as janelas estão gravadas e aparecem nas consultas;\n- `ensaio`: ensaio aberto, encerrado ou descartado, com o corpo de EnsaioEvento (só ADMIN e TECNICO);\n- `alerta`: alerta aberto, piorado, normalizado, reconhecido, suprimido ou encerrado, com o corpo de AlertaEvento;\n- `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o primeiro evento de toda conexão, com o estado atual.\n\nLinhas de comentário (`:batimento`) chegam a cada 15 s sem evento. A conexão é encerrada pelo servidor depois de 30 min; o cliente deve reconectar. Cliente que não consome é descartado.\n",
         "operationId": "eventos",
         "parameters": [
           {
@@ -6582,6 +7892,10 @@
     }
   ],
   "tags": [
+    {
+      "description": "Alertas no padrão ISA-18.2 e diagnóstico da regra de alarme",
+      "name": "Alertas"
+    },
     {
       "description": "Máquinas, pontos de medição e dispositivos. Qualquer usuário autenticado.",
       "name": "Máquinas"

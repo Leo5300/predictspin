@@ -207,6 +207,20 @@ class EventosServiceTest {
     }
 
     @Test
+    void alertaChegaParaTodosDaMesmaFonte() {
+        EmissorDeTeste operador = assinar(10, false, null);
+        EmissorDeTeste soReal = assinar(11, true, false);
+
+        servico.publicarAlerta(MAQUINA, true, java.util.Map.of("acao", "abriu"));
+        servico.publicarModoRapido(new ModoRapidoResposta(MAQUINA, false, null));
+
+        esperar(() -> recebeu(operador, "event:alerta") && recebeu(soReal, "\"ativo\":false"));
+        assertThat(operador.enviados.stream().filter(e -> e.contains("event:alerta")).findFirst().orElseThrow())
+                .contains("\"acao\":\"abriu\"");
+        assertThat(recebeu(soReal, "event:alerta")).isFalse();
+    }
+
+    @Test
     void eventoMarcadoSoChegaParaQuemPodeVerEnsaiosDaMesmaFonte() {
         EmissorDeTeste tecnico = assinar(10, true, null);
         EmissorDeTeste soReal = assinar(11, true, false);

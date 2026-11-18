@@ -4,6 +4,111 @@
  */
 
 export interface paths {
+    "/api/v1/alarmes/limites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Limites em uso da referência, do alarme e da OS (todos PROPOSTA a confirmar) */
+        get: operations["limites"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/alertas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista alertas, não reconhecidos primeiro, paginado e com filtros */
+        get: operations["listar_3"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/alertas/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalha um alerta, com o histórico de cada mudança de estado */
+        get: operations["detalhe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/alertas/{id}/cancelar-supressao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancela a supressão antes do prazo (só ADMIN) */
+        post: operations["cancelarSupressao"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/alertas/{id}/reconhecer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reconhece um alerta ("eu vi"); qualquer usuário
+         * @description Não apaga nem conserta: ativo vira reconhecido; normalizado não reconhecido vira encerrado.
+         */
+        post: operations["reconhecer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/alertas/{id}/suprimir": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suprime um alerta ativo, com motivo e prazo (só ADMIN) */
+        post: operations["suprimir"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/eu": {
         parameters: {
             query?: never;
@@ -299,6 +404,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/maquinas/{id}/alarmes/diagnostico": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Diagnóstico da regra de alarme: indicadores, severidade, deriva, piso e calibração */
+        get: operations["diagnostico"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/maquinas/{id}/avaliacao": {
         parameters: {
             query?: never;
@@ -411,6 +533,7 @@ export interface paths {
          *     - `janela`: janela nova gravada com medido_em de até 30 s atrás, com o corpo de JanelaResposta (reenvio não gera evento);
          *     - `recuperacao`: janelas mais antigas que 30 s (a fila do dispositivo sendo esvaziada depois de uma queda de rede), juntadas no máximo a cada 5 s por máquina, com o corpo de RecuperacaoEvento (de, ate, quantidade); as janelas estão gravadas e aparecem nas consultas;
          *     - `ensaio`: ensaio aberto, encerrado ou descartado, com o corpo de EnsaioEvento (só ADMIN e TECNICO);
+         *     - `alerta`: alerta aberto, piorado, normalizado, reconhecido, suprimido ou encerrado, com o corpo de AlertaEvento;
          *     - `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o primeiro evento de toda conexão, com o estado atual.
          *
          *     Linhas de comentário (`:batimento`) chegam a cada 15 s sem evento. A conexão é encerrada pelo servidor depois de 30 min; o cliente deve reconectar. Cliente que não consome é descartado.
@@ -705,6 +828,108 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AlertaDetalheResposta: {
+            alerta: components["schemas"]["AlertaResposta"];
+            historico: components["schemas"]["Mudanca"][];
+        };
+        AlertaEvento: {
+            /**
+             * @description O que aconteceu
+             * @enum {string}
+             */
+            acao: "abriu" | "piorou" | "normalizou" | "reconhecido" | "suprimido" | "supressao_encerrada" | "encerrado";
+            alerta: components["schemas"]["AlertaResposta"];
+        };
+        AlertaResposta: {
+            /** @description O que conferir primeiro (orientação de inspeção, não diagnóstico) */
+            acao_recomendada: string;
+            /** Format: date-time */
+            atualizado_em: string | null;
+            calibracao: string | null;
+            /** @description Componente provável do ponto */
+            componente: string | null;
+            /** @description Condição do ensaio aberto quando o alerta nasceu */
+            condicao_ensaio: string | null;
+            /** Format: date-time */
+            criado_em: string;
+            /** @description true: aberto durante ensaio de condição; não abre OS nem entra nos indicadores */
+            durante_ensaio_de_condicao: boolean;
+            /** Format: date-time */
+            encerrado_em: string | null;
+            /** Format: int64 */
+            ensaio_id: number | null;
+            /** @enum {string} */
+            estado: "ativo_nao_reconhecido" | "ativo_reconhecido" | "normalizado_nao_reconhecido" | "encerrado" | "suprimido";
+            explicacao: string | null;
+            firmware_versao: string | null;
+            /** Format: int64 */
+            id: number;
+            /**
+             * Format: int64
+             * @description Janela de origem
+             */
+            janela_id: number;
+            /** @example TORNO-01 */
+            maquina: string;
+            /** Format: int64 */
+            maquina_id: number;
+            /**
+             * @description Medida dominante (a de maior z)
+             * @example rms_g
+             */
+            metrica: string;
+            motivo_supressao: string | null;
+            /**
+             * @description Severidade atual
+             * @enum {string}
+             */
+            nivel: "normal" | "atencao" | "alarme";
+            /** Format: date-time */
+            normalizado_em: string | null;
+            /**
+             * Format: int64
+             * @description OS aberta a partir deste alerta
+             */
+            ordem_servico_id: number | null;
+            /**
+             * @description Pior severidade atingida
+             * @enum {string}
+             */
+            pior_nivel: "normal" | "atencao" | "alarme";
+            /** Format: double */
+            pior_z: number | null;
+            /** @example B */
+            ponto: string;
+            /**
+             * @description ATENÇÃO e instrumento = baixa; ALARME = alta
+             * @enum {string}
+             */
+            prioridade: "baixa" | "alta";
+            /** Format: date-time */
+            reconhecido_em: string | null;
+            reconhecido_por: string | null;
+            /**
+             * Format: int32
+             * @description Número da versão da referência usada
+             */
+            referencia_versao: number | null;
+            simulado: boolean;
+            /** Format: date-time */
+            suprimido_ate: string | null;
+            suprimido_por: string | null;
+            /**
+             * @description maquina: desvio da vibração; instrumento: sensor solto, caído ou com defeito
+             * @enum {string}
+             */
+            tipo: "maquina" | "instrumento";
+            /** Format: double */
+            valor: number;
+            /**
+             * Format: double
+             * @description z da medida dominante na última atualização
+             */
+            z: number | null;
+        };
         AlteracaoEnsaioResposta: {
             /** Format: date-time */
             alterado_em: string;
@@ -758,19 +983,20 @@ export interface components {
             mensagem: string;
         };
         CelulaReferenciaResposta: {
-            calibracao: string;
+            /** @description Calibração das janelas usadas; nula quando o firmware não informava */
+            calibracao: string | null;
             /** @example T3 */
             etapa: string;
             /** Format: int64 */
-            ferramenta_id: number;
-            firmware_versoes: string;
+            ferramenta_id: number | null;
+            firmware_versoes: string | null;
             /**
              * Format: int32
              * @description 0 no T0; senão a rotação nominal da marcha
              */
             marcha_rpm: number;
             /** Format: int64 */
-            material_id: number;
+            material_id: number | null;
             /** Format: double */
             mediana: number;
             /** @enum {string} */
@@ -785,7 +1011,7 @@ export interface components {
              * Format: double
              * @description p95 da medida no T0 do ponto; nulo quando não medido
              */
-            piso_ruido: number;
+            piso_ruido: number | null;
             /** @example B */
             ponto: string;
             /** @description true: célula de uma receita no T3; false: T0, T1 ou T3 genérica */
@@ -864,6 +1090,28 @@ export interface components {
             /** Format: date-time */
             timestamp: string;
         };
+        Deriva: {
+            /** Format: int32 */
+            dias: number;
+            /** Format: double */
+            fracao_maxima: number;
+            habilitada: boolean;
+        };
+        DiagnosticoAlarmeResposta: {
+            /** @description Avisos prontos (sem piso de ruído, recalcular a referência...) */
+            avisos: string[];
+            indicadores: components["schemas"]["IndicadoresAlarme"];
+            limites: components["schemas"]["LimitesResposta"];
+            /** @description false: não há T0 gravado; o σ efetivo usa só a fração mínima da mediana */
+            piso_ruido_medido: boolean;
+            pontos: components["schemas"]["SaudePonto"][];
+            /**
+             * Format: int32
+             * @description Número da versão da referência em uso; nulo sem referência
+             */
+            referencia_versao: number | null;
+            simulado: boolean;
+        };
         DispositivoResposta: {
             ativo: boolean;
             firmware_versao: string | null;
@@ -938,6 +1186,28 @@ export interface components {
             nota: string | null;
             /** Format: date-time */
             ocorrido_em: string;
+        };
+        /** @description Últimas 24 h, sem os alertas de ensaio de condição */
+        IndicadoresAlarme: {
+            /**
+             * Format: double
+             * @description Média de alertas por hora nas últimas 24 h
+             */
+            alertas_por_hora: number;
+            /**
+             * Format: int64
+             * @description Alertas ativos há mais de 24 h
+             */
+            parados: number;
+            /**
+             * Format: int64
+             * @description Maior número de alertas numa janela de 10 min
+             */
+            pior_dez_minutos: number;
+            /** @description Pontos em que o mesmo alerta reabriu 3 vezes ou mais em 10 min */
+            pontos_repetitivos: string[];
+            /** Format: int64 */
+            suprimidos: number;
         };
         IngestaoResposta: {
             /** @description true quando a janela já tinha sido recebida: nada foi gravado de novo */
@@ -1037,6 +1307,11 @@ export interface components {
             saturou: boolean;
             /** @description true quando a janela veio de dispositivo simulado */
             simulado: boolean;
+        };
+        LimitesResposta: {
+            alarme: components["schemas"]["PropriedadesAlarme"];
+            os: components["schemas"]["PropriedadesOs"];
+            referencia: components["schemas"]["PropriedadesReferencia"];
         };
         LocalResposta: {
             /** Format: int64 */
@@ -1142,6 +1417,19 @@ export interface components {
              */
             modo_rapido_ate: string | null;
         };
+        Mudanca: {
+            /** @enum {string} */
+            acao: "abriu" | "piorou" | "melhorou" | "normalizou" | "reconhecido" | "suprimido" | "supressao_encerrada" | "encerrado";
+            detalhe: string | null;
+            /** @enum {string} */
+            estado: "ativo_nao_reconhecido" | "ativo_reconhecido" | "normalizado_nao_reconhecido" | "encerrado" | "suprimido";
+            /** @enum {string} */
+            nivel: "normal" | "atencao" | "alarme";
+            /** Format: date-time */
+            ocorrido_em: string;
+            /** @description Nome de quem agiu; nulo quando foi a regra */
+            usuario: string | null;
+        };
         NovoEnsaioRequisicao: {
             /**
              * @description Avanço alvo em mm/volta (opcional)
@@ -1230,6 +1518,17 @@ export interface components {
             /** @enum {string} */
             papel: "ADMIN" | "TECNICO" | "OPERADOR";
             senha: string;
+        };
+        PaginaAlertaResposta: {
+            conteudo: components["schemas"]["AlertaResposta"][];
+            /** Format: int32 */
+            pagina: number;
+            /** Format: int32 */
+            tamanho: number;
+            /** Format: int64 */
+            total_elementos: number;
+            /** Format: int32 */
+            total_paginas: number;
         };
         PaginaAlteracaoEnsaioResposta: {
             conteudo: components["schemas"]["AlteracaoEnsaioResposta"][];
@@ -1393,6 +1692,39 @@ export interface components {
             /** @enum {string} */
             papel: "acionamento" | "ferramenta" | "estrutura";
         };
+        PropriedadesAlarme: {
+            /** Format: double */
+            atraso_s: number;
+            /** Format: double */
+            histerese_z: number;
+            /** Format: double */
+            instrumento_s: number;
+            /** Format: double */
+            saida_s: number;
+            /** Format: double */
+            sinal_fracao: number;
+            /** Format: double */
+            z_alarme: number;
+            /** Format: double */
+            z_atencao: number;
+        };
+        PropriedadesOs: {
+            /** Format: double */
+            alarme_continuo_s: number;
+            /** Format: double */
+            severidade_limite: number;
+        };
+        PropriedadesReferencia: {
+            /** Format: double */
+            amostras_min_fracao: number;
+            deriva: components["schemas"]["Deriva"];
+            /** Format: int32 */
+            min_janelas: number;
+            /** Format: double */
+            sigma_min_fracao: number;
+            /** Format: double */
+            tolerancia_marcha: number;
+        };
         /** @description Campos da receita do corte e a observação. Só os presentes no corpo mudam; null apaga. */
         ReceitaRequisicao: {
             /**
@@ -1460,7 +1792,7 @@ export interface components {
             /** @description false: não há T0 gravado; o σ efetivo usa só a fração mínima da mediana */
             piso_ruido_medido: boolean;
             simulado: boolean;
-            versao: components["schemas"]["VersaoReferenciaResposta"];
+            versao: components["schemas"]["VersaoReferenciaResposta"] | null;
         };
         ResumoEnsaioResposta: {
             aberto: boolean;
@@ -1491,6 +1823,42 @@ export interface components {
             simulado: boolean;
             /** Format: date-time */
             ultima_medicao: string | null;
+        };
+        SaudePonto: {
+            /** Format: int32 */
+            deriva_janelas: number;
+            /**
+             * Format: double
+             * @description Diferença % entre o RMS típico das janelas NORMAL de uso das últimas 24 h (|z| abaixo do limite de atenção) e o da referência; nulo sem janelas
+             */
+            deriva_pct: number | null;
+            /**
+             * Format: int64
+             * @description Janelas das últimas 24 h com calibração diferente da referência
+             */
+            janelas_calibracao_diferente: number;
+            /**
+             * Format: double
+             * @description Piso de ruído do RMS (p95 do T0), em g; nulo quando não medido
+             */
+            piso_ruido_rms: number | null;
+            /** @example B */
+            ponto: string;
+            /**
+             * Format: double
+             * @description Severidade desde a última OS do ponto (abre OS ao passar do limite)
+             */
+            severidade_desde_os: number;
+            /**
+             * Format: double
+             * @description Severidade acumulada hoje (UTC), em z·s
+             */
+            severidade_hoje: number;
+            /**
+             * Format: double
+             * @description Severidade acumulada nos últimos 7 dias, em z·s
+             */
+            severidade_semana: number;
         };
         SerieAgregadaResposta: {
             /** Format: date-time */
@@ -1574,6 +1942,16 @@ export interface components {
         SseEmitter: {
             /** Format: int64 */
             timeout: number | null;
+        };
+        SupressaoRequisicao: {
+            /**
+             * Format: int32
+             * @description Prazo em minutos (1 a 10080, uma semana)
+             * @example 60
+             */
+            minutos: number;
+            /** @example Máquina ao lado em manutenção fazendo o C vibrar */
+            motivo: string;
         };
         TelemetriaPontoResposta: {
             /** Format: double */
@@ -1718,7 +2096,7 @@ export interface components {
         };
         VersaoReferenciaResposta: {
             /** @description Nome de quem recalculou */
-            autor: string;
+            autor: string | null;
             /** Format: int32 */
             celulas: number;
             /** Format: int32 */
@@ -1757,6 +2135,370 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    limites: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LimitesResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    listar_3: {
+        parameters: {
+            query?: {
+                maquina_id?: number;
+                estado?: "ativo_nao_reconhecido" | "ativo_reconhecido" | "normalizado_nao_reconhecido" | "encerrado" | "suprimido";
+                /** @description Código do ponto (A, B, C) */
+                ponto?: string;
+                /** @description baixa ou alta */
+                prioridade?: string;
+                /** @description maquina ou instrumento */
+                tipo?: string;
+                simulado?: boolean;
+                /** @description Abertos a partir deste instante (ISO-8601) */
+                de?: string;
+                /** @description Abertos antes deste instante (ISO-8601) */
+                ate?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaAlertaResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    detalhe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertaDetalheResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    cancelarSupressao: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Supressão cancelada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertaResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Alerta não está suprimido */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    reconhecer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Alerta reconhecido */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertaResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Alerta já reconhecido */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    suprimir: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupressaoRequisicao"];
+            };
+        };
+        responses: {
+            /** @description Alerta suprimido */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertaResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Alerta não está ativo */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
     eu: {
         parameters: {
             query?: never;
@@ -2774,6 +3516,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MaquinaResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    diagnostico: {
+        parameters: {
+            query?: {
+                simulado?: boolean;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagnosticoAlarmeResposta"];
                 };
             };
             /** @description Requisição inválida */

@@ -107,6 +107,13 @@ ps:
     instrumento-s: 30
     # "sinal sumido": RMS e 1X abaixo de 50% do típico
     sinal-fracao: 0.5
+    # de quanto em quanto tempo a API confere supressões vencidas
+    verificar-supressao: 30s
+  os:
+    # alerta de máquina em ALARME por 120 s seguidos abre OS
+    alarme-continuo-s: 120
+    # ou severidade acumulada do ponto acima de 600 z·s desde a última OS (≈ 5 min com z = 5)
+    severidade-limite: 600
 
 springdoc:
   # As respostas são JSON; sem isto o documento diz "*/*" e o cliente gerado perde o tipo

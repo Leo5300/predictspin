@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,11 +58,13 @@ public class AvaliacaoService {
     private final MaquinaRepository maquinas;
     private final PropriedadesReferencia propRef;
     private final PropriedadesAlarme prop;
+    private final ApplicationEventPublisher anuncios;
     private final Map<Long, List<Integer>> marchasPorMaquina = new ConcurrentHashMap<>();
 
     public AvaliacaoService(AvaliacaoRepository repositorio, ReferenciaService referencias,
                             ReferenciaRepository celulas, MaquinaRepository maquinas, PropriedadesReferencia propRef,
-                            PropriedadesAlarme prop) {
+                            PropriedadesAlarme prop, ApplicationEventPublisher anuncios) {
+        this.anuncios = anuncios;
         this.repositorio = repositorio;
         this.referencias = referencias;
         this.celulas = celulas;
@@ -81,7 +84,7 @@ public class AvaliacaoService {
     }
 
     /** Ensaio aberto com condição diferente de "normal" (gravação de falha provocada). */
-    static boolean deCondicao(EnsaioDaJanela ensaio) {
+    public static boolean deCondicao(EnsaioDaJanela ensaio) {
         return ensaio != null && !"normal".equals(ensaio.condicao());
     }
 
@@ -189,6 +192,7 @@ public class AvaliacaoService {
         if (!somas.isEmpty()) {
             repositorio.somarSeveridade(j.maquinaId(), j.simulado(), somas);
         }
+        anuncios.publishEvent(new JanelaAvaliada(resultado));
         repositorio.gravarEstados(estados.values());
         return resultado;
     }

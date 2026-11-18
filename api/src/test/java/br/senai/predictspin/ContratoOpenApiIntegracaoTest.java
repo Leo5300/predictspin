@@ -28,7 +28,7 @@ import com.fasterxml.jackson.databind.JsonNode;
  * (/v3/api-docs) declara para a mesma rota e o mesmo status. O painel gera o cliente a partir desse
  * documento; se um lado mudar sem o outro, este teste quebra.
  */
-class ContratoOpenApiIntegracaoTest extends IntegracaoBase {
+class ContratoOpenApiIntegracaoTest extends AlarmeIntegracaoBase {
 
     private JsonNode documento;
     private String admin;
@@ -199,6 +199,38 @@ class ContratoOpenApiIntegracaoTest extends IntegracaoBase {
                 Long.class, maquinaId);
         conferir("/api/v1/pontos/{id}/telemetria", "get", 200,
                 mvc.perform(comToken(get("/api/v1/pontos/" + pontoA + "/telemetria"), admin)));
+    }
+
+    @Test
+    void referenciaAvaliacaoAlertasEDiagnostico() throws Exception {
+        String rotaRef = "/api/v1/maquinas/" + maquinaId + "/referencias";
+        conferir("/api/v1/maquinas/{id}/referencias", "get", 200,
+                mvc.perform(comToken(get(rotaRef + "?simulado=true"), admin)));
+        prepararReferencia(admin);
+        conferir("/api/v1/maquinas/{id}/referencias/recalcular", "post", 201,
+                mvc.perform(comToken(post(rotaRef + "/recalcular?simulado=true"), admin)));
+        conferir("/api/v1/maquinas/{id}/referencias", "get", 200,
+                mvc.perform(comToken(get(rotaRef + "?simulado=true"), admin)));
+        conferir("/api/v1/maquinas/{id}/referencias/versoes", "get", 200,
+                mvc.perform(comToken(get(rotaRef + "/versoes?simulado=true"), admin)));
+
+        enviarSequencia(Instant.now().truncatedTo(ChronoUnit.SECONDS), 3, 1120, SEVERO);
+        conferir("/api/v1/maquinas/{id}/avaliacao", "get", 200, mvc.perform(comToken(get("/api/v1/maquinas/"
+                + maquinaId + "/avaliacao?simulado=true"), admin)));
+        ResultActions lista = mvc.perform(comToken(get("/api/v1/alertas?simulado=true"), admin));
+        conferir("/api/v1/alertas", "get", 200, lista);
+        long id = corpo(lista).get("conteudo").get(0).get("id").asLong();
+        conferir("/api/v1/alertas/{id}/suprimir", "post", 200, mvc.perform(comToken(post("/api/v1/alertas/" + id
+                + "/suprimir"), admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"motivo\":\"contrato\",\"minutos\":5}")));
+        conferir("/api/v1/alertas/{id}/cancelar-supressao", "post", 200,
+                mvc.perform(comToken(post("/api/v1/alertas/" + id + "/cancelar-supressao"), admin)));
+        conferir("/api/v1/alertas/{id}/reconhecer", "post", 200,
+                mvc.perform(comToken(post("/api/v1/alertas/" + id + "/reconhecer"), admin)));
+        conferir("/api/v1/alertas/{id}", "get", 200, mvc.perform(comToken(get("/api/v1/alertas/" + id), admin)));
+        conferir("/api/v1/alarmes/limites", "get", 200, mvc.perform(comToken(get("/api/v1/alarmes/limites"), admin)));
+        conferir("/api/v1/maquinas/{id}/alarmes/diagnostico", "get", 200, mvc.perform(comToken(get(
+                "/api/v1/maquinas/" + maquinaId + "/alarmes/diagnostico?simulado=true"), admin)));
     }
 
     @Test

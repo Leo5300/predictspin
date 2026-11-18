@@ -18,6 +18,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import br.senai.predictspin.alerta.dto.AlertaEvento;
 import br.senai.predictspin.comum.ErroResposta;
 import br.senai.predictspin.eventos.dto.EnsaioEvento;
 import br.senai.predictspin.eventos.dto.RecuperacaoEvento;
@@ -54,7 +55,7 @@ public class OpenApiConfig {
 
     /** Esquemas que não são corpo de nenhuma rota JSON, mas que o cliente precisa conhecer. */
     private static final List<Class<?>> ESQUEMAS_EXTRAS = List.of(ErroResposta.class, EnsaioEvento.class,
-            RecuperacaoEvento.class);
+            RecuperacaoEvento.class, AlertaEvento.class);
 
     /** Marca interna de propriedade que pode não vir no JSON; é retirada antes de o documento sair. */
     private static final String EXTENSAO_OPCIONAL = "x-opcional";
@@ -130,7 +131,8 @@ public class OpenApiConfig {
 
     /** Propriedades que são outro esquema ($ref) e podem vir nulas, por esquema. */
     private static final Map<String, Set<String>> OBJETOS_NULAVEIS = Map.of(
-            "EnsaioResposta", Set.of("material_item", "ferramenta_item"));
+            "EnsaioResposta", Set.of("material_item", "ferramenta_item"),
+            "ReferenciaResposta", Set.of("versao"));
 
     /** No documento 3.1, "pode ser nulo" é o tipo "null" ao lado do tipo do valor. */
     private static void permitirNulo(Schema<?> propriedade) {

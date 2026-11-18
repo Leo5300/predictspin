@@ -48,6 +48,8 @@ public class EventosController {
                     uma queda de rede), juntadas no máximo a cada 5 s por máquina, com o corpo de RecuperacaoEvento \
                     (de, ate, quantidade); as janelas estão gravadas e aparecem nas consultas;
                     - `ensaio`: ensaio aberto, encerrado ou descartado, com o corpo de EnsaioEvento (só ADMIN e TECNICO);
+                    - `alerta`: alerta aberto, piorado, normalizado, reconhecido, suprimido ou encerrado, com o \
+                    corpo de AlertaEvento;
                     - `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o \
                     primeiro evento de toda conexão, com o estado atual.
 

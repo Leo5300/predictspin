@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import br.senai.predictspin.alerta.AlertaAlterado;
 import br.senai.predictspin.eventos.dto.EnsaioEvento;
 import br.senai.predictspin.maquina.ModoRapidoAlterado;
 import br.senai.predictspin.telemetria.EnsaioAlterado;
@@ -43,6 +44,11 @@ class OuvinteDeEventos {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     void aoMarcarEvento(EventoMarcadoGravado evento) {
         eventos.publicarEventoMarcado(evento.maquinaId(), evento.simulado(), evento.evento());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    void aoAlterarAlerta(AlertaAlterado evento) {
+        eventos.publicarAlerta(evento.maquinaId(), evento.simulado(), evento.evento());
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)

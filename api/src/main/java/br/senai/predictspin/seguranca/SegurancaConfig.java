@@ -91,6 +91,8 @@ public class SegurancaConfig {
                                 "/api/v1/maquinas/*/coleta/**").hasAnyRole("ADMIN", "TECNICO")
                         .requestMatchers(HttpMethod.POST, "/api/v1/maquinas/*/referencias/recalcular")
                         .hasAnyRole("ADMIN", "TECNICO")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/alertas/*/suprimir",
+                                "/api/v1/alertas/*/cancelar-supressao").hasRole("ADMIN")
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(o -> o
