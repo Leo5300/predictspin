@@ -128,6 +128,9 @@ class AlertaIntegracaoTest extends AlarmeIntegracaoBase {
         prepararReferencia(token);
         Instant t = enviarSequencia(Instant.now().truncatedTo(ChronoUnit.SECONDS), 3, 1120, A_ALARME);
         long id = listar(token, "").get("conteudo").get(0).get("id").asLong();
+        // prazo acima de ps.alarme.supressao-max-min (uma semana): 400 com a mensagem do limite
+        assertThat(acao(token, id, "suprimir", Map.of("motivo", "teste", "minutos", 10_081), 400)
+                .get("mensagem").asText()).contains("10080");
         JsonNode suprimido = acao(token, id, "suprimir",
                 Map.of("motivo", "Máquina ao lado em manutenção", "minutos", 60), 200);
         assertThat(suprimido.get("estado").asText()).isEqualTo("suprimido");
@@ -262,6 +265,13 @@ class AlertaIntegracaoTest extends AlarmeIntegracaoBase {
         assertThat(limites.get("alarme").get("atraso_s").asDouble()).isEqualTo(15);
         assertThat(limites.get("referencia").get("deriva").get("fracao_maxima").asDouble()).isEqualTo(0.3);
         assertThat(limites.get("os").get("alarme_continuo_s").asDouble()).isEqualTo(120);
+        // indicadores e supressão também vêm do application.yml (ps.alarme), nunca escritos no painel
+        assertThat(limites.get("alarme").get("indicadores_h").asInt()).isEqualTo(24);
+        assertThat(limites.get("alarme").get("rajada_min").asInt()).isEqualTo(10);
+        assertThat(limites.get("alarme").get("repetitivo_vezes").asInt()).isEqualTo(3);
+        assertThat(limites.get("alarme").get("parado_h").asInt()).isEqualTo(24);
+        assertThat(limites.get("alarme").get("supressao_opcoes_min").toString()).isEqualTo("[15,60,240,1440]");
+        assertThat(limites.get("alarme").get("supressao_max_min").asInt()).isEqualTo(10_080);
 
         JsonNode vazio = corpo(mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId
                 + "/alarmes/diagnostico?simulado=true"), token)));

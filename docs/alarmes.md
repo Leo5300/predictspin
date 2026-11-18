@@ -219,9 +219,14 @@ com a ação (abriu, piorou, normalizou, reconhecido, suprimido, supressao_encer
 
 ## Indicadores de desempenho (Diagnóstico)
 
-Últimas 24 h, sem os alertas de ensaio de condição: alertas por hora (média), pior janela de 10 min,
-pontos repetitivos (o mesmo alerta reabriu 3 vezes ou mais em 10 min), parados (ativos há mais de 24 h)
-e suprimidos. **Referência de leitura:** a EEMUA 191 e a ISA-18.2 citam cerca de 6 alarmes por hora
+Últimas `indicadores-h` horas (24), sem os alertas de ensaio de condição: alertas por hora (média), pior
+intervalo de `rajada-min` minutos (10), pontos repetitivos (o mesmo alerta aberto ou reaberto
+`repetitivo-vezes` vezes ou mais (3) num intervalo de `rajada-min`), parados (ativos há mais de
+`parado-h` horas, 24) e suprimidos. A calibração diferente e a deriva do Diagnóstico usam o mesmo
+período. Os prazos de supressão oferecidos no painel são `supressao-opcoes-min` (15 min, 1 h, 4 h e
+1 dia) e a API recusa (400) prazo acima de `supressao-max-min` (10080 min, uma semana). Todos ficam em
+`ps.alarme` no `application.yml`, saem na rota de limites e aparecem no Diagnóstico; o painel não
+escreve nenhum deles à mão. **Referência de leitura:** a EEMUA 191 e a ISA-18.2 citam cerca de 6 alarmes por hora
 por operador como aceitável. Isto não é afirmação de conformidade com a norma.
 
 ## Ordem de serviço

@@ -109,6 +109,15 @@ ps:
     sinal-fracao: 0.5
     # de quanto em quanto tempo a API confere supressões vencidas
     verificar-supressao: 30s
+    # indicadores do Diagnóstico: período, intervalo da pior rajada e dos repetitivos (mesmo alerta aberto
+    # ou reaberto 3 vezes no intervalo), e alerta ativo há mais de 24 h = parado
+    indicadores-h: 24
+    rajada-min: 10
+    repetitivo-vezes: 3
+    parado-h: 24
+    # prazos de supressão oferecidos no painel e o maior aceito pela API (uma semana)
+    supressao-opcoes-min: [15, 60, 240, 1440]
+    supressao-max-min: 10080
   os:
     # alerta de máquina em ALARME por 120 s seguidos abre OS
     alarme-continuo-s: 120

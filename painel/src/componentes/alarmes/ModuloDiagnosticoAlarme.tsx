@@ -4,7 +4,7 @@ import { consultaDiagnosticoAlarme } from '@/api/adaptadores/referencia'
 import { EstadoCarregando, EstadoErro } from '@/componentes/instrumento/Estados'
 import { Modulo } from '@/componentes/instrumento/Modulo'
 import { Explica } from '@/componentes/ui/explica'
-import { formatarG, formatarNumero, TRACO } from '@/dominio/formato'
+import { formatarG, formatarMinutos, formatarNumero, TRACO } from '@/dominio/formato'
 
 function Par({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
   return (
@@ -17,7 +17,7 @@ function Par({ rotulo, children }: { rotulo: string; children: React.ReactNode }
 
 /**
  * Regra de alarme no Diagnóstico: limites em uso (lidos da API, todos PROPOSTA a confirmar),
- * indicadores de desempenho das últimas 24 h e, por ponto, severidade acumulada, deriva, piso de
+ * indicadores de desempenho do período configurado na API e, por ponto, severidade acumulada, deriva, piso de
  * ruído e janelas com calibração diferente da referência.
  */
 export function ModuloDiagnosticoAlarme({
@@ -81,22 +81,32 @@ export function ModuloDiagnosticoAlarme({
             <Par rotulo="Mínimo por célula">{referencia.min_janelas} janelas</Par>
             <Par rotulo="OS por alarme contínuo">{formatarNumero(os.alarme_continuo_s, 0)} s</Par>
             <Par rotulo="OS por severidade">{formatarNumero(os.severidade_limite, 0)} z·s</Par>
+            <Par rotulo="Supressão">
+              {alarme.supressao_opcoes_min.map(formatarMinutos).join(' · ')} (máx.{' '}
+              {formatarMinutos(alarme.supressao_max_min)})
+            </Par>
           </dl>
         </section>
 
         <section aria-label="Indicadores de desempenho do alarme">
-          <h3 className="rotulo mb-1">Últimas 24 h (sem ensaios de condição)</h3>
+          <h3 className="rotulo mb-1">
+            Últimas {alarme.indicadores_h} h (sem ensaios de condição)
+          </h3>
           <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-0.5 text-13">
             <Par rotulo="Alertas por hora (média)">
               {formatarNumero(d.indicadores.alertas_por_hora, 2)}
             </Par>
-            <Par rotulo="Pior janela de 10 min">{d.indicadores.pior_dez_minutos}</Par>
-            <Par rotulo="Repetitivos (≥ 3 em 10 min)">
+            <Par rotulo={`Pior intervalo de ${alarme.rajada_min} min`}>
+              {d.indicadores.pior_dez_minutos}
+            </Par>
+            <Par
+              rotulo={`Repetitivos (≥ ${alarme.repetitivo_vezes} em ${alarme.rajada_min} min)`}
+            >
               {d.indicadores.pontos_repetitivos.length > 0
                 ? d.indicadores.pontos_repetitivos.join(', ')
                 : 'nenhum'}
             </Par>
-            <Par rotulo="Parados há mais de 24 h">{d.indicadores.parados}</Par>
+            <Par rotulo={`Parados há mais de ${alarme.parado_h} h`}>{d.indicadores.parados}</Par>
             <Par rotulo="Suprimidos">{d.indicadores.suprimidos}</Par>
             <Par rotulo="Janelas sem avaliação (erro, desde que a API subiu)">
               {d.falhas_avaliacao}

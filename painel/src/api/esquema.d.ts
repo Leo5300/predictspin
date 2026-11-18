@@ -1274,24 +1274,24 @@ export interface components {
             /** Format: date-time */
             ocorrido_em: string;
         };
-        /** @description Últimas 24 h, sem os alertas de ensaio de condição */
+        /** @description Últimas limites.alarme.indicadores_h horas (24 por padrão), sem os alertas de ensaio de condição */
         IndicadoresAlarme: {
             /**
              * Format: double
-             * @description Média de alertas por hora nas últimas 24 h
+             * @description Média de alertas por hora no período
              */
             alertas_por_hora: number;
             /**
              * Format: int64
-             * @description Alertas ativos há mais de 24 h
+             * @description Alertas ativos há mais de limites.alarme.parado_h horas
              */
             parados: number;
             /**
              * Format: int64
-             * @description Maior número de alertas numa janela de 10 min
+             * @description Maior número de alertas num intervalo de limites.alarme.rajada_min minutos (o nome do campo vem do padrão, 10 min)
              */
             pior_dez_minutos: number;
-            /** @description Pontos em que o mesmo alerta reabriu 3 vezes ou mais em 10 min */
+            /** @description Pontos em que o mesmo alerta abriu limites.alarme.repetitivo_vezes vezes ou mais num intervalo de rajada_min minutos */
             pontos_repetitivos: string[];
             /** Format: int64 */
             suprimidos: number;
@@ -1877,12 +1877,23 @@ export interface components {
             atraso_s: number;
             /** Format: double */
             histerese_z: number;
+            /** Format: int32 */
+            indicadores_h: number;
             /** Format: double */
             instrumento_s: number;
+            /** Format: int32 */
+            parado_h: number;
+            /** Format: int32 */
+            rajada_min: number;
+            /** Format: int32 */
+            repetitivo_vezes: number;
             /** Format: double */
             saida_s: number;
             /** Format: double */
             sinal_fracao: number;
+            /** Format: int32 */
+            supressao_max_min: number;
+            supressao_opcoes_min: number[];
             /** Format: double */
             z_alarme: number;
             /** Format: double */
@@ -2009,12 +2020,12 @@ export interface components {
             deriva_janelas: number;
             /**
              * Format: double
-             * @description Diferença % entre o RMS típico das janelas NORMAL de uso das últimas 24 h (z abaixo do limite de atenção; z negativo entra) e o da referência; nulo sem janelas
+             * @description Diferença % entre o RMS típico das janelas NORMAL de uso do período (z abaixo do limite de atenção; z negativo entra) e o da referência; nulo sem janelas
              */
             deriva_pct: number | null;
             /**
              * Format: int64
-             * @description Janelas das últimas 24 h com calibração diferente da referência
+             * @description Janelas do período com calibração diferente da referência
              */
             janelas_calibracao_diferente: number;
             /**
@@ -2130,7 +2141,7 @@ export interface components {
         SupressaoRequisicao: {
             /**
              * Format: int32
-             * @description Prazo em minutos (1 a 10080, uma semana)
+             * @description Prazo em minutos, de 1 até ps.alarme.supressao-max-min (10080, uma semana, por padrão; o valor em uso está na rota de limites)
              * @example 60
              */
             minutos: number;

@@ -28,6 +28,7 @@ import br.senai.predictspin.alerta.dto.AlertaResposta;
 import br.senai.predictspin.comum.ConflitoException;
 import br.senai.predictspin.comum.Pagina;
 import br.senai.predictspin.comum.RecursoNaoEncontradoException;
+import br.senai.predictspin.comum.RequisicaoInvalidaException;
 import br.senai.predictspin.referencia.CalculoReferencia;
 import br.senai.predictspin.referencia.Medida;
 
@@ -225,6 +226,10 @@ public class AlertaService {
     /** Silencia de propósito, com motivo e prazo (só ADMIN). Vale para alerta ativo. */
     @Transactional
     public AlertaResposta suprimir(long id, long usuarioId, String motivo, int minutos) {
+        if (minutos > prop.supressaoMaxMin()) {
+            throw new RequisicaoInvalidaException("O prazo da supressão vai até " + prop.supressaoMaxMin()
+                    + " minutos (ps.alarme.supressao-max-min)");
+        }
         AlertaSql.EmAberto a = travar(id);
         if (a.estado() != EstadoAlerta.ATIVO_NAO_RECONHECIDO && a.estado() != EstadoAlerta.ATIVO_RECONHECIDO) {
             throw new ConflitoException("Só alerta ativo pode ser suprimido (estado atual: " + a.estado().valor() + ")");
@@ -302,7 +307,10 @@ public class AlertaService {
                 (int) ((total + tamanho - 1) / tamanho));
     }
 
-    /** Indicadores de desempenho do alarme nas últimas 24 h (sem os alertas de ensaio de condição). */
+    /**
+     * Indicadores de desempenho do alarme nas últimas {@code indicadores-h} horas (sem os alertas de ensaio
+     * de condição); intervalos e contagens vêm de ps.alarme.
+     */
     public record Indicadores(double alertasPorHora, long piorDezMinutos, List<String> pontosRepetitivos,
                               long parados, long suprimidos) {
     }
@@ -310,9 +318,11 @@ public class AlertaService {
     @Transactional(readOnly = true)
     public Indicadores indicadores(long maquinaId, boolean simulado) {
         Instant agora = relogio.instant();
-        Instant desde = agora.minus(Duration.ofHours(24));
-        return new Indicadores(sql.contarDesde(maquinaId, simulado, desde) / 24.0,
-                sql.piorJanela(maquinaId, simulado, desde, 10), sql.repetitivos(maquinaId, simulado, desde, 10, 3),
-                sql.parados(maquinaId, simulado, desde), sql.suprimidos(maquinaId, simulado));
+        Instant desde = agora.minus(Duration.ofHours(prop.indicadoresH()));
+        return new Indicadores((double) sql.contarDesde(maquinaId, simulado, desde) / prop.indicadoresH(),
+                sql.piorJanela(maquinaId, simulado, desde, prop.rajadaMin()),
+                sql.repetitivos(maquinaId, simulado, desde, prop.rajadaMin(), prop.repetitivoVezes()),
+                sql.parados(maquinaId, simulado, agora.minus(Duration.ofHours(prop.paradoH()))),
+                sql.suprimidos(maquinaId, simulado));
     }
 }

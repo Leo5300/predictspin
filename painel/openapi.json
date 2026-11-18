@@ -1142,27 +1142,27 @@
         ]
       },
       "IndicadoresAlarme": {
-        "description": "Últimas 24 h, sem os alertas de ensaio de condição",
+        "description": "Últimas limites.alarme.indicadores_h horas (24 por padrão), sem os alertas de ensaio de condição",
         "properties": {
           "alertas_por_hora": {
-            "description": "Média de alertas por hora nas últimas 24 h",
+            "description": "Média de alertas por hora no período",
             "format": "double",
             "type": "number"
           },
           "parados": {
-            "description": "Alertas ativos há mais de 24 h",
+            "description": "Alertas ativos há mais de limites.alarme.parado_h horas",
             "format": "int64",
             "type": "integer"
           },
           "pior_dez_minutos": {
-            "description": "Maior número de alertas numa janela de 10 min",
+            "description": "Maior número de alertas num intervalo de limites.alarme.rajada_min minutos (o nome do campo vem do padrão, 10 min)",
             "format": "int64",
             "type": "integer"
           },
           "pontos_repetitivos": {
-            "description": "Pontos em que o mesmo alerta reabriu 3 vezes ou mais em 10 min",
+            "description": "Pontos em que o mesmo alerta abriu limites.alarme.repetitivo_vezes vezes ou mais num intervalo de rajada_min minutos",
             "items": {
-              "description": "Pontos em que o mesmo alerta reabriu 3 vezes ou mais em 10 min",
+              "description": "Pontos em que o mesmo alerta abriu limites.alarme.repetitivo_vezes vezes ou mais num intervalo de rajada_min minutos",
               "type": "string"
             },
             "type": "array"
@@ -2774,9 +2774,25 @@
             "format": "double",
             "type": "number"
           },
+          "indicadores_h": {
+            "format": "int32",
+            "type": "integer"
+          },
           "instrumento_s": {
             "format": "double",
             "type": "number"
+          },
+          "parado_h": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "rajada_min": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "repetitivo_vezes": {
+            "format": "int32",
+            "type": "integer"
           },
           "saida_s": {
             "format": "double",
@@ -2785,6 +2801,17 @@
           "sinal_fracao": {
             "format": "double",
             "type": "number"
+          },
+          "supressao_max_min": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "supressao_opcoes_min": {
+            "items": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "array"
           },
           "z_alarme": {
             "format": "double",
@@ -2798,9 +2825,15 @@
         "required": [
           "atraso_s",
           "histerese_z",
+          "indicadores_h",
           "instrumento_s",
+          "parado_h",
+          "rajada_min",
+          "repetitivo_vezes",
           "saida_s",
           "sinal_fracao",
+          "supressao_max_min",
+          "supressao_opcoes_min",
           "z_alarme",
           "z_atencao"
         ]
@@ -3079,7 +3112,7 @@
             "type": "integer"
           },
           "deriva_pct": {
-            "description": "Diferença % entre o RMS típico das janelas NORMAL de uso das últimas 24 h (z abaixo do limite de atenção; z negativo entra) e o da referência; nulo sem janelas",
+            "description": "Diferença % entre o RMS típico das janelas NORMAL de uso do período (z abaixo do limite de atenção; z negativo entra) e o da referência; nulo sem janelas",
             "format": "double",
             "type": [
               "number",
@@ -3087,7 +3120,7 @@
             ]
           },
           "janelas_calibracao_diferente": {
-            "description": "Janelas das últimas 24 h com calibração diferente da referência",
+            "description": "Janelas do período com calibração diferente da referência",
             "format": "int64",
             "type": "integer"
           },
@@ -3315,10 +3348,9 @@
       "SupressaoRequisicao": {
         "properties": {
           "minutos": {
-            "description": "Prazo em minutos (1 a 10080, uma semana)",
+            "description": "Prazo em minutos, de 1 até ps.alarme.supressao-max-min (10080, uma semana, por padrão; o valor em uso está na rota de limites)",
             "example": 60,
             "format": "int32",
-            "maximum": 10080,
             "minimum": 1,
             "type": "integer"
           },

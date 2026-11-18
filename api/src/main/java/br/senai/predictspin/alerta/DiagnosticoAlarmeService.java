@@ -35,7 +35,9 @@ import br.senai.predictspin.referencia.ReferenciaService;
  * Diagnóstico da regra de alarme: limites em uso, indicadores de desempenho e, por ponto, severidade
  * acumulada, deriva, piso de ruído e janelas com calibração diferente da referência.
  * <p>
- * Deriva: para cada janela de USO (sem ensaio) avaliada NORMAL nas últimas 24 h, a razão entre o RMS e o
+ * Indicadores, calibração e deriva olham as últimas ps.alarme.indicadores-h horas (24 por padrão).
+ * <p>
+ * Deriva: para cada janela de USO (sem ensaio) avaliada NORMAL no período, a razão entre o RMS e o
  * típico da célula com que foi comparada (a marcha muda o nível, por isso a razão e não o valor); a
  * deriva é a mediana das razões menos 1, em %.
  */
@@ -74,7 +76,8 @@ public class DiagnosticoAlarmeService {
         Maquina maquina = maquinas.findById(maquinaId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Máquina " + maquinaId + " não encontrada"));
         Instant agora = relogio.instant();
-        Instant desde = agora.minus(Duration.ofHours(24));
+        int horas = limites.alarme().indicadoresH();
+        Instant desde = agora.minus(Duration.ofHours(horas));
         AlertaService.Indicadores ind = alertas.indicadores(maquinaId, simulado);
         Optional<ReferenciaAtiva> ref = referencias.ativa(maquinaId, simulado);
 
@@ -152,7 +155,7 @@ public class DiagnosticoAlarmeService {
             long cal = calibracao.getOrDefault(id, 0L);
             if (cal > 0) {
                 avisos.add("Sensor " + codigo + " com calibração diferente da referência em " + cal
-                        + " janela(s) nas últimas 24 h: recalcule a referência.");
+                        + " janela(s) nas últimas " + horas + " h: recalcule a referência.");
             }
             pontos.add(new DiagnosticoAlarmeResposta.Ponto(codigo, s[0], s[1], desdeOs.getOrDefault(id, 0.0), deriva,
                     lista.size(), pisos.get(id), cal));

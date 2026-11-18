@@ -81,6 +81,16 @@ export function formatarIdade(segundos: number | null | undefined): string {
   return `${Math.floor(s / 86_400)} d`
 }
 
+/** Prazo em minutos para rótulo: "15 min", "1 h", "4 h", "1 dia", "7 dias", "90 min". */
+export function formatarMinutos(minutos: number): string {
+  if (minutos >= 1440 && minutos % 1440 === 0) {
+    const dias = minutos / 1440
+    return `${dias} ${dias === 1 ? 'dia' : 'dias'}`
+  }
+  if (minutos >= 60 && minutos % 60 === 0) return `${minutos / 60} h`
+  return `${minutos} min`
+}
+
 /** Contagem regressiva em m:ss ("1:58"). */
 export function formatarPrazo(segundos: number): string {
   const s = Math.max(0, Math.ceil(segundos))

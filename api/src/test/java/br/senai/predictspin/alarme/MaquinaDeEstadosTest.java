@@ -12,7 +12,8 @@ import br.senai.predictspin.alarme.MaquinaDeEstados.PassoInstrumento;
 
 class MaquinaDeEstadosTest {
 
-    static final PropriedadesAlarme P = new PropriedadesAlarme(3, 5, 15, 1, 15, 30, 0.5);
+    static final PropriedadesAlarme P = new PropriedadesAlarme(3, 5, 15, 1, 15, 30, 0.5, 24, 10, 3, 24,
+            java.util.List.of(15, 60, 240, 1440), 10_080);
     private static final Instant T0 = Instant.parse("2026-11-18T10:00:00Z");
     private static final CondicaoInstrumento OK = new CondicaoInstrumento(false, false, false);
 

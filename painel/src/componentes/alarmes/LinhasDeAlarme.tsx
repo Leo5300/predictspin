@@ -1,11 +1,13 @@
+import { useQuery } from '@tanstack/react-query'
 import { Check, X } from 'lucide-react'
 import { useState } from 'react'
 
 import type { Alarme, EstadoAlarme, OrdemServico, RetornoTecnico } from '@/api/adaptadores/alarmes'
+import { consultaLimites } from '@/api/adaptadores/referencia'
 import { SegurarParaConfirmar } from '@/componentes/instrumento/SegurarParaConfirmar'
 import { Button } from '@/componentes/ui/button'
 import { Explica } from '@/componentes/ui/explica'
-import { formatarDataHora, formatarNumero } from '@/dominio/formato'
+import { formatarDataHora, formatarMinutos, formatarNumero } from '@/dominio/formato'
 import { cn } from '@/lib/utils'
 
 const ROTULO_ESTADO: Record<EstadoAlarme, string> = {
@@ -68,14 +70,11 @@ function IconeDoAlarme({ alarme }: { alarme: Alarme }) {
   )
 }
 
-const PRAZOS = [
-  { minutos: 15, rotulo: '15 min' },
-  { minutos: 60, rotulo: '1 h' },
-  { minutos: 240, rotulo: '4 h' },
-  { minutos: 1440, rotulo: '1 dia' },
-]
-
-/** Supressão inline (sem modal): motivo e prazo obrigatórios. */
+/**
+ * Supressão inline (sem modal): motivo e prazo obrigatórios. Os prazos vêm da API
+ * (ps.alarme.supressao-opcoes-min na rota de limites); enquanto ela não responde, o seletor fica vazio
+ * e o botão desabilitado.
+ */
 function FormularioDeSupressao({
   aoSuprimir,
   aoCancelar,
@@ -83,14 +82,18 @@ function FormularioDeSupressao({
   aoSuprimir: (motivo: string, minutos: number) => void
   aoCancelar: () => void
 }) {
+  const limites = useQuery(consultaLimites())
+  const prazos = limites.data?.alarme.supressao_opcoes_min ?? []
   const [motivo, setMotivo] = useState('')
-  const [minutos, setMinutos] = useState(60)
+  const [escolhido, setMinutos] = useState<number | null>(null)
+  // padrão: 1 h se estiver entre as opções, senão a primeira
+  const minutos = escolhido ?? (prazos.includes(60) ? 60 : (prazos[0] ?? null))
   return (
     <form
       className="col-span-2 flex flex-wrap items-end gap-2 border border-linha-forte bg-rebaixo p-2 sm:col-span-3"
       onSubmit={(e) => {
         e.preventDefault()
-        if (motivo.trim()) aoSuprimir(motivo.trim(), minutos)
+        if (motivo.trim() && minutos !== null) aoSuprimir(motivo.trim(), minutos)
       }}
     >
       <label className="flex min-w-48 flex-1 flex-col gap-1 text-13">
@@ -107,18 +110,18 @@ function FormularioDeSupressao({
       <label className="flex flex-col gap-1 text-13">
         <span className="rotulo">Prazo</span>
         <select
-          value={minutos}
+          value={minutos ?? ''}
           onChange={(e) => setMinutos(Number(e.target.value))}
           className="h-8 border border-linha-forte bg-modulo px-2 text-13 text-texto"
         >
-          {PRAZOS.map((p) => (
-            <option key={p.minutos} value={p.minutos}>
-              {p.rotulo}
+          {prazos.map((p) => (
+            <option key={p} value={p}>
+              {formatarMinutos(p)}
             </option>
           ))}
         </select>
       </label>
-      <Button type="submit" size="sm" disabled={!motivo.trim()}>
+      <Button type="submit" size="sm" disabled={!motivo.trim() || minutos === null}>
         Suprimir
       </Button>
       <Button type="button" size="sm" variant="outline" onClick={aoCancelar}>

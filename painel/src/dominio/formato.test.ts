@@ -6,6 +6,7 @@ import {
   formatarG,
   formatarIdade,
   formatarIntervalo,
+  formatarMinutos,
   formatarNumero,
   formatarPercentual,
   formatarPrazo,
@@ -21,6 +22,17 @@ const ESPACOS_INSEPARAVEIS = new RegExp(
 const limpo = (texto: string) => texto.replace(ESPACOS_INSEPARAVEIS, ' ')
 
 describe('formatação pt-BR', () => {
+  it('rotula prazos de supressão vindos da API', () => {
+    expect([15, 60, 90, 240, 1440, 10_080].map(formatarMinutos)).toEqual([
+      '15 min',
+      '1 h',
+      '90 min',
+      '4 h',
+      '1 dia',
+      '7 dias',
+    ])
+  })
+
   it('usa vírgula decimal e casas fixas', () => {
     expect(formatarG(0.0451)).toBe('0,045')
     expect(formatarG(1)).toBe('1,000')
