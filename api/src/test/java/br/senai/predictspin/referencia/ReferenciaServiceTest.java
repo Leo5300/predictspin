@@ -47,7 +47,7 @@ class ReferenciaServiceTest {
 
     private ReferenciaService servico(PropriedadesReferencia p, ObjectMapper json) {
         return new ReferenciaService(repositorio, maquinas, mock(PontoMedicaoRepository.class), p, json,
-                Clock.fixed(AGORA, ZoneOffset.UTC));
+                Clock.fixed(AGORA, ZoneOffset.UTC), 3);
     }
 
     @Test
@@ -58,7 +58,7 @@ class ReferenciaServiceTest {
         // a versão recém-gravada tem de ser lida de volta; sem ela, é erro de programa
         assertThatThrownBy(() -> servico(semDeriva, new ObjectMapper()).recalcular(1L, false, null))
                 .isInstanceOf(IllegalStateException.class);
-        verify(repositorio, never()).janelasDeDeriva(anyLong(), anyBoolean(), any());
+        verify(repositorio, never()).janelasDeDeriva(anyLong(), anyBoolean(), any(), org.mockito.ArgumentMatchers.anyDouble());
         verify(repositorio).inserirCelulas(anyLong(), any());
     }
 

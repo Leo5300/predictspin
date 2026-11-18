@@ -79,6 +79,39 @@ public abstract class AlarmeIntegracaoBase extends IntegracaoBase {
         return t;
     }
 
+    /** RMS de A, B e C usados na referência de teste (1120 rpm). */
+    protected static final double[] PARADO = {0.010, 0.012, 0.008};
+    protected static final double[] VAZIO = {0.10, 0.08, 0.04};
+    protected static final double[] CORTE = {0.14, 0.20, 0.06};
+    protected static final double[] SEVERO = {0.60, 0.80, 0.30};
+
+    /** Grava T0, T1 e T3 normais a 1120 rpm (25 janelas cada, há duas horas) e recalcula a referência. */
+    protected JsonNode prepararReferencia(String token) throws Exception {
+        Instant t = Instant.now().minus(java.time.Duration.ofHours(2));
+        t = gravarEnsaio(token, "T0", "normal", 0, null, 25, t, PARADO[0], PARADO[1], PARADO[2]);
+        t = gravarEnsaio(token, "T1", "normal", 1120, null, 25, t, VAZIO[0], VAZIO[1], VAZIO[2]);
+        gravarEnsaio(token, "T3", "normal", 1120, null, 25, t, CORTE[0], CORTE[1], CORTE[2]);
+        return recalcular(token);
+    }
+
+    /** Envia {@code n} janelas simuladas de 5 s a partir de {@code inicio}; devolve o instante seguinte. */
+    protected Instant enviarSequencia(Instant inicio, int n, double rpm, double[] rms) throws Exception {
+        Instant t = inicio;
+        for (int i = 0; i < n; i++) {
+            enviar(DISPOSITIVO_SIM, CHAVE_SIM, janela(DISPOSITIVO_SIM, t, rpm, rms[0], rms[1], rms[2]))
+                    .andExpect(status().isCreated());
+            t = t.plusSeconds(5);
+        }
+        return t;
+    }
+
+    protected Integer estadoDoPonto(String codigo) {
+        return jdbc.queryForObject("""
+                SELECT e.estado FROM estado_ponto e JOIN ponto_medicao pm ON pm.id = e.ponto_medicao_id
+                WHERE pm.codigo = ? AND e.simulado = true
+                """, Integer.class, codigo);
+    }
+
     protected JsonNode recalcular(String token) throws Exception {
         return corpo(mvc.perform(comToken(post("/api/v1/maquinas/" + maquinaId
                 + "/referencias/recalcular?simulado=true"), token)).andExpect(status().isCreated()));

@@ -67,6 +67,86 @@
           }
         }
       },
+      "AvaliacaoResposta": {
+        "properties": {
+          "estado": {
+            "description": "Pior estado entre os pontos avaliados; nulo quando nenhum ponto foi avaliado",
+            "enum": [
+              "normal",
+              "atencao",
+              "alarme"
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "explicacao": {
+            "description": "Até 3 medidas/pontos de maior z, em texto pronto; nulo quando nada está acima do típico",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "janela_id": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "marcha_rpm": {
+            "description": "Rotação nominal mais próxima da medida; 0 com o torno parado",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "medido_em": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pontos": {
+            "items": {
+              "$ref": "#/components/schemas/PontoAvaliado"
+            },
+            "type": "array"
+          },
+          "referencia_versao": {
+            "description": "Número da versão da referência usada; nulo sem referência",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "rotacao_rpm": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "simulado": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "estado",
+          "explicacao",
+          "janela_id",
+          "marcha_rpm",
+          "medido_em",
+          "pontos",
+          "referencia_versao",
+          "rotacao_rpm",
+          "simulado"
+        ]
+      },
       "CampoInvalido": {
         "properties": {
           "campo": {
@@ -1043,6 +1123,56 @@
           "rotacoes_nominais_rpm"
         ]
       },
+      "MedidaAvaliada": {
+        "properties": {
+          "diferenca_pct": {
+            "description": "Diferença em % em relação ao típico",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "medida": {
+            "enum": [
+              "rms_g",
+              "pico_g",
+              "curtose",
+              "o1x",
+              "o2x",
+              "o3x",
+              "vel_rms_mm_s"
+            ],
+            "type": "string"
+          },
+          "tipico": {
+            "description": "Mediana da referência",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "valor": {
+            "format": "double",
+            "type": "number"
+          },
+          "z": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "diferenca_pct",
+          "medida",
+          "tipico",
+          "valor",
+          "z"
+        ]
+      },
       "MedidaPonto": {
         "description": "Características por ponto de medição, pelo código do ponto (A, B, C)",
         "properties": {
@@ -1700,6 +1830,85 @@
         },
         "required": [
           "rotacoes_rpm"
+        ]
+      },
+      "PontoAvaliado": {
+        "properties": {
+          "dominante": {
+            "enum": [
+              "rms_g",
+              "pico_g",
+              "curtose",
+              "o1x",
+              "o2x",
+              "o3x",
+              "vel_rms_mm_s"
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "estado": {
+            "description": "Estado com atraso e histerese (ISA-18.2); nulo quando não avaliado",
+            "enum": [
+              "normal",
+              "atencao",
+              "alarme"
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "etapa_ref": {
+            "description": "Etapa da referência usada (T2 usa a do T1)",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "generica": {
+            "description": "true: comparado com o corte de todas as receitas juntas",
+            "type": "boolean"
+          },
+          "medidas": {
+            "items": {
+              "$ref": "#/components/schemas/MedidaAvaliada"
+            },
+            "type": "array"
+          },
+          "ponto": {
+            "example": "B",
+            "type": "string"
+          },
+          "situacao": {
+            "enum": [
+              "avaliada",
+              "sem_referencia",
+              "sem_referencia_completa",
+              "calibracao_diferente",
+              "nao_avaliavel"
+            ],
+            "type": "string"
+          },
+          "z_max": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "dominante",
+          "estado",
+          "etapa_ref",
+          "generica",
+          "medidas",
+          "ponto",
+          "situacao",
+          "z_max"
         ]
       },
       "PontoResposta": {
@@ -3957,6 +4166,89 @@
         "summary": "Detalha uma máquina, com o local, as rotações nominais e o plano de coleta",
         "tags": [
           "Máquinas"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/avaliacao": {
+      "get": {
+        "description": "Estado da máquina (pior entre os pontos) e de cada ponto, com o z, o típico e a diferença em % de cada medida. Ponto sem referência vem com situacao sem_referencia.",
+        "operationId": "atual",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "true: dados simulados; false (padrão): reais",
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvaliacaoResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Avaliação da janela mais recente da máquina",
+        "tags": [
+          "Avaliação"
         ]
       }
     },
@@ -6305,6 +6597,10 @@
     {
       "description": "Ingestão pelo dispositivo e consultas pelos usuários",
       "name": "Telemetria"
+    },
+    {
+      "description": "Comparação de cada janela com a referência: z, estado e explicação",
+      "name": "Avaliação"
     },
     {
       "description": "O normal aprendido de cada ponto, por marcha, etapa e receita",

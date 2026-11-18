@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -49,16 +50,19 @@ public class ReferenciaService {
     private final ObjectMapper json;
     private final Clock relogio;
     private final Map<ChaveCache, Optional<ReferenciaAtiva>> cache = new ConcurrentHashMap<>();
+    /** Janela de deriva só entra com |z| abaixo do limite de ATENÇÃO em todas as medidas. */
+    private final double zAtencao;
 
     public ReferenciaService(ReferenciaRepository repositorio, MaquinaRepository maquinas,
                              PontoMedicaoRepository pontos, PropriedadesReferencia propriedades, ObjectMapper json,
-                             Clock relogio) {
+                             Clock relogio, @Value("${ps.alarme.z-atencao:3}") double zAtencao) {
         this.repositorio = repositorio;
         this.maquinas = maquinas;
         this.pontos = pontos;
         this.propriedades = propriedades;
         this.json = json;
         this.relogio = relogio;
+        this.zAtencao = zAtencao;
     }
 
     /** Calcula e grava uma versão nova a partir dos ensaios "normal" (e da deriva, se ligada). */
@@ -68,7 +72,7 @@ public class ReferenciaService {
         Instant agora = relogio.instant();
         List<ReferenciaRepository.LinhaJanela> deriva = propriedades.deriva().habilitada()
                 ? repositorio.janelasDeDeriva(maquinaId, simulado,
-                        agora.minus(Duration.ofDays(propriedades.deriva().dias())))
+                        agora.minus(Duration.ofDays(propriedades.deriva().dias())), zAtencao)
                 : List.of();
         CalculoReferencia.Resultado resultado = CalculoReferencia.calcular(
                 repositorio.janelasDeEnsaios(maquinaId, simulado), deriva, maquina.getRotacoesNominaisRpm(),

@@ -94,6 +94,19 @@ ps:
       habilitada: true
       dias: 7
       fracao-maxima: 0.30
+  alarme:
+    # ATENÇÃO com z ≥ 3, ALARME com z ≥ 5 (z = quantos σ efetivos acima da mediana da referência)
+    z-atencao: 3
+    z-alarme: 5
+    # ISA-18.2: entra só depois de 15 s seguidos acima do limite...
+    atraso-s: 15
+    # ...e sai só com z abaixo de (limite − 1) por 15 s
+    histerese-z: 1
+    saida-s: 15
+    # alerta de instrumento: ponto ausente ou sinal sumido por 30 s
+    instrumento-s: 30
+    # "sinal sumido": RMS e 1X abaixo de 50% do típico
+    sinal-fracao: 0.5
 
 springdoc:
   # As respostas são JSON; sem isto o documento diz "*/*" e o cliente gerado perde o tipo

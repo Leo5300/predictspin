@@ -123,8 +123,13 @@ public class IngestaoService {
         if (!leituras.isEmpty()) {
             ingestao.inserirLeituras(janelaId, leituras);
         }
+        boolean aoVivo = !medidoEm.isBefore(agora.minus(LIMITE_AO_VIVO));
+        // Avaliação contra a referência: escuta síncrona, grava na mesma transação da janela
+        anuncios.publishEvent(new JanelaRecebida(dispositivo.maquinaId(), dispositivo.simulado(), janelaId, medidoEm,
+                aoVivo, req.rotacaoRpm(), req.saturou(), req.modoOuNormal(), req.amostras(), req.amostrasEsperadas(),
+                rastreio.firmwareVersao(), rastreio.calibracao(), ensaioId, pontoPorCodigo, linhas));
         // Só anuncia: quem escuta age depois do commit e fora desta thread (eventos ao vivo do painel)
-        if (medidoEm.isBefore(agora.minus(LIMITE_AO_VIVO))) {
+        if (!aoVivo) {
             anuncios.publishEvent(new JanelaRecuperada(dispositivo.maquinaId(), dispositivo.simulado(), medidoEm));
         } else {
             anuncios.publishEvent(new JanelaGravada(dispositivo.maquinaId(), janelaId));

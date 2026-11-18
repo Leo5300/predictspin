@@ -332,6 +332,9 @@ class IngestaoServiceTest {
         verify(dispositivos).registrarContato(20L, AGORA, AGORA.minusSeconds(10));
         verify(anuncios).publishEvent(new JanelaRecuperada(MAQUINA, true, antiga));
         verify(anuncios, never()).publishEvent(any(JanelaGravada.class));
+        // a avaliação também recebe a janela antiga, marcada como fora do ao vivo
+        verify(anuncios).publishEvent(org.mockito.ArgumentMatchers.<Object>argThat(e -> e instanceof JanelaRecebida r
+                && !r.aoVivo() && r.janelaId() == 100L && r.simulado() && r.maquinaId().equals(MAQUINA)));
     }
 
     @Test

@@ -181,6 +181,19 @@ class CalculoReferenciaTest {
     }
 
     @Test
+    void janelaSemVelocidadeNaoGeraCelulaDeVelocidade() {
+        List<LinhaJanela> linhas = new ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            linhas.add(new LinhaJanela(500 + i, T.plusSeconds(i * 5L), 1120, false, ModoJanela.NORMAL, null, null,
+                    null, null, A, "A", "T1", "normal", false, null, null,
+                    new double[] {0.1, 0.3, 3, 0.06, 0.02, 0.01}, null));
+        }
+        var r = CalculoReferencia.calcular(linhas, List.of(), MARCHAS, P);
+        assertThat(celula(r, A, Medida.VEL_RMS_MM_S, 1120, "T1", false)).isEmpty();
+        assertThat(celula(r, A, Medida.RMS_G, 1120, "T1", false)).isPresent();
+    }
+
+    @Test
     void limiteDaDeriva() {
         assertThat(CalculoReferencia.limiteDeriva(70, 0.30)).isEqualTo(30);
         assertThat(CalculoReferencia.limiteDeriva(70, 0)).isZero();

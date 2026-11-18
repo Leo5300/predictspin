@@ -48,9 +48,11 @@ public class ReferenciaRepository {
 
     /**
      * Janelas de uso (sem ensaio) desde {@code desde}, avaliadas NORMAL no ponto, sem alerta aberto na
-     * máquina no instante da janela. A etapa vem da referência usada na avaliação (T0, T1 ou T3).
+     * máquina no instante da janela, e com |z| abaixo de {@code zMaximo} em todas as medidas (perto do
+     * normal nos dois sentidos: uma janela de giro em vazio comparada com o corte tem z muito negativo e
+     * puxaria a referência do corte para baixo). A etapa vem da referência usada na avaliação.
      */
-    public List<LinhaJanela> janelasDeDeriva(long maquinaId, boolean simulado, Instant desde) {
+    public List<LinhaJanela> janelasDeDeriva(long maquinaId, boolean simulado, Instant desde, double zMaximo) {
         return jdbc.query("SELECT " + COLUNAS_JANELA + """
                 , a.etapa_ref
                 FROM janela j
@@ -60,13 +62,16 @@ public class ReferenciaRepository {
                 JOIN avaliacao a ON a.janela_id = j.id AND a.ponto_medicao_id = t.ponto_medicao_id
                 WHERE d.maquina_id = ? AND d.simulado = ? AND j.ensaio_id IS NULL AND j.medido_em >= ?
                   AND a.situacao = 0 AND a.estado = 0 AND a.etapa_ref IS NOT NULL
+                  AND greatest(abs(coalesce(a.z_rms, 0)), abs(coalesce(a.z_pico, 0)), abs(coalesce(a.z_curtose, 0)),
+                               abs(coalesce(a.z_o1x, 0)), abs(coalesce(a.z_o2x, 0)), abs(coalesce(a.z_o3x, 0)),
+                               abs(coalesce(a.z_vel, 0))) < ?
                   AND NOT EXISTS (SELECT 1 FROM alerta al
                                   WHERE al.maquina_id = d.maquina_id AND al.simulado = d.simulado
                                     AND al.criado_em <= j.medido_em
                                     AND (al.normalizado_em IS NULL OR al.normalizado_em >= j.medido_em))
                 ORDER BY j.medido_em DESC, j.id DESC, pm.codigo
                 """, (rs, i) -> linha(rs, rs.getString("etapa_ref"), "normal", false, null, null),
-                maquinaId, simulado, utc(desde));
+                maquinaId, simulado, utc(desde), zMaximo);
     }
 
     private static LinhaJanela linha(ResultSet rs, String etapa, String condicao, boolean descartado,
@@ -193,7 +198,8 @@ public class ReferenciaRepository {
 
         /** Valor da medida, ou nulo (velocidade ausente). */
         public Double valor(Medida medida) {
-            return medida == Medida.VEL_RMS_MM_S ? velRmsMmS : valores[medida.ordinal()];
+            // Double.valueOf: com "? velRmsMmS : valores[i]" o Java desembrulharia o nulo (NPE)
+            return medida == Medida.VEL_RMS_MM_S ? velRmsMmS : Double.valueOf(valores[medida.ordinal()]);
         }
 
         public boolean ordensZeradas() {

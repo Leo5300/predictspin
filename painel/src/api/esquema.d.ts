@@ -299,6 +299,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/maquinas/{id}/avaliacao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Avaliação da janela mais recente da máquina
+         * @description Estado da máquina (pior entre os pontos) e de cada ponto, com o z, o típico e a diferença em % de cada medida. Ponto sem referência vem com situacao sem_referencia.
+         */
+        get: operations["atual"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/maquinas/{id}/coleta/cobertura": {
         parameters: {
             query?: never;
@@ -706,6 +726,33 @@ export interface components {
             /** @example Aço SAE 1045 */
             nome?: string;
         };
+        AvaliacaoResposta: {
+            /**
+             * @description Pior estado entre os pontos avaliados; nulo quando nenhum ponto foi avaliado
+             * @enum {string|null}
+             */
+            estado: "normal" | "atencao" | "alarme" | null;
+            /** @description Até 3 medidas/pontos de maior z, em texto pronto; nulo quando nada está acima do típico */
+            explicacao: string | null;
+            /** Format: int64 */
+            janela_id: number | null;
+            /**
+             * Format: int32
+             * @description Rotação nominal mais próxima da medida; 0 com o torno parado
+             */
+            marcha_rpm: number | null;
+            /** Format: date-time */
+            medido_em: string | null;
+            pontos: components["schemas"]["PontoAvaliado"][];
+            /**
+             * Format: int32
+             * @description Número da versão da referência usada; nulo sem referência
+             */
+            referencia_versao: number | null;
+            /** Format: double */
+            rotacao_rpm: number | null;
+            simulado: boolean;
+        };
         CampoInvalido: {
             campo: string;
             mensagem: string;
@@ -1026,6 +1073,24 @@ export interface components {
             /** @description Rotações que a máquina oferece (placa de rotações), em rpm */
             rotacoes_nominais_rpm: number[];
         };
+        MedidaAvaliada: {
+            /**
+             * Format: double
+             * @description Diferença em % em relação ao típico
+             */
+            diferenca_pct: number | null;
+            /** @enum {string} */
+            medida: "rms_g" | "pico_g" | "curtose" | "o1x" | "o2x" | "o3x" | "vel_rms_mm_s";
+            /**
+             * Format: double
+             * @description Mediana da referência
+             */
+            tipico: number | null;
+            /** Format: double */
+            valor: number;
+            /** Format: double */
+            z: number | null;
+        };
         /** @description Características por ponto de medição, pelo código do ponto (A, B, C) */
         MedidaPonto: {
             /**
@@ -1297,6 +1362,26 @@ export interface components {
              *     ]
              */
             rotacoes_rpm: number[];
+        };
+        PontoAvaliado: {
+            /** @enum {string|null} */
+            dominante: "rms_g" | "pico_g" | "curtose" | "o1x" | "o2x" | "o3x" | "vel_rms_mm_s" | null;
+            /**
+             * @description Estado com atraso e histerese (ISA-18.2); nulo quando não avaliado
+             * @enum {string|null}
+             */
+            estado: "normal" | "atencao" | "alarme" | null;
+            /** @description Etapa da referência usada (T2 usa a do T1) */
+            etapa_ref: string | null;
+            /** @description true: comparado com o corte de todas as receitas juntas */
+            generica: boolean;
+            medidas: components["schemas"]["MedidaAvaliada"][];
+            /** @example B */
+            ponto: string;
+            /** @enum {string} */
+            situacao: "avaliada" | "sem_referencia" | "sem_referencia_completa" | "calibracao_diferente" | "nao_avaliavel";
+            /** Format: double */
+            z_max: number | null;
         };
         PontoResposta: {
             ativo: boolean;
@@ -2689,6 +2774,67 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MaquinaResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    atual: {
+        parameters: {
+            query?: {
+                /** @description true: dados simulados; false (padrão): reais */
+                simulado?: boolean;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvaliacaoResposta"];
                 };
             };
             /** @description Requisição inválida */
