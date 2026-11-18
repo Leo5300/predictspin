@@ -81,6 +81,26 @@ describe('glossário com os limites em uso', () => {
     const texto = GLOSSARIO.desvio.explicacao + GLOSSARIO.atencao_alarme.explicacao
     expect(texto).not.toMatch(/\b(3|5|15) ?s?\b/)
   })
+
+  it('nenhum termo do glossário traz limite da regra escrito à mão (todos vêm da API)', () => {
+    // limites de ps.alarme e ps.os: z de atenção e alarme, tempos em s, severidade em z·s, prazos
+    const PROIBIDOS = [
+      /\bz\s*(≥|>=|>|de|acima de)?\s*\d/i,
+      /\b(15|30|120) ?s\b/,
+      /\b600\b/,
+      /\d ?z·s/,
+      /\b\d+(,\d+)? ?σ/,
+      /\b24 ?h\b/,
+      /\b3 vezes\b/,
+    ]
+    // "dado velho" (15 s) é a regra de frescor do próprio painel, não limite da regra de alarme
+    const DO_PAINEL = new Set(['dado_velho'])
+    for (const [chave, termo] of Object.entries(GLOSSARIO)) {
+      if (DO_PAINEL.has(chave)) continue
+      const texto = [termo.titulo, termo.explicacao, termo.exemplo].join(' ').replace(/\{\w+\}/g, '')
+      for (const padrao of PROIBIDOS) expect(texto, `${chave}: ${padrao}`).not.toMatch(padrao)
+    }
+  })
 })
 
 describe('evento "recuperacao"', () => {
