@@ -29,7 +29,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista alertas, não reconhecidos primeiro, paginado e com filtros */
-        get: operations["listar_3"];
+        get: operations["listar_4"];
         put?: never;
         post?: never;
         delete?: never;
@@ -177,7 +177,7 @@ export interface paths {
             cookie?: never;
         };
         /** Detalha um ensaio */
-        get: operations["buscar_1"];
+        get: operations["buscar_2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -378,7 +378,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista máquinas com o local, paginado */
-        get: operations["listar_2"];
+        get: operations["listar_3"];
         put?: never;
         post?: never;
         delete?: never;
@@ -395,7 +395,7 @@ export interface paths {
             cookie?: never;
         };
         /** Detalha uma máquina, com o local, as rotações nominais e o plano de coleta */
-        get: operations["buscar"];
+        get: operations["buscar_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -534,6 +534,7 @@ export interface paths {
          *     - `recuperacao`: janelas mais antigas que 30 s (a fila do dispositivo sendo esvaziada depois de uma queda de rede), juntadas no máximo a cada 5 s por máquina, com o corpo de RecuperacaoEvento (de, ate, quantidade); as janelas estão gravadas e aparecem nas consultas;
          *     - `ensaio`: ensaio aberto, encerrado ou descartado, com o corpo de EnsaioEvento (só ADMIN e TECNICO);
          *     - `alerta`: alerta aberto, piorado, normalizado, reconhecido, suprimido ou encerrado, com o corpo de AlertaEvento;
+         *     - `os`: ordem de serviço aberta, assumida ou concluída, com o corpo de OrdemServicoEvento;
          *     - `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o primeiro evento de toda conexão, com o estado atual.
          *
          *     Linhas de comentário (`:batimento`) chegam a cada 15 s sem evento. A conexão é encerrada pelo servidor depois de 30 min; o cliente deve reconectar. Cliente que não consome é descartado.
@@ -743,6 +744,77 @@ export interface paths {
         put?: never;
         /** Desativa o material (ADMIN): some da escolha, os ensaios continuam apontando para ele */
         post: operations["desativarMaterial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ordens-servico": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista OS, abertas e em andamento primeiro, paginado e com filtros */
+        get: operations["listar_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ordens-servico/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalha uma OS */
+        get: operations["buscar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ordens-servico/{id}/assumir": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assume a OS (fica em andamento, com o usuário como responsável) */
+        post: operations["assumir"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ordens-servico/{id}/concluir": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Conclui a OS com o retorno do técnico
+         * @description confirmada: havia problema; rejeitada: falso positivo. O retorno fica guardado na OS e no alerta de origem, como rótulo para o treino.
+         */
+        post: operations["concluir"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1079,6 +1151,16 @@ export interface components {
             /** @description Rotações consideradas na grade */
             rotacoes_rpm: number[];
             simulado: boolean | null;
+        };
+        ConclusaoRequisicao: {
+            /** @example Ferramenta conferida, sem desgaste; vibração veio da máquina ao lado */
+            comentario?: string;
+            /**
+             * @description confirmada: havia problema; rejeitada: falso positivo
+             * @example rejeitada
+             * @enum {string}
+             */
+            retorno: "confirmada" | "rejeitada";
         };
         ConflitoCatalogoResposta: {
             caminho: string;
@@ -1519,6 +1601,67 @@ export interface components {
             papel: "ADMIN" | "TECNICO" | "OPERADOR";
             senha: string;
         };
+        OrdemServicoEvento: {
+            /** @enum {string} */
+            acao: "aberta" | "assumida" | "concluida";
+            ordem: components["schemas"]["OrdemServicoResposta"];
+        };
+        OrdemServicoResposta: {
+            /** Format: date-time */
+            aberta_em: string;
+            /** @description O que conferir primeiro (orientação de inspeção, não diagnóstico) */
+            acao_recomendada: string;
+            /**
+             * Format: int64
+             * @description Alerta de origem
+             */
+            alerta_id: number | null;
+            /** Format: date-time */
+            assumida_em: string | null;
+            calibracao: string | null;
+            comentario_tecnico: string | null;
+            /** @description Componente provável do ponto */
+            componente: string | null;
+            /** Format: date-time */
+            concluida_em: string | null;
+            explicacao: string | null;
+            firmware_versao: string | null;
+            /** Format: int64 */
+            id: number;
+            /** @example TORNO-01 */
+            maquina: string;
+            /** Format: int64 */
+            maquina_id: number;
+            /**
+             * @description alarme_continuo: ALARME por tempo seguido; severidade: severidade acumulada
+             * @enum {string}
+             */
+            motivo_abertura: "alarme_continuo" | "severidade";
+            /** @example OS-2026-0001 */
+            numero: string;
+            /** @example B */
+            ponto: string;
+            /** Format: int32 */
+            referencia_versao: number | null;
+            /** @description Nome de quem assumiu */
+            responsavel: string | null;
+            /**
+             * @description confirmada: havia problema; rejeitada: falso positivo. Vira rótulo do treino (parte B)
+             * @enum {string|null}
+             */
+            retorno_tecnico: "confirmada" | "rejeitada" | null;
+            /**
+             * Format: double
+             * @description Severidade acumulada do ponto no momento da abertura, em z·s
+             */
+            severidade_acumulada: number;
+            simulado: boolean;
+            /**
+             * @description aberta → em_andamento → concluida
+             * @enum {string}
+             */
+            status: "aberta" | "em_andamento" | "concluida" | "cancelada";
+        };
         PaginaAlertaResposta: {
             conteudo: components["schemas"]["AlertaResposta"][];
             /** Format: int32 */
@@ -1598,6 +1741,17 @@ export interface components {
         };
         PaginaMaquinaResposta: {
             conteudo: components["schemas"]["MaquinaResposta"][];
+            /** Format: int32 */
+            pagina: number;
+            /** Format: int32 */
+            tamanho: number;
+            /** Format: int64 */
+            total_elementos: number;
+            /** Format: int32 */
+            total_paginas: number;
+        };
+        PaginaOrdemServicoResposta: {
+            conteudo: components["schemas"]["OrdemServicoResposta"][];
             /** Format: int32 */
             pagina: number;
             /** Format: int32 */
@@ -2173,7 +2327,7 @@ export interface operations {
             };
         };
     };
-    listar_3: {
+    listar_4: {
         parameters: {
             query?: {
                 maquina_id?: number;
@@ -2639,7 +2793,7 @@ export interface operations {
             };
         };
     };
-    buscar_1: {
+    buscar_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -3448,7 +3602,7 @@ export interface operations {
             };
         };
     };
-    listar_2: {
+    listar_3: {
         parameters: {
             query?: {
                 page?: number;
@@ -3498,7 +3652,7 @@ export interface operations {
             };
         };
     };
-    buscar: {
+    buscar_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -4939,6 +5093,258 @@ export interface operations {
             };
             /** @description Recurso não encontrado */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    listar_2: {
+        parameters: {
+            query?: {
+                maquina_id?: number;
+                /** @description aberta, em_andamento, concluida ou cancelada */
+                status?: "aberta" | "em_andamento" | "concluida" | "cancelada";
+                /** @description Código do ponto (A, B, C) */
+                ponto?: string;
+                simulado?: boolean;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaOrdemServicoResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    buscar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrdemServicoResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    assumir: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OS em andamento */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrdemServicoResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description OS não está aberta */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    concluir: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConclusaoRequisicao"];
+            };
+        };
+        responses: {
+            /** @description OS concluída */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrdemServicoResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description OS já concluída ou cancelada */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

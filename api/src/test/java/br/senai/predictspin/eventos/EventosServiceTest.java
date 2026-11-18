@@ -212,9 +212,11 @@ class EventosServiceTest {
         EmissorDeTeste soReal = assinar(11, true, false);
 
         servico.publicarAlerta(MAQUINA, true, java.util.Map.of("acao", "abriu"));
+        servico.publicarOrdemServico(MAQUINA, false, java.util.Map.of("acao", "aberta"));
         servico.publicarModoRapido(new ModoRapidoResposta(MAQUINA, false, null));
 
         esperar(() -> recebeu(operador, "event:alerta") && recebeu(soReal, "\"ativo\":false"));
+        assertThat(recebeu(soReal, "event:os")).isTrue();
         assertThat(operador.enviados.stream().filter(e -> e.contains("event:alerta")).findFirst().orElseThrow())
                 .contains("\"acao\":\"abriu\"");
         assertThat(recebeu(soReal, "event:alerta")).isFalse();

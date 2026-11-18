@@ -231,6 +231,18 @@ class ContratoOpenApiIntegracaoTest extends AlarmeIntegracaoBase {
         conferir("/api/v1/alarmes/limites", "get", 200, mvc.perform(comToken(get("/api/v1/alarmes/limites"), admin)));
         conferir("/api/v1/maquinas/{id}/alarmes/diagnostico", "get", 200, mvc.perform(comToken(get(
                 "/api/v1/maquinas/" + maquinaId + "/alarmes/diagnostico?simulado=true"), admin)));
+
+        // a severidade do SEVERO abriu OS
+        ResultActions ordens = mvc.perform(comToken(get("/api/v1/ordens-servico?simulado=true"), admin));
+        conferir("/api/v1/ordens-servico", "get", 200, ordens);
+        long os = corpo(ordens).get("conteudo").get(0).get("id").asLong();
+        conferir("/api/v1/ordens-servico/{id}", "get", 200,
+                mvc.perform(comToken(get("/api/v1/ordens-servico/" + os), admin)));
+        conferir("/api/v1/ordens-servico/{id}/assumir", "post", 200,
+                mvc.perform(comToken(post("/api/v1/ordens-servico/" + os + "/assumir"), admin)));
+        conferir("/api/v1/ordens-servico/{id}/concluir", "post", 200, mvc.perform(comToken(post(
+                "/api/v1/ordens-servico/" + os + "/concluir"), admin).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"retorno\":\"confirmada\",\"comentario\":\"contrato\"}")));
     }
 
     @Test

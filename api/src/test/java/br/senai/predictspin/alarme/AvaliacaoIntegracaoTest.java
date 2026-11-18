@@ -61,8 +61,10 @@ class AvaliacaoIntegracaoTest extends AlarmeIntegracaoBase {
         Double severidade = jdbc.queryForObject("SELECT sum(valor) FROM severidade_acumulada WHERE simulado",
                 Double.class);
         assertThat(severidade).isPositive();
+        // a severidade passou de 600 z·s: abriu OS e o contador "desde a última OS" recomeçou
+        assertThat(contar("ordem_servico")).isPositive();
         assertThat(jdbc.queryForObject("SELECT sum(severidade_desde_os) FROM estado_ponto", Double.class))
-                .isEqualTo(severidade, org.assertj.core.api.Assertions.within(1e-6));
+                .isLessThan(severidade);
 
         // volta ao normal: sai só depois de 15 s abaixo do limite − histerese
         t = enviarSequencia(t, 2, 1120, VAZIO);

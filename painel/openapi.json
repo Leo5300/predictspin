@@ -719,6 +719,28 @@
           "simulado"
         ]
       },
+      "ConclusaoRequisicao": {
+        "properties": {
+          "comentario": {
+            "example": "Ferramenta conferida, sem desgaste; vibração veio da máquina ao lado",
+            "maxLength": 2000,
+            "minLength": 0,
+            "type": "string"
+          },
+          "retorno": {
+            "description": "confirmada: havia problema; rejeitada: falso positivo",
+            "enum": [
+              "confirmada",
+              "rejeitada"
+            ],
+            "example": "rejeitada",
+            "type": "string"
+          }
+        },
+        "required": [
+          "retorno"
+        ]
+      },
       "ConflitoCatalogoResposta": {
         "properties": {
           "caminho": {
@@ -1938,6 +1960,185 @@
           "senha"
         ]
       },
+      "OrdemServicoEvento": {
+        "properties": {
+          "acao": {
+            "enum": [
+              "aberta",
+              "assumida",
+              "concluida"
+            ],
+            "type": "string"
+          },
+          "ordem": {
+            "$ref": "#/components/schemas/OrdemServicoResposta"
+          }
+        },
+        "required": [
+          "acao",
+          "ordem"
+        ]
+      },
+      "OrdemServicoResposta": {
+        "properties": {
+          "aberta_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "acao_recomendada": {
+            "description": "O que conferir primeiro (orientação de inspeção, não diagnóstico)",
+            "type": "string"
+          },
+          "alerta_id": {
+            "description": "Alerta de origem",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "assumida_em": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "calibracao": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "comentario_tecnico": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "componente": {
+            "description": "Componente provável do ponto",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "concluida_em": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "explicacao": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "firmware_versao": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "maquina": {
+            "example": "TORNO-01",
+            "type": "string"
+          },
+          "maquina_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "motivo_abertura": {
+            "description": "alarme_continuo: ALARME por tempo seguido; severidade: severidade acumulada",
+            "enum": [
+              "alarme_continuo",
+              "severidade"
+            ],
+            "type": "string"
+          },
+          "numero": {
+            "example": "OS-2026-0001",
+            "type": "string"
+          },
+          "ponto": {
+            "example": "B",
+            "type": "string"
+          },
+          "referencia_versao": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "responsavel": {
+            "description": "Nome de quem assumiu",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "retorno_tecnico": {
+            "description": "confirmada: havia problema; rejeitada: falso positivo. Vira rótulo do treino (parte B)",
+            "enum": [
+              "confirmada",
+              "rejeitada"
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "severidade_acumulada": {
+            "description": "Severidade acumulada do ponto no momento da abertura, em z·s",
+            "format": "double",
+            "type": "number"
+          },
+          "simulado": {
+            "type": "boolean"
+          },
+          "status": {
+            "description": "aberta → em_andamento → concluida",
+            "enum": [
+              "aberta",
+              "em_andamento",
+              "concluida",
+              "cancelada"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "aberta_em",
+          "acao_recomendada",
+          "alerta_id",
+          "assumida_em",
+          "calibracao",
+          "comentario_tecnico",
+          "componente",
+          "concluida_em",
+          "explicacao",
+          "firmware_versao",
+          "id",
+          "maquina",
+          "maquina_id",
+          "motivo_abertura",
+          "numero",
+          "ponto",
+          "referencia_versao",
+          "responsavel",
+          "retorno_tecnico",
+          "severidade_acumulada",
+          "simulado",
+          "status"
+        ]
+      },
       "PaginaAlertaResposta": {
         "properties": {
           "conteudo": {
@@ -2174,6 +2375,39 @@
           "conteudo": {
             "items": {
               "$ref": "#/components/schemas/MaquinaResposta"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
+        ]
+      },
+      "PaginaOrdemServicoResposta": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/OrdemServicoResposta"
             },
             "type": "array"
           },
@@ -3495,7 +3729,7 @@
     },
     "/api/v1/alertas": {
       "get": {
-        "operationId": "listar_3",
+        "operationId": "listar_4",
         "parameters": [
           {
             "in": "query",
@@ -4156,7 +4390,7 @@
     },
     "/api/v1/ensaios/{id}": {
       "get": {
-        "operationId": "buscar_1",
+        "operationId": "buscar_2",
         "parameters": [
           {
             "in": "path",
@@ -5252,7 +5486,7 @@
     },
     "/api/v1/maquinas": {
       "get": {
-        "operationId": "listar_2",
+        "operationId": "listar_3",
         "parameters": [
           {
             "in": "query",
@@ -5328,7 +5562,7 @@
     },
     "/api/v1/maquinas/{id}": {
       "get": {
-        "operationId": "buscar",
+        "operationId": "buscar_1",
         "parameters": [
           {
             "in": "path",
@@ -6122,7 +6356,7 @@
     },
     "/api/v1/maquinas/{id}/eventos": {
       "get": {
-        "description": "Fluxo text/event-stream. O token vai no cabeçalho Authorization, nunca na URL. Eventos:\n\n- `janela`: janela nova gravada com medido_em de até 30 s atrás, com o corpo de JanelaResposta (reenvio não gera evento);\n- `recuperacao`: janelas mais antigas que 30 s (a fila do dispositivo sendo esvaziada depois de uma queda de rede), juntadas no máximo a cada 5 s por máquina, com o corpo de RecuperacaoEvento (de, ate, quantidade); as janelas estão gravadas e aparecem nas consultas;\n- `ensaio`: ensaio aberto, encerrado ou descartado, com o corpo de EnsaioEvento (só ADMIN e TECNICO);\n- `alerta`: alerta aberto, piorado, normalizado, reconhecido, suprimido ou encerrado, com o corpo de AlertaEvento;\n- `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o primeiro evento de toda conexão, com o estado atual.\n\nLinhas de comentário (`:batimento`) chegam a cada 15 s sem evento. A conexão é encerrada pelo servidor depois de 30 min; o cliente deve reconectar. Cliente que não consome é descartado.\n",
+        "description": "Fluxo text/event-stream. O token vai no cabeçalho Authorization, nunca na URL. Eventos:\n\n- `janela`: janela nova gravada com medido_em de até 30 s atrás, com o corpo de JanelaResposta (reenvio não gera evento);\n- `recuperacao`: janelas mais antigas que 30 s (a fila do dispositivo sendo esvaziada depois de uma queda de rede), juntadas no máximo a cada 5 s por máquina, com o corpo de RecuperacaoEvento (de, ate, quantidade); as janelas estão gravadas e aparecem nas consultas;\n- `ensaio`: ensaio aberto, encerrado ou descartado, com o corpo de EnsaioEvento (só ADMIN e TECNICO);\n- `alerta`: alerta aberto, piorado, normalizado, reconhecido, suprimido ou encerrado, com o corpo de AlertaEvento;\n- `os`: ordem de serviço aberta, assumida ou concluída, com o corpo de OrdemServicoEvento;\n- `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o primeiro evento de toda conexão, com o estado atual.\n\nLinhas de comentário (`:batimento`) chegam a cada 15 s sem evento. A conexão é encerrada pelo servidor depois de 30 min; o cliente deve reconectar. Cliente que não consome é descartado.\n",
         "operationId": "eventos",
         "parameters": [
           {
@@ -7473,6 +7707,370 @@
         ]
       }
     },
+    "/api/v1/ordens-servico": {
+      "get": {
+        "operationId": "listar_2",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "maquina_id",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "aberta, em_andamento, concluida ou cancelada",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "enum": [
+                "aberta",
+                "em_andamento",
+                "concluida",
+                "cancelada"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Código do ponto (A, B, C)",
+            "in": "query",
+            "name": "ponto",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaOrdemServicoResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          }
+        },
+        "summary": "Lista OS, abertas e em andamento primeiro, paginado e com filtros",
+        "tags": [
+          "Ordens de serviço"
+        ]
+      }
+    },
+    "/api/v1/ordens-servico/{id}": {
+      "get": {
+        "operationId": "buscar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdemServicoResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Detalha uma OS",
+        "tags": [
+          "Ordens de serviço"
+        ]
+      }
+    },
+    "/api/v1/ordens-servico/{id}/assumir": {
+      "post": {
+        "operationId": "assumir",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdemServicoResposta"
+                }
+              }
+            },
+            "description": "OS em andamento"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "OS não está aberta"
+          }
+        },
+        "summary": "Assume a OS (fica em andamento, com o usuário como responsável)",
+        "tags": [
+          "Ordens de serviço"
+        ]
+      }
+    },
+    "/api/v1/ordens-servico/{id}/concluir": {
+      "post": {
+        "description": "confirmada: havia problema; rejeitada: falso positivo. O retorno fica guardado na OS e no alerta de origem, como rótulo para o treino.",
+        "operationId": "concluir",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConclusaoRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdemServicoResposta"
+                }
+              }
+            },
+            "description": "OS concluída"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "OS já concluída ou cancelada"
+          }
+        },
+        "summary": "Conclui a OS com o retorno do técnico",
+        "tags": [
+          "Ordens de serviço"
+        ]
+      }
+    },
     "/api/v1/pontos/{id}/telemetria": {
       "get": {
         "description": "Sem 'de', usa as últimas 24 h até 'ate' (ou agora).",
@@ -7923,6 +8521,10 @@
     {
       "description": "Materiais e ferramentas da receita do corte. Listar e criar: ADMIN e TECNICO. Renomear e desativar: ADMIN.",
       "name": "Catálogos"
+    },
+    {
+      "description": "OS abertas pela regra; assumir e concluir só ADMIN e TECNICO",
+      "name": "Ordens de serviço"
     },
     {
       "description": "Cadastro de usuários. Somente ADMIN.",

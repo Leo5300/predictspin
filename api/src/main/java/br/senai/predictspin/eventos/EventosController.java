@@ -50,6 +50,7 @@ public class EventosController {
                     - `ensaio`: ensaio aberto, encerrado ou descartado, com o corpo de EnsaioEvento (só ADMIN e TECNICO);
                     - `alerta`: alerta aberto, piorado, normalizado, reconhecido, suprimido ou encerrado, com o \
                     corpo de AlertaEvento;
+                    - `os`: ordem de serviço aberta, assumida ou concluída, com o corpo de OrdemServicoEvento;
                     - `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o \
                     primeiro evento de toda conexão, com o estado atual.
 

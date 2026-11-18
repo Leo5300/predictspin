@@ -22,6 +22,7 @@ import br.senai.predictspin.alerta.dto.AlertaEvento;
 import br.senai.predictspin.comum.ErroResposta;
 import br.senai.predictspin.eventos.dto.EnsaioEvento;
 import br.senai.predictspin.eventos.dto.RecuperacaoEvento;
+import br.senai.predictspin.ordemservico.dto.OrdemServicoEvento;
 import io.swagger.v3.core.converter.ModelConverters;
 import io.swagger.v3.core.jackson.ModelResolver;
 import io.swagger.v3.oas.models.Components;
@@ -55,7 +56,7 @@ public class OpenApiConfig {
 
     /** Esquemas que não são corpo de nenhuma rota JSON, mas que o cliente precisa conhecer. */
     private static final List<Class<?>> ESQUEMAS_EXTRAS = List.of(ErroResposta.class, EnsaioEvento.class,
-            RecuperacaoEvento.class, AlertaEvento.class);
+            RecuperacaoEvento.class, AlertaEvento.class, OrdemServicoEvento.class);
 
     /** Marca interna de propriedade que pode não vir no JSON; é retirada antes de o documento sair. */
     private static final String EXTENSAO_OPCIONAL = "x-opcional";

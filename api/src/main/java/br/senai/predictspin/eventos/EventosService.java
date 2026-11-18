@@ -57,6 +57,7 @@ public class EventosService implements SmartLifecycle {
     public static final String EVENTO_MARCADO = "evento_marcado";
     public static final String EVENTO_RECUPERACAO = "recuperacao";
     public static final String EVENTO_ALERTA = "alerta";
+    public static final String EVENTO_OS = "os";
 
     private static final Logger log = LoggerFactory.getLogger(EventosService.class);
     private static final int FILA_DA_DIFUSAO = 256;
@@ -189,11 +190,19 @@ public class EventosService implements SmartLifecycle {
 
     /** Alerta aberto, piorado, normalizado, reconhecido, suprimido ou encerrado: para quem vê o tipo de dado. */
     public void publicarAlerta(Long maquinaId, boolean simulado, Object evento) {
+        publicarParaTodos(EVENTO_ALERTA, maquinaId, simulado, evento);
+    }
+
+    /** OS aberta, assumida ou concluída: para quem vê o tipo de dado. */
+    public void publicarOrdemServico(Long maquinaId, boolean simulado, Object evento) {
+        publicarParaTodos(EVENTO_OS, maquinaId, simulado, evento);
+    }
+
+    private void publicarParaTodos(String nome, Long maquinaId, boolean simulado, Object evento) {
         if (!temAssinantes(maquinaId)) {
             return;
         }
-        difundir(EVENTO_ALERTA, () -> distribuir(maquinaId, mensagem(EVENTO_ALERTA, evento),
-                a -> a.aceita(simulado)));
+        difundir(nome, () -> distribuir(maquinaId, mensagem(nome, evento), a -> a.aceita(simulado)));
     }
 
     /** Modo rápido ligado ou desligado, com o prazo. */
