@@ -252,6 +252,18 @@ faixa refletiva da flange passa. A rotação vem do período entre bordas
   sem formar período;
 - abaixo de uma volta por janela (rotação muito lenta), usa o último período, se ainda recente.
 
+**Largura do pulso (diagnóstico).** A interrupção do FC-51 passou a disparar nas **duas** bordas
+([`lib/rotacao/LarguraPulso.cpp`](../firmware/lib/rotacao/LarguraPulso.cpp)). Ela guarda o instante
+e o nível do pino depois da borda, lido direto do registrador de entrada. O laço repassa **só as
+descidas** ao decodificador de rotação, exatamente como antes (um teste nativo confere que a rotação
+com as duas bordas é igual à rotação só com as descidas). Descida e subida dão a largura do pulso, o
+tempo em nível baixo com a faixa na frente do sensor. A linha `#` de cada janela ganha
+`pulso_min_us`, `pulso_medio_us` e `pulsos` (pulsos completos na janela). **Não vai ao payload.**
+Serve para conferir na bancada a hipótese de que, nas marchas altas, o pulso fica curto demais para
+o FC-51, que não especifica tempo de resposta. Limite: um pulso mais curto que a latência da
+interrupção (alguns µs) pode ter o nível lido errado; nesse caso a descida também se perde para a
+rotação.
+
 ## Envio à API
 
 | Item | Como |
@@ -388,7 +400,7 @@ Sem o sinal bruto, a serial mostra uma linha por janela e uma de diagnóstico (c
 
 ```
 janela 2026-11-11T12:00:00.000000Z rpm=812 modo=normal | A rms=0.0310 pico=0.1120 | B --- | C --- | amostras=8000/8000 fila=0 rede=ok http=201
-# defasagem_AC_us=0/0 tick_max_us=... ticks_atrasados=0 taxa_Hz=1600.0/0.0/0.0 amostras=8000/0/0 ordens=ok ...
+# defasagem_AC_us=0/0 tick_max_us=... ticks_atrasados=0 taxa_Hz=1600.0/0.0/0.0 amostras=8000/0/0 ordens=ok ... pulso_min_us=... pulso_medio_us=... pulsos=...
 ```
 
 (Exemplo do formato; os números não são medição.)

@@ -177,13 +177,15 @@ void imprimirJanela(const JanelaPronta& j) {
   Serial.printf(
       "# defasagem_AC_us=%lu/%lu tick_max_us=%lu ticks_atrasados=%lu taxa_Hz=%.1f/%.1f/%.1f "
       "amostras=%lu/%lu/%lu ordens=%s variacao_rot=%.3f heap_livre=%lu heap_min=%lu fila_perdidas=%lu "
-      "sem_hora=%lu descartadas=%lu janelas_perdidas=%lu quadros_perdidos=%lu\n",
+      "sem_hora=%lu descartadas=%lu janelas_perdidas=%lu quadros_perdidos=%lu pulso_min_us=%lu "
+      "pulso_medio_us=%lu pulsos=%lu\n",
       (unsigned long)d.defasagemAcMediaUs, (unsigned long)d.defasagemAcMaxUs, (unsigned long)d.tickMaxUs,
       (unsigned long)d.ticksAtrasados, d.taxaHz[0], d.taxaHz[1], d.taxaHz[2], (unsigned long)d.amostrasSensor[0],
       (unsigned long)d.amostrasSensor[1], (unsigned long)d.amostrasSensor[2], d.ordensValidas ? "ok" : "zero",
       d.variacaoRotacao, (unsigned long)ESP.getFreeHeap(), (unsigned long)ESP.getMinFreeHeap(),
       (unsigned long)fila.perdidas(), (unsigned long)descartadasSemHora, (unsigned long)descartadasErro,
-      (unsigned long)d.janelasPerdidas, (unsigned long)d.quadrosBrutosPerdidos);
+      (unsigned long)d.janelasPerdidas, (unsigned long)d.quadrosBrutosPerdidos, (unsigned long)d.pulsoMinUs,
+      (unsigned long)d.pulsoMedioUs, (unsigned long)d.pulsos);
 }
 
 void tratarJanela(const JanelaPronta& j) {

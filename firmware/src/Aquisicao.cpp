@@ -2,12 +2,15 @@
 
 #include <Arduino.h>
 #include <SPI.h>
+#include <soc/gpio_reg.h>
+#include <soc/soc.h>
 #include <sys/time.h>
 
 #include "Adxl345.h"
 #include "Caracteristicas.h"
 #include "Config.h"
 #include "Estado.h"
+#include "LarguraPulso.h"
 #include "Protocolo.h"
 #include "Rotacao.h"
 #include "Velocidade.h"
@@ -31,9 +34,12 @@ double mediaAnterior[3] = {0, 0, 0};
 double taxaMedida[3] = {cfg::TAXA_NOMINAL_HZ, cfg::TAXA_NOMINAL_HZ, cfg::TAXA_NOMINAL_HZ};
 bool temMedia[3] = {false, false, false};
 
-// Bordas da rotação: a interrupção só guarda o instante; o laço repassa para `rotacao`
+// Bordas do FC-51 (as duas): a interrupção só guarda o instante e o nível depois da borda; o laço
+// repassa as descidas para `rotacao` (como antes) e as duas para `largura` (diagnóstico)
 const uint32_t TAMANHO_BORDAS = 32;  // potência de 2
 volatile uint32_t bordas[TAMANHO_BORDAS];
+volatile uint8_t niveis[TAMANHO_BORDAS];
+ps::LarguraPulso largura;
 volatile uint32_t cabecaBordas = 0;
 uint32_t caudaBordas = 0;
 
@@ -66,8 +72,12 @@ uint8_t quadro[ps::QUADRO_MAX];
 
 void IRAM_ATTR aoDetectarBorda() {
   uint32_t agora = micros();
+  // nível lido direto do registrador de entrada (pino < 32): rápido e seguro dentro da interrupção.
+  // Um pulso mais curto que a latência da interrupção (alguns µs) pode ter o nível lido errado.
+  uint8_t nivel = (uint8_t)((REG_READ(GPIO_IN_REG) >> cfg::PINO_ROTACAO) & 1u);
   uint32_t c = cabecaBordas;
   bordas[c & (TAMANHO_BORDAS - 1)] = agora;
+  niveis[c & (TAMANHO_BORDAS - 1)] = nivel;
   cabecaBordas = c + 1;
 }
 
@@ -108,6 +118,10 @@ void comecarJanela(uint32_t agoraMcu) {
 void fecharJanela(uint32_t agoraMcu) {
   double duracao = (double)(agoraMcu - inicioJanelaMcu) / 1e6;
   ps::Rotacao::Janela rot = rotacao.fecharJanela(agoraMcu);
+  ps::LarguraPulso::Janela pulso = largura.fecharJanela();
+  diag.pulsos = pulso.pulsos;
+  diag.pulsoMinUs = pulso.minimoUs;
+  diag.pulsoMedioUs = pulso.medioUs;
   bool ordensOk = ps::ordensValidas(rpmBase, rot.rpm, rot.variacao, cfg::ROTACAO_LIMITE_VARIACAO);
 
   JanelaPronta j;
@@ -258,7 +272,8 @@ void iniciar() {
 
   pinMode(cfg::PINO_ROTACAO, INPUT_PULLDOWN);
   // FC-51: a saída vai a 0 quando a faixa refletiva passa na frente do sensor
-  attachInterrupt(digitalPinToInterrupt(cfg::PINO_ROTACAO), aoDetectarBorda, FALLING);
+  // as duas bordas: a descida dá a rotação; descida e subida dão a largura do pulso
+  attachInterrupt(digitalPinToInterrupt(cfg::PINO_ROTACAO), aoDetectarBorda, CHANGE);
 
   uint32_t agora = micros();
   proximoTick = agora + cfg::TICK_US;
@@ -320,7 +335,11 @@ void passo() {
   uint32_t cabeca = cabecaBordas;
   if (cabeca - caudaBordas > TAMANHO_BORDAS) caudaBordas = cabeca - TAMANHO_BORDAS;  // estouro: fica com as mais novas
   while (caudaBordas != cabeca) {
-    rotacao.borda(bordas[caudaBordas & (TAMANHO_BORDAS - 1)]);
+    uint32_t i = caudaBordas & (TAMANHO_BORDAS - 1);
+    uint32_t instante = bordas[i];
+    bool subiu = niveis[i] != 0;
+    largura.borda(instante, subiu);
+    if (!subiu) rotacao.borda(instante);  // só a descida, como com a interrupção em FALLING
     caudaBordas++;
   }
 

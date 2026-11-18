@@ -6,6 +6,7 @@
 
 #include "AlertaLocal.h"
 #include "FilaJanelas.h"
+#include "LarguraPulso.h"
 #include "Rotacao.h"
 
 using namespace ps;
@@ -93,6 +94,72 @@ void test_parada_longa_nao_forma_periodo() {
   TEST_ASSERT_EQUAL_FLOAT(0.0f, r.rpmAtual(10000001));
   r.borda(10060000);
   TEST_ASSERT_FLOAT_WITHIN(0.01, 1000.0, r.rpmAtual(10060001));
+}
+
+// ---------------------------------------------------------------- largura do pulso
+
+void test_largura_do_pulso_minimo_medio_e_contagem() {
+  LarguraPulso l;
+  // 3 pulsos de 400, 500 e 600 µs, um por volta a 1000 rpm
+  uint32_t t = 1000;
+  const uint32_t larguras[3] = {400, 500, 600};
+  for (uint32_t w : larguras) {
+    l.borda(t, false);
+    l.borda(t + w, true);
+    t += 60000;
+  }
+  LarguraPulso::Janela j = l.fecharJanela();
+  TEST_ASSERT_EQUAL_UINT32(3, j.pulsos);
+  TEST_ASSERT_EQUAL_UINT32(400, j.minimoUs);
+  TEST_ASSERT_EQUAL_UINT32(500, j.medioUs);
+  // janela seguinte sem pulso
+  LarguraPulso::Janela vazia = l.fecharJanela();
+  TEST_ASSERT_EQUAL_UINT32(0, vazia.pulsos);
+  TEST_ASSERT_EQUAL_UINT32(0, vazia.minimoUs);
+  TEST_ASSERT_EQUAL_UINT32(0, vazia.medioUs);
+}
+
+void test_largura_ignora_subida_sem_descida_e_conta_pulso_entre_janelas() {
+  LarguraPulso l;
+  l.borda(100, true);  // partiu no meio de um pulso
+  l.borda(1000, false);
+  TEST_ASSERT_EQUAL_UINT32(0, l.fecharJanela().pulsos);  // o pulso ainda não terminou
+  l.borda(1300, true);
+  LarguraPulso::Janela j = l.fecharJanela();
+  TEST_ASSERT_EQUAL_UINT32(1, j.pulsos);
+  TEST_ASSERT_EQUAL_UINT32(300, j.minimoUs);
+  // descida repetida recomeça o pulso; atravessa o estouro do micros()
+  l.borda(0xFFFFFF00u, false);
+  l.borda(0xFFFFFF80u, false);
+  l.borda(0x00000030u, true);
+  j = l.fecharJanela();
+  TEST_ASSERT_EQUAL_UINT32(1, j.pulsos);
+  TEST_ASSERT_EQUAL_UINT32(0xB0, j.minimoUs);
+}
+
+void test_rotacao_com_as_duas_bordas_e_igual_a_so_descida() {
+  // Com a interrupção nas duas bordas, só as descidas vão para o decodificador: a rotação não muda
+  Rotacao soDescida(PERIODO_MIN, SEM_PULSO), comAsDuas(PERIODO_MIN, SEM_PULSO);
+  LarguraPulso l;
+  uint32_t t = 5000;
+  for (int i = 0; i < 40; i++) {
+    uint32_t periodo = 75000 + (uint32_t)((i % 3) * 400);  // ~800 rpm com pequena variação
+    soDescida.borda(t);
+    // fluxo da interrupção CHANGE: descida (nível 0) e subida (nível 1) 450 µs depois
+    const uint32_t instantes[2] = {t, t + 450};
+    const bool niveis[2] = {false, true};
+    for (int k = 0; k < 2; k++) {
+      l.borda(instantes[k], niveis[k]);
+      if (!niveis[k]) comAsDuas.borda(instantes[k]);
+    }
+    t += periodo;
+  }
+  Rotacao::Janela a = soDescida.fecharJanela(t - 70000);
+  Rotacao::Janela b = comAsDuas.fecharJanela(t - 70000);
+  TEST_ASSERT_EQUAL_FLOAT(a.rpm, b.rpm);
+  TEST_ASSERT_EQUAL_FLOAT(a.variacao, b.variacao);
+  TEST_ASSERT_EQUAL_UINT32(a.bordas, b.bordas);
+  TEST_ASSERT_EQUAL_UINT32(450, l.fecharJanela().minimoUs);
 }
 
 // ---------------------------------------------------------------- alerta local
@@ -271,6 +338,9 @@ int main(int, char**) {
   RUN_TEST(test_rotacao_variacao_mostra_mudanca_de_marcha);
   RUN_TEST(test_rotacao_atravessa_estouro_do_micros);
   RUN_TEST(test_parada_longa_nao_forma_periodo);
+  RUN_TEST(test_largura_do_pulso_minimo_medio_e_contagem);
+  RUN_TEST(test_largura_ignora_subida_sem_descida_e_conta_pulso_entre_janelas);
+  RUN_TEST(test_rotacao_com_as_duas_bordas_e_igual_a_so_descida);
   RUN_TEST(test_alerta_aprende_e_compara);
   RUN_TEST(test_alerta_reaprende);
   RUN_TEST(test_alerta_com_referencia_zero_fica_normal);

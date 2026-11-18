@@ -22,6 +22,9 @@ struct Diagnostico {
   uint32_t janelasPerdidas;     // acumulado desde a partida: fila do FreeRTOS cheia
   float variacaoRotacao;
   uint8_t ordensValidas;
+  uint32_t pulsos;              // pulsos completos do FC-51 na janela (descida e subida)
+  uint32_t pulsoMinUs;          // menor largura de pulso (nível baixo), em µs
+  uint32_t pulsoMedioUs;
 };
 
 // Janela pronta, do núcleo 1 para o núcleo 0
