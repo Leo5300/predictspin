@@ -2,6 +2,9 @@
 
 Roteiro para conferir o firmware de 3 sensores no laboratório do SENAI, com o dispositivo real
 `ps-torno-01`. Primeiro só com o ponto A ligado (passos 1 a 10), depois com os três (passo 11).
+Os passos 12 a 18 (segunda rodada, 17/11/2026) são as medições que viram número para o artigo:
+calibração, piso de ruído, teste-reteste, fixação, batida, banda e FC-51 em todas as marchas. As
+tabelas deles estão **vazias de propósito**: só entra número medido.
 Cada passo diz o que deve acontecer e o que fazer se não acontecer. Anote os números que aparecerem:
 são a primeira medição real do firmware.
 
@@ -17,6 +20,8 @@ antes com `GET /api/v1/maquinas/{id}/ensaios` e encerre ou descarte o que estive
 - celular com hotspot (para os testes sem rede e de hibernação);
 - e-mail e senha de um usuário da API (para as consultas e o modo rápido);
 - uma chave de boca ou de fenda para as batidas.
+- nível de bolha (calibração sobre superfície nivelada), caneta para marcar o contorno do ímã, fita
+  dupla-face, e uma tira de fita branca ou papel refletivo de cerca de 1/8 da volta da flange (item 18).
 
 As consultas abaixo usam PowerShell. Antes delas, entre uma vez na mesma janela:
 
@@ -122,7 +127,7 @@ ficar sem enviar:
 |---|---|
 | durante a queda: `fila=` subindo, `rede=sem_wifi`, LED de rede âmbar piscando, LED de fila âmbar depois de 1 min | fila parada em 64 e `fila_perdidas` subindo: LittleFS falhou (veja o passo 2) |
 | na volta: primeiras linhas `#envio falhou (-11)` ou `(-1)`, com espera de 1, 2, 4... s, enquanto a API acorda (~1 min) | 401 na volta: a chave mudou no Render |
-| depois: `http=201` e `fila=` caindo até 0 | fila não desce: anote o código HTTP das linhas `#envio falhou` |
+| depois: `http=201`, `envio=recuperacao` na linha `janela` e `fila=` caindo cerca de 4 por segundo até 0 (240 janelas: ~1 min); no painel, o dado ao vivo atrasado até a fila esvaziar, sem o painel cair | fila não desce: anote o código HTTP das linhas `#envio falhou`. Painel caiu (reconectando sem parar): anote a hora; a API devia mandar só eventos `recuperacao` |
 
 Confira que não faltou janela no período (a quantidade esperada é minutos x 12):
 
@@ -138,7 +143,7 @@ Desligue o hotspot por 2 min e ligue de novo.
 
 | Esperado | Se não acontecer |
 |---|---|
-| `fila=` sobe até cerca de 24 e desce a 0 em poucos segundos depois da volta | a fila desce devagar (uma a cada vários segundos): anote; cada envio deveria levar menos de 1 s com a conexão reaproveitada |
+| `fila=` sobe até cerca de 24 e desce a 0 em menos de 15 s depois da volta (ritmo de recuperação, 250 ms entre envios, enquanto a mais antiga tiver mais de 30 s) | a fila desce devagar (uma a cada vários segundos): anote; cada envio deveria levar menos de 1 s com a conexão reaproveitada |
 | contagem do período (comando do passo 5) = 24 janelas | faltando janela: anote `fila_perdidas` e `janelas_perdidas` do diagnóstico |
 
 ## 7. Modo rápido
@@ -213,6 +218,188 @@ Desligue, ligue B (CS 16) e C (CS 17) e repita os passos 2, 3, 8 e 9.
 | na captura: `A: ~1600/s / B: ~1600/s / C: ~1600/s`, linhas com campos vazios só de vez em quando | um sensor com bem menos amostras: ele ficou sem ler; anote `tick_max_us` |
 | batida perto de um sensor mexe mais nele do que nos outros dois | os três iguais: estão presos na mesma peça rígida; normal se a batida for no barramento |
 
+## 12. Calibração de cada sensor (antes de montar)
+
+Faça com o firmware da segunda rodada (a primeira linha da serial mostra `versao 2026-11-17+...`),
+o sinal bruto desligado, cada sensor **solto** sobre uma superfície nivelada (a mesa da bancada,
+conferida com nível de bolha) e longe de máquina ligada. Calibre um ponto por vez; o sensor continua
+ligado ao ESP32 pelo cabo de sempre. Procedimento completo em
+[`firmware.md`](firmware.md#calibração-por-sensor).
+
+1. Apoie o sensor com o eixo de análise (Z, perpendicular à face do ímã) **para cima** e digite
+   `cal A cima`. Não toque na mesa por 2 s.
+2. Vire o sensor de cabeça para baixo (eixo para baixo, apoiado na própria face) e digite `cal A baixo`.
+3. Digite `cal A fim`, depois `cal A mostrar`.
+4. Repita para B e C, cada um com o cabo dele.
+5. Reinicie o ESP32 (EN) e confira na partida a linha `#calibracao: A=A-2026... B=... C=...`.
+
+| Esperado | Se não acontecer |
+|---|---|
+| `cal A cima ok: média=... desvio=...` com desvio de poucos LSB | `recusada: desvio alto`: a mesa vibrou ou o sensor mexeu; espere a máquina vizinha parar e repita. `fora da faixa`: o sensor não está parado ou o eixo não é o Z; confira a posição |
+| `cal A fim` grava com ganho entre 230 e 282 LSB/g (o do datasheet) | `ganho fora de 200 a 320`: as posições foram trocadas (cima/baixo) ou o sensor estava de lado; repita as duas. Ganho entre 200 e 230 ou entre 282 e 320: aceito, mas **anote**: é um sensor fora do típico |
+| a tela mostra `CAL A 27x.x LSB/g` por alguns segundos | — |
+| depois do reinício, a calibração continua (`#calibracao` com os identificadores) | volta a `nominal`: o LittleFS não gravou (veja a linha `LittleFS FALHOU`) ou o sistema de arquivos foi regravado (`uploadfs` apaga a calibração) |
+| a janela seguinte chega na API com `calibracao` e `firmware_versao` (exportação CSV, colunas do fim) | sem os campos: o firmware gravado é o anterior |
+
+| Sensor | Média cima (LSB) | Desvio cima | Média baixo (LSB) | Desvio baixo | Ganho (LSB/g) | Offset (LSB) | Identificador |
+|---|---|---|---|---|---|---|---|
+| A | | | | | | | |
+| B | | | | | | | |
+| C | | | | | | | |
+
+O ganho medido em 10/11/2026 num sensor (273,5 LSB/g, offset Z +1286 LSB) é só referência: cada
+sensor tem o seu.
+
+## 13. Piso de ruído em T0
+
+Com os sensores **montados** nos pontos, o torno **desligado** e a oficina funcionando normalmente
+(as outras máquinas como estiverem). É o menor valor que o sistema consegue distinguir.
+
+1. Pelo painel (Coleta), abra um ensaio **T0** real na rotação 0 e grave **5 min** (60 janelas).
+   Os três pontos gravam juntos; se só um sensor estiver montado, repita por ponto.
+2. Encerre o ensaio, baixe a exportação e rode:
+
+   ```powershell
+   Invoke-WebRequest "$API/api/v1/ensaios/exportar.csv?simulado=false" -Headers $H -OutFile exportar.csv
+   cd analise
+   python bancada.py piso-ruido ..\exportar.csv --ensaios CODIGO_DO_T0
+   ```
+
+| Esperado | Se não acontecer |
+|---|---|
+| 60 janelas por ponto, `vel_rms_mm_s` presente a partir da segunda | menos janelas: a gravação parou (veja a fila na tela). Sem velocidade: firmware anterior |
+| o script mostra média, desvio, p95, máximo e o limite (média + 3 desvios) em g e em mm/s | `Nenhuma janela T0`: o ensaio não é T0, não foi encerrado, ou todas as janelas ficaram marcadas (modo rápido ligado durante a gravação) |
+| a tabela não muda muito se repetir em outro horário | muda muito: anote o que estava ligado na oficina; o piso é desse ambiente |
+
+| Ponto | Janelas | RMS médio (g) | Desvio (g) | p95 (g) | Máximo (g) | Limite (g) | Vel. média (mm/s) | Vel. limite (mm/s) |
+|---|---|---|---|---|---|---|---|---|
+| A | | | | | | | | |
+| B | | | | | | | | |
+| C | | | | | | | | |
+
+**Abaixo do limite nada se afirma:** um RMS ou uma velocidade menor que o limite do ponto não se
+distingue da oficina com o torno parado.
+
+## 14. Teste-reteste da montagem
+
+Quanto o valor muda só por tirar e recolocar o sensor. Use **um ponto** (comece pelo B, o mais
+mexido no uso) e o torno girando **em vazio (T1)** sempre na **mesma marcha**.
+
+1. Marque com caneta o contorno do ímã na peça, para recolocar no mesmo lugar e na mesma direção.
+2. Para cada uma das **5 montagens**: recoloque o ímã no contorno, ligue o torno na marcha escolhida,
+   espere 30 s, grave um ensaio T1 de **1 min** (12 janelas), pare o torno e tire o ímã.
+3. Encerre os 5 ensaios e rode:
+
+   ```powershell
+   python bancada.py teste-reteste ..\exportar.csv --ensaios COD1,COD2,COD3,COD4,COD5
+   ```
+
+| Esperado | Se não acontecer |
+|---|---|
+| sem `AVISO` (todos T1, mesma rotação) | aviso de rotação: algum ensaio foi aberto com outra rotação alvo; refaça esse |
+| CV do RMS, da 1X e da velocidade por ponto | CV da 1X `-`: as ordens saíram 0 (rotação instável, veja `variacao_rot` na serial) |
+
+| Ponto | Marcha (rpm) | Montagens | RMS médio (g) | CV RMS | 1X média (g) | CV 1X | Vel. média (mm/s) | CV vel. |
+|---|---|---|---|---|---|---|---|---|
+| | | | | | | | | |
+
+O CV é a **incerteza de montagem**: uma diferença entre duas condições menor que ele não se separa
+da recolocação do sensor.
+
+## 15. Ímã contra fita dupla-face
+
+Mesmo ponto e mesma marcha do item 14, T1.
+
+1. Com o ímã no contorno marcado, grave um T1 de 1 min.
+2. Tire o ímã, limpe a superfície, cole o sensor com fita dupla-face no mesmo contorno, grave outro T1
+   de 1 min. Anote a fita usada.
+3. Compare os dois ensaios na exportação (ou pelo replay no painel), lembrando do CV do item 14.
+
+| Fixação | Ensaio | RMS (g) | 1X (g) | 2X (g) | Vel. (mm/s) | Observação |
+|---|---|---|---|---|---|---|
+| ímã | | | | | | |
+| fita dupla-face (qual) | | | | | | |
+
+| Esperado | Se não acontecer |
+|---|---|
+| 1X e velocidade parecidos (diferença dentro do CV); o RMS pode diferir mais, porque a fixação muda a resposta em frequência alta | diferença muito maior que o CV também na 1X: a fixação por ímã está mexendo; anote e não use o ímã nesse ponto sem investigar |
+
+## 16. Batida com o cabo da chave
+
+Torno parado. Diferente do item 9 (que confere o alerta), aqui o objetivo é ver a resposta de cada
+ponto a um impulso e confirmar que cada sensor está no ponto certo.
+
+1. Ligue a captura do sinal bruto (`python captura.py --porta COM5 --segundos 10 --saida dados/batida_A.csv`).
+2. Durante a captura, dê **3 batidas** leves com o **cabo** da chave (não com a parte metálica), a
+   cerca de 5 cm do sensor A, uma a cada 2 s.
+3. Repita para B e C, cada um com o arquivo dele.
+
+| Ponto batido | Pico no ponto batido (g) | Pico nos outros (g) | Curtose da janela | Observação |
+|---|---|---|---|---|
+| A | | | | |
+| B | | | | |
+| C | | | | |
+
+| Esperado | Se não acontecer |
+|---|---|
+| o ponto batido tem o maior pico; a curtose da janela sobe bem acima de 3 | o maior pico aparece em outro ponto: os cabos estão trocados (CS 5 = A, 16 = B, 17 = C) |
+| nenhuma saturação (`saturou` falso) com batida leve | satura: bata mais leve; o fundo de escala é 16 g |
+
+## 17. Banda acima de 800 Hz (captura a 3200 Hz)
+
+**Ainda não dá para fazer:** o firmware não tem o comando de captura a 3200 Hz (item 5.3 da segunda
+rodada, não implementado). O script já existe: quando houver uma captura a 3200 Hz,
+`python bancada.py banda captura.csv --taxa 3200 --grafico banda.png` dá a fração da energia entre 800
+e 1600 Hz, que é a que poderia dobrar para dentro da banda na aquisição normal a 1600 Hz.
+
+| Ponto | Etapa | Fração acima de 800 Hz | Arquivo da captura |
+|---|---|---|---|
+| A | T1 | | |
+| A | T3 | | |
+
+## 18. FC-51 em todas as marchas
+
+Confere a hipótese de que, nas marchas altas, o pulso da faixa refletiva fica curto demais para o
+FC-51 (o módulo não especifica tempo de resposta) e a rotação sai errada.
+
+1. Torno em vazio. Para cada marcha da tabela (do menor para o maior), espere 2 janelas e anote da
+   linha `#` da serial: `pulso_min_us`, `pulso_medio_us` e `pulsos` (por janela), e o `rpm=` da linha
+   `janela`.
+2. Se em alguma marcha a rotação sair pela **metade** (ou com variação alta, `ordens=zero`), troque o
+   retalho refletivo por uma **faixa branca mais longa**, cerca de **1/8 da volta** da flange, e repita
+   a tabela inteira na segunda coluna de resultados.
+
+| Esperado | Se não acontecer |
+|---|---|
+| `rpm=` igual à marcha nominal com poucos % de diferença em todas as marchas; `pulsos` = voltas na janela (rpm/60 x 5) | rotação pela metade ou `pulsos` abaixo das voltas: o sensor perde pulsos; veja o `pulso_min_us` dessa marcha e troque a faixa (passo 2) |
+| `pulso_min_us` diminui com a marcha, sem cair a poucos µs | `pulso_min_us` de poucos µs: repique ou ruído na saída; ajuste o trimpot e a distância |
+| a rotação no payload é a mesma de antes (a largura do pulso é só diagnóstico) | — |
+
+| Marcha nominal (rpm) | rpm lido (retalho) | pulso mín. (µs) | pulso médio (µs) | pulsos/janela | rpm lido (faixa 1/8) | pulso mín. (µs) | pulsos/janela |
+|---|---|---|---|---|---|---|---|
+| 45 | | | | | | | |
+| 71 | | | | | | | |
+| 90 | | | | | | | |
+| 112 | | | | | | | |
+| 140 | | | | | | | |
+| 180 | | | | | | | |
+| 224 | | | | | | | |
+| 265 | | | | | | | |
+| 280 | | | | | | | |
+| 355 | | | | | | | |
+| 450 | | | | | | | |
+| 560 | | | | | | | |
+| 710 | | | | | | | |
+| 900 | | | | | | | |
+| 1120 | | | | | | | |
+| 1400 | | | | | | | |
+| 1800 | | | | | | | |
+| 2240 | | | | | | | |
+
+Abaixo de ~25 rpm (mais de 2,4 s por volta) a rotação vai a 0 por falta de pulso em 2 s; acima de
+4000 rpm o antirrepique descarta as bordas. Confira também a marcha de 265 rpm na placa do torno
+(ainda não conferida, ver [`der.md`](der.md)).
+
 ## Para registrar
 
 | Item | Valor |
@@ -229,4 +416,7 @@ Desligue, ligue B (CS 16) e C (CS 17) e repita os passos 2, 3, 8 e 9.
 | Sem rede 2 min: janelas faltando | |
 | Modo rápido: ligou e voltou sozinho (sim/não) | |
 | Captura: amostras/s por sensor, quadros perdidos, erros de CRC | |
+| Versão do firmware (primeira linha da serial) | |
+| Calibração A, B, C (identificador e ganho) | ver item 12 |
+| Recuperação: tempo para esvaziar a fila, painel caiu? (sim/não) | |
 | Problemas e o que foi feito | |
