@@ -218,7 +218,7 @@ def test_etapa_padrao_e_o_corte():
     assert sim.criar_argumentos().parse_args(["continuo"]).etapa == "T3"
 
 
-@pytest.mark.parametrize("condicao", [c for c in sim.CONDICOES if c != "normal"])
+@pytest.mark.parametrize("condicao", ["ferramenta_desgastada", "avanco_excessivo"])
 def test_condicao_aparece_na_ferramenta_e_quase_nao_no_acionamento(condicao):
     normal_b = media_de("rms_g", "B", etapa="T3")
     alterada_b = media_de("rms_g", "B", etapa="T3", condicao=condicao)
@@ -229,7 +229,7 @@ def test_condicao_aparece_na_ferramenta_e_quase_nao_no_acionamento(condicao):
 
 
 @pytest.mark.parametrize("etapa", ["T1", "T2"])
-@pytest.mark.parametrize("condicao", [c for c in sim.CONDICOES if c != "normal"])
+@pytest.mark.parametrize("condicao", [c for c in sim.CONDICOES if c not in ("normal", "desbalanceamento")])
 def test_sem_corte_a_condicao_nao_muda_o_sinal(etapa, condicao):
     for ponto in sim.PONTOS:
         assert media_de("rms_g", ponto, etapa=etapa, condicao=condicao) \
@@ -248,6 +248,96 @@ def test_rotacao_inadequada_excita_mais_a_estrutura_e_a_3x():
         > 1.5 * media_de("rms_g", "C", etapa="T3")
     assert media_de("o3x", "B", etapa="T3", condicao="rotacao_inadequada") \
         > 1.5 * media_de("o3x", "B", etapa="T3")
+
+
+def test_rotacao_inadequada_trepida_tambem_no_acionamento():
+    assert media_de("rms_g", "A", etapa="T3", condicao="rotacao_inadequada")         > 1.15 * media_de("rms_g", "A", etapa="T3")
+    assert media_de("rms_g", "B", etapa="T3", condicao="rotacao_inadequada")         > 1.2 * media_de("rms_g", "B", etapa="T3")
+
+
+def test_avanco_excessivo_sobe_rms_do_b_e_derruba_um_pouco_a_rotacao():
+    assert media_de("rms_g", "B", etapa="T3", condicao="avanco_excessivo")         > 1.5 * media_de("rms_g", "B", etapa="T3")
+    def rotacao(**kwargs):
+        rng = random.Random(9)
+        return mean(sim.gerar_payload("ps-sim-01", INICIO, 1120, etapa="T3", rng=rng, **kwargs)["rotacao_rpm"]
+                    for _ in range(200))
+    assert rotacao(condicao="avanco_excessivo") < rotacao() - 10
+
+
+def test_desgaste_sobe_pico_e_curtose_do_b_mais_que_o_rms():
+    def razao(campo):
+        return media_de(campo, "B", etapa="T3", condicao="ferramenta_desgastada") / media_de(campo, "B", etapa="T3")
+    assert razao("pico_g") > razao("rms_g")
+    assert razao("curtose") > 1.3
+
+
+@pytest.mark.parametrize("etapa", ["T1", "T3"])
+def test_desbalanceamento_sobe_a_1x_do_a_e_do_c_com_ou_sem_corte(etapa):
+    for ponto in ("A", "C"):
+        assert media_de("o1x", ponto, etapa=etapa, condicao="desbalanceamento")             > 1.6 * media_de("o1x", ponto, etapa=etapa)
+    # a 2X do acionamento não muda: é a 1X que denuncia o desbalanceamento
+    assert media_de("o2x", "A", etapa=etapa, condicao="desbalanceamento")         == pytest.approx(media_de("o2x", "A", etapa=etapa), rel=0.05)
+
+
+def test_desbalanceamento_cresce_com_a_rotacao():
+    def o1x_a(rotacao):
+        rng = random.Random(3)
+        return mean(sim.gerar_payload("ps-sim-01", INICIO, rotacao, etapa="T1", condicao="desbalanceamento",
+                                      rng=rng)["pontos"]["A"]["o1x"] for _ in range(100))
+    assert o1x_a(450) < o1x_a(900) < o1x_a(1400)
+
+
+def test_intensidade_zero_e_o_normal_e_intensidade_escala_o_efeito():
+    def rms_b(intensidade):
+        rng = random.Random(4)
+        return mean(sim.gerar_payload("ps-sim-01", INICIO, 1120, etapa="T3", condicao="avanco_excessivo", rng=rng,
+                                      intensidade=intensidade)["pontos"]["B"]["rms_g"] for _ in range(200))
+    normal = media_de("rms_g", "B", rotacao=1120, etapa="T3")
+    assert rms_b(0.0) == pytest.approx(normal, rel=0.05)
+    assert normal < rms_b(0.5) < rms_b(1.0)
+
+
+def test_sorteio_do_ensaio_fica_nos_limites_e_normal_nao_tem_efeito():
+    rng = random.Random(8)
+    for _ in range(200):
+        forca, montagem = sim.sortear_ensaio(rng, "avanco_excessivo")
+        assert sim.INTENSIDADE_MIN <= forca <= sim.INTENSIDADE_MAX
+        assert 0.75 <= montagem <= 1.25
+    assert sim.sortear_ensaio(rng, "normal")[0] == 0.0
+    assert sim.sortear_ensaio(rng, "desbalanceamento", intensidade=0.8)[0] == 0.8
+    assert sim.sortear_ensaio(rng, "normal", variacao_desvio=0)[1] == 1.0
+
+
+def test_classes_se_sobrepoem_entre_ensaios():
+    """Com a intensidade e a montagem sorteadas, um ensaio fraco de desgaste fica perto do normal."""
+    rng = random.Random(21)
+    normais, desgastes = [], []
+    for _ in range(40):
+        _, montagem = sim.sortear_ensaio(rng, "normal")
+        normais.append(sim.gerar_payload("ps-sim-01", INICIO, 1120, etapa="T3", rng=rng,
+                                         variacao=montagem)["pontos"]["B"]["rms_g"])
+        forca, montagem = sim.sortear_ensaio(rng, "ferramenta_desgastada")
+        desgastes.append(sim.gerar_payload("ps-sim-01", INICIO, 1120, etapa="T3", condicao="ferramenta_desgastada",
+                                           rng=rng, intensidade=forca, variacao=montagem)["pontos"]["B"]["rms_g"])
+    assert min(desgastes) < max(normais)
+    assert mean(desgastes) > mean(normais)
+
+
+def test_nivel_de_som_so_com_todos_os_canais_lentos():
+    rng = random.Random(6)
+    padrao = sim.gerar_payload("ps-sim-01", INICIO, 1120, rng=rng)
+    todos = sim.gerar_payload("ps-sim-01", INICIO, 1120, rng=rng, canais_lentos="todos")
+    nenhum = sim.gerar_payload("ps-sim-01", INICIO, 1120, rng=rng, canais_lentos="nenhum")
+    assert set(padrao["canais"]) == set(sim.CANAIS)
+    assert set(todos["canais"]) == set(sim.CANAIS) | {sim.CANAL_SOM}
+    assert "canais" not in nenhum
+    def som(**kwargs):
+        rng = random.Random(2)
+        return mean(sim.gerar_payload("ps-sim-01", INICIO, 1120, rng=rng, canais_lentos="todos",
+                                      **kwargs)["canais"][sim.CANAL_SOM] for _ in range(100))
+    assert som(etapa="T0") < som(etapa="T1") < som(etapa="T3") < som(etapa="T3", condicao="avanco_excessivo")
+    with pytest.raises(ValueError):
+        sim.gerar_payload("ps-sim-01", INICIO, 1120, canais_lentos="alguns")
 
 
 def test_modos_normal_atencao_severo_sao_crescentes():
