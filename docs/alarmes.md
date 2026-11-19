@@ -124,8 +124,11 @@ ordem não são avaliadas com o torno parado nem quando vieram zeradas.
   referência completa** (sem estado), porque comparar o corte só com o giro em vazio alarmaria todo
   corte. Consequência visível: uma janela de giro em vazio aparece "comparada com o corte" com z
   negativo, e o estado é NORMAL do mesmo jeito.
-- **Calibração diferente:** se a janela chega com calibração diferente da referência daquele ponto, o
-  ponto fica `calibracao_diferente`, não gera estado nem alerta, e o Diagnóstico pede recalcular.
+- **Calibração diferente:** a janela só é comparada quando ela e a referência têm a **mesma** calibração
+  naquele ponto, ou quando **nenhuma das duas** traz identificador. Se só um dos lados tem identificador (o
+  sensor foi calibrado depois da referência, ou o firmware deixou de informar) ou se os dois têm e diferem, o
+  ponto fica `calibracao_diferente`, não gera estado nem alerta, e o Diagnóstico pede recalcular. (Até
+  19/11/2026 a comparação era pulada quando um dos lados não tinha calibração.)
 
 **Estado do ponto** pela pior medida entre `rms_g`, `vel_rms_mm_s`, `o1x`, `o2x`, `o3x` e `pico_g` (a
 curtose entra só na explicação). Só desvio **para cima** gera estado.

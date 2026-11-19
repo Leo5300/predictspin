@@ -21,6 +21,8 @@ import br.senai.predictspin.referencia.ReferenciaRepository.CelulaGravada;
  *       fica com a de menor pior z (a interpretação mais normal). Se faltar uma das duas, o ponto fica
  *       "sem referência completa": comparar o corte só com o giro em vazio alarmaria todo corte.</li>
  * </ul>
+ * Calibração: só compara quando janela e referência têm a mesma calibração no ponto (ou nenhuma das duas
+ * informa); senão o ponto fica "calibração diferente".
  * z = (x − mediana) / σ efetivo, só nas células suficientes. As ordens não são avaliadas com o torno
  * parado nem quando vieram zeradas (primeira janela depois de ligar ou trocar de marcha).
  */
@@ -57,8 +59,7 @@ public final class Avaliador {
         if (ctx.naoAvaliavel()) {
             return Resultado.sem(Situacao.NAO_AVALIAVEL);
         }
-        String calibracaoRef = ref.calibracao(pontoId);
-        if (calibracaoRef != null && ctx.calibracao() != null && !Objects.equals(calibracaoRef, ctx.calibracao())) {
+        if (calibracaoDiferente(ref.calibracao(pontoId), ctx.calibracao())) {
             return Resultado.sem(Situacao.CALIBRACAO_DIFERENTE);
         }
         int marcha = ctx.marcha();
@@ -89,6 +90,16 @@ public final class Avaliador {
             return corte;
         }
         return corte.zMax() < vazio.zMax() ? corte : vazio;
+    }
+
+    /**
+     * Calibração da janela × calibração da referência no ponto. Só é a mesma quando os dois lados não têm
+     * identificador ou têm o mesmo. Um lado só com identificador (sensor calibrado depois da referência, ou
+     * firmware que deixou de informar) ou dois diferentes: os valores em g podem ter mudado (~7%), e a
+     * comparação não vale até recalcular a referência.
+     */
+    public static boolean calibracaoDiferente(String daReferencia, String daJanela) {
+        return !Objects.equals(daReferencia, daJanela);
     }
 
     private static Resultado avaliarNoEnsaio(ReferenciaAtiva ref, long pontoId, Contexto ctx,

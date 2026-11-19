@@ -126,15 +126,39 @@ class AvaliadorTest {
     }
 
     @Test
-    void calibracaoDiferenteENaoAvaliavelNaoGeramZ() {
+    void naoAvaliavelNaoGeraZ() {
         ReferenciaAtiva ref = ref(etapa(A, 1120, "T1", false, null, 0.10));
-        assertThat(Avaliador.avaliar(ref, A, new Avaliador.Contexto(1120, false, "T1", null, null, "A-2"),
-                todos(0.5), false).situacao()).isEqualTo(Situacao.CALIBRACAO_DIFERENTE);
-        // sem calibração na janela (firmware antigo) não dá para comparar: avalia
-        assertThat(Avaliador.avaliar(ref, A, new Avaliador.Contexto(1120, false, "T1", null, null, null),
-                todos(0.1), false).situacao()).isEqualTo(Situacao.AVALIADA);
         assertThat(Avaliador.avaliar(ref, A, new Avaliador.Contexto(1120, true, "T1", null, null, "A-1"),
                 todos(0.5), false).situacao()).isEqualTo(Situacao.NAO_AVALIAVEL);
+    }
+
+    /** Referência T1 do ponto A com a calibração dada (nula = as janelas usadas não informavam). */
+    private static ReferenciaAtiva refCalibrada(String calibracao) {
+        List<CelulaGravada> lista = new ArrayList<>();
+        for (CelulaGravada c : etapa(A, 1120, "T1", false, null, 0.10)) {
+            lista.add(new CelulaGravada(c.id(), c.pontoId(), c.ponto(), c.medida(), c.marchaRpm(), c.etapa(),
+                    c.porReceita(), c.materialId(), c.ferramentaId(), c.n(), c.nDeriva(), c.mediana(), c.sigma(),
+                    c.p95(), c.pisoRuido(), c.sigmaEfetivo(), c.suficiente(), calibracao, c.firmwareVersoes()));
+        }
+        return ref(lista);
+    }
+
+    private static Situacao situacaoComCalibracao(String daReferencia, String daJanela) {
+        return Avaliador.avaliar(refCalibrada(daReferencia), A,
+                new Avaliador.Contexto(1120, false, "T1", null, null, daJanela), todos(0.1), false).situacao();
+    }
+
+    @Test
+    void calibracaoSoEhIgualQuandoOsDoisLadosNaoTemOuTemAMesma() {
+        // os dois sem identificador: compara
+        assertThat(situacaoComCalibracao(null, null)).isEqualTo(Situacao.AVALIADA);
+        // os dois com o mesmo: compara
+        assertThat(situacaoComCalibracao("A-1", "A-1")).isEqualTo(Situacao.AVALIADA);
+        // só um dos lados tem: diferente (sensor calibrado depois da referência, ou o contrário)
+        assertThat(situacaoComCalibracao(null, "A-1")).isEqualTo(Situacao.CALIBRACAO_DIFERENTE);
+        assertThat(situacaoComCalibracao("A-1", null)).isEqualTo(Situacao.CALIBRACAO_DIFERENTE);
+        // os dois têm e diferem
+        assertThat(situacaoComCalibracao("A-1", "A-2")).isEqualTo(Situacao.CALIBRACAO_DIFERENTE);
     }
 
     @Test
@@ -151,7 +175,7 @@ class AvaliadorTest {
         List<CelulaGravada> zeradas = new ArrayList<>();
         for (Medida m : Medida.values()) {
             zeradas.add(new CelulaGravada(0, A, "A", m, 1120, "T1", false, null, null, 30, 0, 0, 0, 0, null, 0, true,
-                    null, null));
+                    "A-1", null));
         }
         assertThat(Avaliador.avaliar(ref(zeradas), A, ctx(1120, "T1", null), todos(0.1), false).situacao())
                 .isEqualTo(Situacao.SEM_REFERENCIA);
