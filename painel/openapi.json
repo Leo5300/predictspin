@@ -795,6 +795,16 @@
       },
       "DiagnosticoAlarmeResposta": {
         "properties": {
+          "avaliacoes_descartadas": {
+            "description": "Janelas que ficaram sem avaliação porque a fila continuou cheia por limites.avaliacao.espera_fila_ms, desde que a API subiu",
+            "format": "int64",
+            "type": "integer"
+          },
+          "avaliacoes_na_fila": {
+            "description": "Janelas gravadas esperando avaliação agora (todas as máquinas)",
+            "format": "int32",
+            "type": "integer"
+          },
           "avisos": {
             "description": "Avisos prontos (sem piso de ruído, recalcular a referência...)",
             "items": {
@@ -837,6 +847,8 @@
           }
         },
         "required": [
+          "avaliacoes_descartadas",
+          "avaliacoes_na_fila",
           "avisos",
           "falhas_avaliacao",
           "indicadores",
@@ -1482,6 +1494,9 @@
           "alarme": {
             "$ref": "#/components/schemas/PropriedadesAlarme"
           },
+          "avaliacao": {
+            "$ref": "#/components/schemas/PropriedadesAvaliacao"
+          },
           "os": {
             "$ref": "#/components/schemas/PropriedadesOs"
           },
@@ -1491,6 +1506,7 @@
         },
         "required": [
           "alarme",
+          "avaliacao",
           "os",
           "referencia"
         ]
@@ -1685,6 +1701,14 @@
       "MedidaPonto": {
         "description": "Características por ponto de medição, pelo código do ponto (A, B, C)",
         "properties": {
+          "amostras": {
+            "description": "Opcional. Amostras lidas deste sensor nesta janela (o campo \"amostras\" da janela é a menor entre os sensores)",
+            "example": 8000,
+            "format": "int32",
+            "maximum": 1000000,
+            "minimum": 0,
+            "type": "integer"
+          },
           "curtose": {
             "example": 3.1,
             "format": "double",
@@ -1725,6 +1749,11 @@
             "maximum": 1000,
             "minimum": 0,
             "type": "number"
+          },
+          "saturou": {
+            "description": "Opcional. Este acelerômetro bateu no fundo de escala nesta janela. Quando vem, o alerta de instrumento por saturação vai para este ponto; sem ele, a API só sabe o \"saturou\" da janela inteira",
+            "example": false,
+            "type": "boolean"
           },
           "vel_rms_mm_s": {
             "description": "Opcional. Velocidade RMS em mm/s (no firmware, banda de 10 Hz a ~800 Hz)",
@@ -2836,6 +2865,23 @@
           "supressao_opcoes_min",
           "z_alarme",
           "z_atencao"
+        ]
+      },
+      "PropriedadesAvaliacao": {
+        "description": "Fila da avaliação das janelas (ps.avaliacao)",
+        "properties": {
+          "espera_fila_ms": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "fila_max": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "espera_fila_ms",
+          "fila_max"
         ]
       },
       "PropriedadesOs": {

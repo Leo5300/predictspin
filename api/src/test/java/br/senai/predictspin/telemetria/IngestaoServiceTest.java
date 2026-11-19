@@ -67,7 +67,7 @@ class IngestaoServiceTest {
         when(ensaios.idAberto(MAQUINA, true)).thenReturn(Optional.empty());
         servico = new IngestaoService(ingestao, pontos, canais, dispositivos, ensaios, modoRapido,
                 Clock.fixed(AGORA, ZoneOffset.UTC));
-        recepcao = new RecepcaoTelemetriaService(servico, anuncios);
+        recepcao = new RecepcaoTelemetriaService(servico, anuncios, FilaDeAvaliacao.imediata());
     }
 
     private static CodigoId codigo(String codigo, Long id) {

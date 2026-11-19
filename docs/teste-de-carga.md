@@ -367,6 +367,49 @@ avaliada contra a referência (estado de cada ponto, alerta e OS) antes da respo
 - O cenário é mais pesado que o uso real: um ESP32 manda uma janela a cada 5 s, em série; aqui 20 VUs
   mandam janelas do mesmo dispositivo ao mesmo tempo.
 
+## Avaliação fora do caminho da resposta (19/11/2026)
+
+Medido nesta máquina (Windows, Docker Desktop com 8 CPUs e 4 GB, compose local, API sem limite de memória e
+`JAVA_OPTS` padrão da imagem, pool de 10), mesmo método: k6 pela imagem `grafana/k6` na rede do compose,
+`-e CENARIO=20`, aquecimento de 10 s descartado e execuções de 60 s. Para toda janela do k6 ser avaliada, a
+referência simulada foi gravada antes em todas as marchas da faixa sorteada pelo script (380 a 1250 rpm):
+roteiro T0, T1 e T3 normais a 355, 450, 560, 710, 900 e 1120 rpm, 30 janelas cada (versão 3, 306 células).
+
+**Medição antes (código de de9782f).** Instrumentação temporária (retirada antes do commit) mediu, em cada POST, o
+tempo de gravar (transação da ingestão), o de avaliar (estado, alerta e OS, ainda na thread do pedido), a espera
+pela trava de `estado_ponto` dentro da avaliação e o pool de conexões (Hikari) no fim da avaliação. Uma janela
+normal custa 28 comandos SQL (log do PostgreSQL com `log_statement = all`, uma janela): 17 da ingestão, 9 da
+avaliação (trava, 3 avaliações, 3 estados) e 2 da autenticação do dispositivo.
+
+| Execução (20 VUs, 60 s) | p95 ingestão | p99 ingestão | gravar p95 | avaliar p95 | trava p95 / p99 | pool no pico |
+|---|---|---|---|---|---|---|
+| antes, máquina livre (1 146 janelas) | 152,0 ms | 323,7 ms | 49,3 ms | 40,5 ms | 20,6 / 89,2 ms | 10 ativas, 10 threads esperando |
+| antes, 8 laços de CPU em paralelo (1 095 janelas) | 227,4 ms | 451,6 ms | 77,7 ms | 69,9 ms | 43,7 / 178,8 ms | 10 ativas, 10 threads esperando |
+
+Execuções antes, sem instrumentação: p95 da ingestão 86,7 ms e 150,2 ms (p99 1,44 s na segunda). Os
+673 ms a 1,94 s de 18/11 não se repetiram; a hipótese mais provável é a máquina carregada pelos testes que
+rodavam em paralelo naquele dia, mas isso não foi provado.
+
+**Causa.** A avaliação ficava no caminho da resposta (cerca de metade do tempo), as avaliações da mesma
+máquina esperavam umas pelas outras na trava de `estado_ponto` e, nos picos, o pool ficava cheio e as threads
+da ingestão esperavam conexão. Com a máquina carregada, quem segura a trava perde a CPU e a fila cresce.
+
+**Correção.** A avaliação saiu da resposta para a `FilaDeAvaliacao` (uma thread por máquina e tipo de dado, fila
+de 64, ordem preservada, erro isolado e contado; ver [`alarmes.md`](alarmes.md#visão-geral)). Uma avaliação
+por máquina de cada vez: não há mais disputa pela trava nem segunda conexão por pedido.
+
+| Execução depois (20 VUs, 60 s) | Requisições | Erros | p95 ingestão | p99 ingestão |
+|---|---|---|---|---|
+| 1ª | 2 342 | 0% | 44,5 ms | 83,4 ms |
+| 2ª | 2 312 | 0% | 123,3 ms | 419,1 ms |
+| 3ª | 2 364 | 0% | 19,6 ms | 43,7 ms |
+| com 8 laços de CPU em paralelo | 2 256 | 0% | 126,5 ms | 387,8 ms |
+
+As 2 496 janelas das duas primeiras execuções foram todas avaliadas (nenhuma sem linha em `avaliacao`), com 0
+na fila, 0 descartadas e 0 falhas no Diagnóstico ao fim. A meta de 500 ms é atendida antes e depois nesta
+medição; a variação entre execuções seguidas (19,6 a 123,3 ms) é desta máquina de desenvolvimento, e o p99 da
+2ª execução mostra que ainda há picos que não vêm da avaliação.
+
 ### Como medir em produção
 
 Para ter o antes em produção, rode **antes do push** que leva esta mudança ao Render; depois do

@@ -1180,6 +1180,16 @@ export interface components {
             habilitada: boolean;
         };
         DiagnosticoAlarmeResposta: {
+            /**
+             * Format: int64
+             * @description Janelas que ficaram sem avaliação porque a fila continuou cheia por limites.avaliacao.espera_fila_ms, desde que a API subiu
+             */
+            avaliacoes_descartadas: number;
+            /**
+             * Format: int32
+             * @description Janelas gravadas esperando avaliação agora (todas as máquinas)
+             */
+            avaliacoes_na_fila: number;
             /** @description Avisos prontos (sem piso de ruído, recalcular a referência...) */
             avisos: string[];
             /**
@@ -1418,6 +1428,7 @@ export interface components {
         };
         LimitesResposta: {
             alarme: components["schemas"]["PropriedadesAlarme"];
+            avaliacao: components["schemas"]["PropriedadesAvaliacao"];
             os: components["schemas"]["PropriedadesOs"];
             referencia: components["schemas"]["PropriedadesReferencia"];
         };
@@ -1477,6 +1488,12 @@ export interface components {
         /** @description Características por ponto de medição, pelo código do ponto (A, B, C) */
         MedidaPonto: {
             /**
+             * Format: int32
+             * @description Opcional. Amostras lidas deste sensor nesta janela (o campo "amostras" da janela é a menor entre os sensores)
+             * @example 8000
+             */
+            amostras?: number;
+            /**
              * Format: double
              * @example 3.1
              */
@@ -1506,6 +1523,11 @@ export interface components {
              * @example 0.12
              */
             rms_g: number;
+            /**
+             * @description Opcional. Este acelerômetro bateu no fundo de escala nesta janela. Quando vem, o alerta de instrumento por saturação vai para este ponto; sem ele, a API só sabe o "saturou" da janela inteira
+             * @example false
+             */
+            saturou?: boolean;
             /**
              * Format: double
              * @description Opcional. Velocidade RMS em mm/s (no firmware, banda de 10 Hz a ~800 Hz)
@@ -1898,6 +1920,13 @@ export interface components {
             z_alarme: number;
             /** Format: double */
             z_atencao: number;
+        };
+        /** @description Fila da avaliação das janelas (ps.avaliacao) */
+        PropriedadesAvaliacao: {
+            /** Format: int64 */
+            espera_fila_ms: number;
+            /** Format: int32 */
+            fila_max: number;
         };
         PropriedadesOs: {
             /** Format: double */

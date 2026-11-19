@@ -20,6 +20,7 @@ import br.senai.predictspin.alarme.AvaliacaoService;
 import br.senai.predictspin.alarme.PropriedadesAlarme;
 import br.senai.predictspin.alerta.dto.DiagnosticoAlarmeResposta;
 import br.senai.predictspin.alerta.dto.LimitesResposta;
+import br.senai.predictspin.telemetria.FilaDeAvaliacao;
 import br.senai.predictspin.comum.RecursoNaoEncontradoException;
 import br.senai.predictspin.maquina.Maquina;
 import br.senai.predictspin.maquina.MaquinaRepository;
@@ -54,16 +55,19 @@ public class DiagnosticoAlarmeService {
     private final MaquinaRepository maquinas;
     private final LimitesResposta limites;
     private final Clock relogio;
+    private final FilaDeAvaliacao fila;
 
     public DiagnosticoAlarmeService(JdbcTemplate jdbc, AlertaService alertas, ReferenciaService referencias,
                                     MaquinaRepository maquinas, PropriedadesReferencia ref, PropriedadesAlarme alarme,
-                                    PropriedadesOs os, Clock relogio, AvaliacaoService avaliacoes) {
+                                    PropriedadesOs os, Clock relogio, AvaliacaoService avaliacoes,
+                                    FilaDeAvaliacao fila) {
         this.avaliacoes = avaliacoes;
+        this.fila = fila;
         this.jdbc = jdbc;
         this.alertas = alertas;
         this.referencias = referencias;
         this.maquinas = maquinas;
-        this.limites = new LimitesResposta(ref, alarme, os);
+        this.limites = new LimitesResposta(ref, alarme, os, fila.propriedades());
         this.relogio = relogio;
     }
 
@@ -170,7 +174,7 @@ public class DiagnosticoAlarmeService {
                 new DiagnosticoAlarmeResposta.Indicadores(ind.alertasPorHora(), ind.piorDezMinutos(),
                         ind.pontosRepetitivos(), ind.parados(), ind.suprimidos()),
                 !pisos.isEmpty(), ref.map(ReferenciaAtiva::numero).orElse(null), pontos, avisos,
-                avaliacoes.falhasDeAvaliacao());
+                avaliacoes.falhasDeAvaliacao() + fila.falhas(), fila.naFila(), fila.descartadas());
     }
 
     private static OffsetDateTime utc(Instant instante) {

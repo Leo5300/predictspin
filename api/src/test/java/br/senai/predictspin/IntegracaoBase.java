@@ -3,6 +3,7 @@ package br.senai.predictspin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -25,6 +26,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import br.senai.predictspin.referencia.ReferenciaService;
+import br.senai.predictspin.telemetria.FilaDeAvaliacao;
 
 /**
  * Base dos testes de integração: API inteira (MockMvc) sobre PostgreSQL real do Testcontainers.
@@ -59,6 +61,9 @@ public abstract class IntegracaoBase {
 
     @Autowired
     protected ReferenciaService referencias;
+
+    @Autowired
+    protected FilaDeAvaliacao filaDeAvaliacao;
 
     @BeforeEach
     void limparBase() {
@@ -159,12 +164,20 @@ public abstract class IntegracaoBase {
         return p;
     }
 
+    /**
+     * POST /api/v1/telemetria e espera a fila de avaliação esvaziar: a avaliação, os alertas, a OS e o fluxo ao
+     * vivo rodam depois da resposta ({@link FilaDeAvaliacao}), e os testes conferem o efeito deles.
+     */
     protected ResultActions enviar(String dispositivo, String chave, Object corpo) throws Exception {
-        return mvc.perform(post("/api/v1/telemetria")
+        ResultActions resultado = mvc.perform(post("/api/v1/telemetria")
                 .header("X-Dispositivo-Id", dispositivo)
                 .header("X-Dispositivo-Chave", chave)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(corpo instanceof String s ? s : json.writeValueAsString(corpo)));
+        if (!filaDeAvaliacao.aguardarOcioso(Duration.ofSeconds(30))) {
+            throw new AssertionError("a fila de avaliação não esvaziou em 30 s");
+        }
+        return resultado;
     }
 
     protected ResultActions enviarSimulado(Instant medidoEm) throws Exception {

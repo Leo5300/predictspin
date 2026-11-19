@@ -17,7 +17,10 @@ public record DiagnosticoAlarmeResposta(
         List<Ponto> pontos,
         @Schema(description = "Avisos prontos (sem piso de ruído, recalcular a referência...)") List<String> avisos,
         @Schema(description = "Janelas que ficaram sem avaliação por erro desde que a API subiu (a janela "
-                + "foi gravada; o erro está no log)") long falhasAvaliacao) {
+                + "foi gravada; o erro está no log)") long falhasAvaliacao,
+        @Schema(description = "Janelas gravadas esperando avaliação agora (todas as máquinas)") int avaliacoesNaFila,
+        @Schema(description = "Janelas que ficaram sem avaliação porque a fila continuou cheia por "
+                + "limites.avaliacao.espera_fila_ms, desde que a API subiu") long avaliacoesDescartadas) {
 
     @Schema(name = "IndicadoresAlarme", description = "Últimas limites.alarme.indicadores_h horas (24 por padrão), "
             + "sem os alertas de ensaio de condição")

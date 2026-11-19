@@ -118,6 +118,11 @@ ps:
     # prazos de supressão oferecidos no painel e o maior aceito pela API (uma semana)
     supressao-opcoes-min: [15, 60, 240, 1440]
     supressao-max-min: 10080
+  avaliacao:
+    # a avaliação de cada janela roda depois da resposta, numa fila por máquina e tipo de dado (uma thread):
+    # até 64 janelas esperando; cheia, o POST espera até 2000 ms por vaga e depois grava sem avaliar (contado)
+    fila-max: 64
+    espera-fila-ms: 2000
   os:
     # alerta de máquina em ALARME por 120 s seguidos abre OS
     alarme-continuo-s: 120

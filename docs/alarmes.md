@@ -24,14 +24,22 @@ janela (POST /telemetria) ─► filtro de qualidade ─► avaliação contra a
    gravada junto                         alerta ISA-18.2 ─► ordem de serviço ─► retorno do técnico
 ```
 
-A janela é gravada primeiro, na transação da ingestão. Quando ela termina (commit feito e conexão devolvida
-ao pool), o `RecepcaoTelemetriaService`, sem transação, anuncia `JanelaRecebida`: a avaliação (estado,
-alerta, OS) roda ainda na thread do pedido, em transação própria; só depois a janela vai ao fluxo ao vivo,
-já avaliada. Se a avaliação falhar, a transação dela é desfeita inteira, a janela continua gravada, a
-resposta do `POST /api/v1/telemetria` é a mesma (201) e o erro vai para o log e para o contador "Sem
-avaliação por erro" do Diagnóstico (`falhas_avaliacao`, desde que a API subiu). A janela que ficou sem
-avaliação não é reavaliada depois; a seguinte é avaliada normalmente. Os eventos ao vivo (`alerta`, `os`)
-saem depois do commit da avaliação.
+A janela é gravada primeiro, na transação da ingestão, e a resposta do `POST /api/v1/telemetria` sai logo
+depois do commit. A avaliação (estado, alerta, OS) roda **depois da resposta**, na fila de avaliação da máquina
+(`FilaDeAvaliacao`, desde 19/11/2026): uma thread por máquina e tipo de dado, que preserva a ordem de chegada,
+avalia em transação própria e só então manda a janela ao fluxo ao vivo, já avaliada. A fila é curta
+(`ps.avaliacao.fila-max`, 64 janelas); cheia, o POST espera até `ps.avaliacao.espera-fila-ms` (2000 ms) por
+uma vaga e, se ela não abrir, a janela fica gravada sem avaliação e é contada ("Descartadas da fila" no
+Diagnóstico, `avaliacoes_descartadas`). Se a avaliação falhar, a transação dela é desfeita inteira, a janela
+continua gravada e o erro vai para o log e para o contador "Sem avaliação por erro" (`falhas_avaliacao`, desde
+que a API subiu). A janela que ficou sem avaliação não é reavaliada depois; a seguinte é avaliada normalmente.
+Os eventos ao vivo (`alerta`, `os`) saem depois do commit da avaliação. A janela recuperada (mais de 30 s de
+idade) continua tratada como antes: o "ao vivo" é decidido na chegada, não na hora da avaliação.
+
+Por que fora da resposta: com a avaliação na thread do pedido, metade do tempo da resposta era avaliação, as
+avaliações da mesma máquina faziam fila na trava das linhas de `estado_ponto` e o pool de conexões chegava a
+ter todas as conexões ocupadas e outras 10 threads esperando (medição em
+[`teste-de-carga.md`](teste-de-carga.md#avaliação-fora-do-caminho-da-resposta-19112026)).
 
 Uma primeira versão rodava a avaliação no `afterCommit` da ingestão. Nesse ponto o Spring ainda não
 devolveu a conexão da ingestão, e a transação da avaliação pegava uma segunda: com 20 VUs no k6 e pool de
