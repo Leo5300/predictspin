@@ -94,7 +94,17 @@ public class IngestaoRepository {
     }
 
     /** Uma linha de TELEMETRIA; a velocidade é opcional. */
+    /**
+     * Um ponto da janela. {@code saturou} e {@code amostras} são do sensor (opcionais no envio) e não são
+     * gravados: servem à avaliação, para o alerta de instrumento ir para o sensor com falha.
+     */
     public record LinhaTelemetria(long pontoId, double rmsG, double picoG, double curtose,
-                                  double o1x, double o2x, double o3x, Double velRmsMmS) {
+                                  double o1x, double o2x, double o3x, Double velRmsMmS, Boolean saturou,
+                                  Integer amostras) {
+
+        public LinhaTelemetria(long pontoId, double rmsG, double picoG, double curtose, double o1x, double o2x,
+                               double o3x, Double velRmsMmS) {
+            this(pontoId, rmsG, picoG, curtose, o1x, o2x, o3x, velRmsMmS, null, null);
+        }
     }
 }

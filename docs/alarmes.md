@@ -171,8 +171,16 @@ Alerta de **instrumento** (sensor solto, caído ou com defeito), prioridade baix
   outros pontos; ou
 - num ponto só, com rotação > 0 e os outros pontos sem queda, RMS **e** 1X abaixo de `sinal-fracao`
   (50%) do típico (fora de ensaio, o típico do giro em vazio); ou
-- saturação ou amostras faltando se repetem em 30 s (o payload diz isso da janela inteira; o alerta vai
-  para o ponto de maior pico).
+- saturação ou amostras faltando se repetem em 30 s **no mesmo sensor**. O alerta vai para o ponto que
+  mandou `pontos.*.saturou = true` ou cujas `pontos.*.amostras` ficaram abaixo de 98% das esperadas
+  (campos opcionais por ponto, 19/11/2026). Quando o envio só traz o `saturou` e as `amostras` da janela
+  inteira (como o firmware de 17/11/2026, que não foi alterado), a API não tem como saber o sensor: fica com
+  o ponto de maior pico, e o motivo do alerta diz "o envio não diz qual sensor".
+
+Nos três casos o alerta vai para o ponto que sumiu, caiu ou falhou, nunca para outro (testes em
+`AlertaIntegracaoTest`: `instrumentoAbreComAcaoDoSensorENormaliza`, `instrumentoPorSinalCaidoVaiParaOPontoQueCaiu`,
+`instrumentoPorSaturacaoVaiParaOSensorQueSaturou`, `instrumentoPorAmostrasDoSensorVaiParaOSensorComFalta` e
+`saturacaoSoDaJanelaFicaComOMaiorPicoEDizIsso`).
 
 Normaliza depois de `saida-s` sem nenhuma das condições. Não abre OS: a ação já é conferir o sensor.
 Desvio só para cima num ponto só continua sendo alerta de **máquina** (o corte afeta principalmente o
@@ -325,7 +333,8 @@ relógio das janelas controlado). Com dado real, a severidade só se acumula dep
   limitação pesa no uso real só se sabe com os ensaios T0 a T3 no torno (com as condições de defeito
   gravadas nas duas etapas); é essa coleta que valida ou derruba a regra. Até lá, para conferir a
   máquina em vazio, abra um ensaio T1.
-- Saturação e falta de amostras são da janela inteira no payload; o alerta de instrumento vai para o
-  ponto de maior pico, que pode não ser o sensor com defeito.
+- O firmware de 17/11/2026 manda saturação e amostras só da janela inteira; até ele mandar os campos por
+  ponto, o alerta de instrumento por saturação ou falta de amostras fica com o ponto de maior pico, que pode
+  não ser o sensor com defeito (o motivo do alerta avisa).
 - A deriva compara a mediana das razões RMS ÷ típico (porque a marcha muda o nível), não as medianas
   brutas.

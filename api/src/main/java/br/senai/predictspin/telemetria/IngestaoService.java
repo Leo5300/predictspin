@@ -137,7 +137,7 @@ public class IngestaoService {
         List<IngestaoRepository.LinhaTelemetria> linhas = new ArrayList<>(medidas.size());
         medidas.forEach((codigo, m) -> linhas.add(new IngestaoRepository.LinhaTelemetria(
                 idPorCodigo.get(codigo.trim()), m.rmsG(), m.picoG(), m.curtose(), m.o1x(), m.o2x(), m.o3x(),
-                m.velRmsMmS())));
+                m.velRmsMmS(), m.saturou(), m.amostras())));
         return linhas;
     }
 

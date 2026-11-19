@@ -5,7 +5,10 @@ características já extraídas na borda. **Este contrato é fixo:** mudanças q
 nova versão da rota. Em 11/11/2026 (migração V3) entraram três campos **opcionais** (`modo`, `amostras`,
 `amostras_esperadas`) e o campo de resposta `modo_rapido_ate`; o envio antigo continua válido. Em
 17/11/2026 (migração V6) entraram, também **opcionais**, a velocidade `vel_rms_mm_s` por ponto e a
-rastreabilidade da janela (`firmware_versao`, `calibracao`, `eixos`).
+rastreabilidade da janela (`firmware_versao`, `calibracao`, `eixos`). Em 19/11/2026 entraram, opcionais e
+sem migração, `saturou` e `amostras` por ponto, para o alerta de instrumento ir para o sensor certo (o
+firmware atual ainda não manda; o `saturou` e as `amostras` da janela continuam obrigatório e opcional como
+antes).
 
 ## Autenticação
 
@@ -53,6 +56,8 @@ Dispositivo inexistente, inativo, sem cabeçalho ou com chave errada: **401**.
 | `amostras` | inteiro | **não** | ≥ 0; o **menor** número de amostras lidas entre os sensores nesta janela |
 | `amostras_esperadas` | inteiro | **não** | ≥ 1; quantas amostras a janela deveria ter (taxa × duração: 8000 em 5 s, 1600 em 1 s a 1600 Hz) |
 | `pontos.*.vel_rms_mm_s` | número (mm/s) | **não** | ≥ 0; velocidade RMS do ponto. No firmware, banda de 10 Hz a ~800 Hz; falta na primeira janela depois da partida ou de uma falta de amostras (ver [`firmware.md`](firmware.md#velocidade-rms-em-mms)) |
+| `pontos.*.saturou` | booleano | **não** | este acelerômetro bateu no fundo de escala nesta janela (19/11/2026). Quando vem, o alerta de instrumento por saturação vai para este ponto; não é gravado |
+| `pontos.*.amostras` | inteiro | **não** | ≥ 0; amostras lidas deste sensor (19/11/2026). Abaixo de 98% das `amostras_esperadas`, o alerta de instrumento vai para este ponto; não é gravado |
 | `firmware_versao` | texto | **não** | 1 a 40 caracteres; versão do firmware que mediu a janela (data e hash curto do commit, por exemplo `2026-11-17+76951bf`; `simulado` no simulador) |
 | `calibracao` | objeto ponto → texto | **não** | identificador da calibração usada em cada ponto (`A-20261117T143200Z`, `A-semhora-3`, `nominal`); 1 a 40 caracteres, só letras, números e `. _ : + -`; ponto desconhecido → **400** |
 | `eixos` | objeto ponto → texto | **não** | eixo do acelerômetro analisado em cada ponto: `x`, `y` ou `z`; outro valor ou ponto desconhecido → **400** |

@@ -96,11 +96,26 @@ public record TelemetriaRequisicao(
             // JsonInclude: o esquema MedidaPonto não termina em "Requisicao" e seria lido como resposta, com
             // toda propriedade obrigatória; assim o documento diz que a velocidade pode faltar
             @JsonInclude(JsonInclude.Include.NON_NULL)
-            @PositiveOrZero @DecimalMax("100000") Double velRmsMmS) {
+            @PositiveOrZero @DecimalMax("100000") Double velRmsMmS,
+            @Schema(example = "false", description = "Opcional. Este acelerômetro bateu no fundo de escala nesta "
+                    + "janela. Quando vem, o alerta de instrumento por saturação vai para este ponto; sem ele, a API só "
+                    + "sabe o \"saturou\" da janela inteira")
+            @JsonInclude(JsonInclude.Include.NON_NULL)
+            Boolean saturou,
+            @Schema(example = "8000", description = "Opcional. Amostras lidas deste sensor nesta janela (o campo "
+                    + "\"amostras\" da janela é a menor entre os sensores)")
+            @JsonInclude(JsonInclude.Include.NON_NULL)
+            @PositiveOrZero @Max(1_000_000) Integer amostras) {
 
         /** Ponto sem velocidade (contrato anterior à V6). */
         public MedidaPonto(Double rmsG, Double picoG, Double curtose, Double o1x, Double o2x, Double o3x) {
             this(rmsG, picoG, curtose, o1x, o2x, o3x, null);
+        }
+
+        /** Ponto sem a saturação e as amostras por sensor (contrato anterior à parte B). */
+        public MedidaPonto(Double rmsG, Double picoG, Double curtose, Double o1x, Double o2x, Double o3x,
+                           Double velRmsMmS) {
+            this(rmsG, picoG, curtose, o1x, o2x, o3x, velRmsMmS, null, null);
         }
     }
 }

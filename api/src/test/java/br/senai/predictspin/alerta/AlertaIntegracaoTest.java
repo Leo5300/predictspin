@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import br.senai.predictspin.AlarmeIntegracaoBase;
 
+@SuppressWarnings("unchecked")
 class AlertaIntegracaoTest extends AlarmeIntegracaoBase {
 
     /** A em ATENÇÃO (z ≈ 4 no 1X contra o corte); B e C em corte normal. */
@@ -206,6 +207,76 @@ class AlertaIntegracaoTest extends AlarmeIntegracaoBase {
         enviarSequencia(t, 3, 1120, VAZIO);
         assertThat(listar(token, "&tipo=instrumento").get("conteudo").get(0).get("estado").asText())
                 .isEqualTo("normalizado_nao_reconhecido");
+    }
+
+    @Test
+    void instrumentoPorSinalCaidoVaiParaOPontoQueCaiu() throws Exception {
+        String token = tokenAdmin();
+        prepararReferencia(token);
+        // B com RMS e 1X a 25% do típico do giro em vazio; A (o de maior pico) e C normais
+        enviarSequencia(Instant.now().truncatedTo(ChronoUnit.SECONDS), 7, 1120,
+                new double[] {VAZIO[0], VAZIO[1] * 0.25, VAZIO[2]});
+        JsonNode lista = listar(token, "&tipo=instrumento");
+        assertThat(lista.get("total_elementos").asLong()).isEqualTo(1);
+        JsonNode a = lista.get("conteudo").get(0);
+        assertThat(a.get("ponto").asText()).isEqualTo("B");
+        assertThat(a.get("explicacao").asText()).contains("o sinal sumiu");
+    }
+
+    @Test
+    void instrumentoPorSaturacaoVaiParaOSensorQueSaturou() throws Exception {
+        String token = tokenAdmin();
+        prepararReferencia(token);
+        Instant t = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        // C diz que saturou, embora o maior pico seja o do A: o alerta vai para o C
+        for (int i = 0; i < 2; i++) {
+            Map<String, Object> p = janela(DISPOSITIVO_SIM, t, 1120, VAZIO[0], VAZIO[1], VAZIO[2]);
+            p.put("saturou", true);
+            ((Map<String, Object>) ((Map<?, ?>) p.get("pontos")).get("C")).put("saturou", true);
+            ((Map<String, Object>) ((Map<?, ?>) p.get("pontos")).get("A")).put("saturou", false);
+            enviar(DISPOSITIVO_SIM, CHAVE_SIM, p).andExpect(status().isCreated());
+            t = t.plusSeconds(5);
+        }
+        JsonNode lista = listar(token, "&tipo=instrumento");
+        assertThat(lista.get("total_elementos").asLong()).isEqualTo(1);
+        JsonNode a = lista.get("conteudo").get(0);
+        assertThat(a.get("ponto").asText()).isEqualTo("C");
+        assertThat(a.get("explicacao").asText()).contains("neste sensor");
+    }
+
+    @Test
+    void instrumentoPorAmostrasDoSensorVaiParaOSensorComFalta() throws Exception {
+        String token = tokenAdmin();
+        prepararReferencia(token);
+        Instant t = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        for (int i = 0; i < 2; i++) {
+            Map<String, Object> p = janela(DISPOSITIVO_SIM, t, 1120, VAZIO[0], VAZIO[1], VAZIO[2]);
+            p.put("amostras", 5000);
+            p.put("amostras_esperadas", 8000);
+            ((Map<String, Object>) ((Map<?, ?>) p.get("pontos")).get("A")).put("amostras", 8000);
+            ((Map<String, Object>) ((Map<?, ?>) p.get("pontos")).get("B")).put("amostras", 5000);
+            ((Map<String, Object>) ((Map<?, ?>) p.get("pontos")).get("C")).put("amostras", 7990);
+            enviar(DISPOSITIVO_SIM, CHAVE_SIM, p).andExpect(status().isCreated());
+            t = t.plusSeconds(5);
+        }
+        JsonNode a = listar(token, "&tipo=instrumento").get("conteudo").get(0);
+        assertThat(a.get("ponto").asText()).isEqualTo("B");
+    }
+
+    @Test
+    void saturacaoSoDaJanelaFicaComOMaiorPicoEDizIsso() throws Exception {
+        String token = tokenAdmin();
+        prepararReferencia(token);
+        Instant t = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+        for (int i = 0; i < 2; i++) {
+            Map<String, Object> p = janela(DISPOSITIVO_SIM, t, 1120, VAZIO[0], VAZIO[1], VAZIO[2]);
+            p.put("saturou", true);
+            enviar(DISPOSITIVO_SIM, CHAVE_SIM, p).andExpect(status().isCreated());
+            t = t.plusSeconds(5);
+        }
+        JsonNode a = listar(token, "&tipo=instrumento").get("conteudo").get(0);
+        assertThat(a.get("ponto").asText()).isEqualTo("A");
+        assertThat(a.get("explicacao").asText()).contains("não diz qual sensor");
     }
 
     @Test

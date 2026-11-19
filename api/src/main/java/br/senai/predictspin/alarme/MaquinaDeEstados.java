@@ -99,7 +99,16 @@ public final class MaquinaDeEstados {
     // ------------------------------------------------------------------ instrumento
 
     /** Condições de instrumento vistas nesta janela, para um ponto. */
-    public record CondicaoInstrumento(boolean ausente, boolean sinalBaixo, boolean falhaAmostragem) {
+    /**
+     * @param falhaIdentificada o envio disse qual sensor saturou ou perdeu amostras; false quando a falha veio só
+     *                          da janela inteira e o ponto foi escolhido pelo maior pico
+     */
+    public record CondicaoInstrumento(boolean ausente, boolean sinalBaixo, boolean falhaAmostragem,
+                                      boolean falhaIdentificada) {
+
+        public CondicaoInstrumento(boolean ausente, boolean sinalBaixo, boolean falhaAmostragem) {
+            this(ausente, sinalBaixo, falhaAmostragem, true);
+        }
     }
 
     /** Resultado do passo de instrumento: abriu (com o motivo), normalizou ou nada. */
@@ -128,7 +137,8 @@ public final class MaquinaDeEstados {
         } else if (durou(e.sinalBaixoDesde, t, duracaoS, p.instrumentoS())) {
             motivo = "o sinal sumiu: RMS e 1X abaixo da metade do típico, com o torno girando e os outros pontos normais";
         } else if (repetida) {
-            motivo = "saturação ou amostras faltando repetidas";
+            motivo = c.falhaIdentificada() ? "saturação ou amostras faltando repetidas neste sensor"
+                    : "saturação ou amostras faltando repetidas; o envio não diz qual sensor, ficou o de maior pico";
         }
         if (motivo != null) {
             e.instrumentoOkDesde = null;

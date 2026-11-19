@@ -5,9 +5,11 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -133,7 +135,8 @@ public class AvaliacaoService {
         double duracao = j.modo() == ModoJanela.RAPIDO ? 1 : 5;
         boolean amostrasFaltando = FiltroQualidade.amostrasFaltando(j.amostras(), j.amostrasEsperadas(),
                 propRef.amostrasMinFracao());
-        boolean naoAvaliavel = j.saturou() || amostrasFaltando
+        FalhaDeAmostragem falha = falhaDeAmostragem(j, amostrasFaltando, propRef.amostrasMinFracao());
+        boolean naoAvaliavel = j.saturou() || amostrasFaltando || !falha.pontos().isEmpty()
                 || FiltroQualidade.foraDaMarcha(j.rotacaoRpm(), marchas, propRef.toleranciaMarcha());
 
         Map<Long, String> codigoPorId = new HashMap<>();
@@ -155,7 +158,6 @@ public class AvaliacaoService {
 
         // 2. regra de cada ponto ativo (os ausentes também andam: é assim que o instrumento percebe)
         Map<Long, EstadoPonto> estados = repositorio.travarEstados(codigoPorId.keySet(), j.simulado());
-        Long pontoDaFalha = (j.saturou() || amostrasFaltando) ? pontoDeMaiorPico(j.linhas()) : null;
         List<PontoProcessado> processados = new ArrayList<>();
         List<Explicacao.Item> todosItens = new ArrayList<>();
         for (EstadoPonto e : estados.values()) {
@@ -170,7 +172,7 @@ public class AvaliacaoService {
                 instrumento = MaquinaDeEstados.passoInstrumento(e, j.medidoEm(), duracao,
                         new CondicaoInstrumento(linha == null,
                                 sinalBaixo(e.pontoId, resultados, linhas, j, tipicoDoSinal(ref, ensaio, marcha)),
-                                Long.valueOf(e.pontoId).equals(pontoDaFalha)), prop);
+                                falha.pontos().contains(e.pontoId), falha.identificada()), prop);
                 e.ultimoMedidoEm = j.medidoEm();
             }
             List<Explicacao.Item> itens = itens(codigo, r, linha, marcha);
@@ -239,10 +241,45 @@ public class AvaliacaoService {
         };
     }
 
-    /** Saturação e falta de amostras são da janela; ficam com o ponto de maior pico (o que bateu no fundo). */
-    private static Long pontoDeMaiorPico(List<LinhaTelemetria> linhas) {
-        return linhas.stream().max((a, b) -> Double.compare(a.picoG(), b.picoG())).map(LinhaTelemetria::pontoId)
-                .orElse(null);
+    /**
+     * Sensores com falha de amostragem nesta janela.
+     *
+     * @param pontos       pontos que saturaram ou ficaram com amostras faltando
+     * @param identificada o envio disse qual sensor (campos por ponto); false quando só veio o "saturou" ou as
+     *                     "amostras" da janela inteira e o ponto escolhido foi o de maior pico
+     * @param saturou      algum ponto disse que saturou
+     */
+    record FalhaDeAmostragem(Set<Long> pontos, boolean identificada, boolean saturou) {
+    }
+
+    /**
+     * O alerta de instrumento por saturação ou falta de amostras vai para o sensor que falhou: o ponto que
+     * mandou {@code saturou = true}, ou cujas {@code amostras} ficaram abaixo da fração mínima. Quando o envio só
+     * traz a falha da janela inteira (o firmware de 17/11/2026 manda assim), não dá para saber o sensor: fica
+     * com o de maior pico, e o motivo do alerta diz isso.
+     */
+    static FalhaDeAmostragem falhaDeAmostragem(JanelaRecebida j, boolean amostrasFaltando, double fracaoMin) {
+        Set<Long> pontos = new LinkedHashSet<>();
+        boolean saturou = false;
+        for (LinhaTelemetria l : j.linhas()) {
+            if (Boolean.TRUE.equals(l.saturou())) {
+                pontos.add(l.pontoId());
+                saturou = true;
+            }
+            if (l.amostras() != null
+                    && FiltroQualidade.amostrasFaltando(l.amostras(), j.amostrasEsperadas(), fracaoMin)) {
+                pontos.add(l.pontoId());
+            }
+        }
+        if (!pontos.isEmpty()) {
+            return new FalhaDeAmostragem(pontos, true, saturou);
+        }
+        if (!j.saturou() && !amostrasFaltando) {
+            return new FalhaDeAmostragem(Set.of(), true, false);
+        }
+        Set<Long> maiorPico = j.linhas().stream().max((a, b) -> Double.compare(a.picoG(), b.picoG()))
+                .map(l -> Set.of(l.pontoId())).orElse(Set.of());
+        return new FalhaDeAmostragem(maiorPico, false, false);
     }
 
     /**
