@@ -32,8 +32,24 @@ services:
       PORT: "8080"
       # vazio = limites normais; "tempos-curtos" só para o Playwright do fluxo de alarme
       SPRING_PROFILES_ACTIVE: ${PERFIL_API:-}
+      # serviço de treino (perfil "treino"): defina TREINO_URL=http://treino:8090 e TREINO_CHAVE no .env
+      TREINO_URL: ${TREINO_URL:-}
     ports:
       - "8080:8080"
+
+  # Serviço de treino (FastAPI): só sobe com --profile treino. Busca o conjunto na API e devolve o modelo.
+  #   docker compose --profile treino up -d --build
+  treino:
+    profiles: ["treino"]
+    build:
+      context: ./analise
+      dockerfile: treino/Dockerfile
+    restart: unless-stopped
+    environment:
+      PS_API_URL: http://api:8080
+      TREINO_CHAVE: ${TREINO_CHAVE:?defina TREINO_CHAVE no .env}
+    ports:
+      - "8090:8090"
 
 volumes:
   dados-postgres:
