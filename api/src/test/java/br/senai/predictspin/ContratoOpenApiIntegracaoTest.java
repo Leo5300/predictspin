@@ -256,7 +256,17 @@ class ContratoOpenApiIntegracaoTest extends AlarmeIntegracaoBase {
                 mvc.perform(comToken(post("/api/v1/ordens-servico/" + os + "/assumir"), admin)));
         conferir("/api/v1/ordens-servico/{id}/concluir", "post", 200, mvc.perform(comToken(post(
                 "/api/v1/ordens-servico/" + os + "/concluir"), admin).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"retorno\":\"confirmada\",\"comentario\":\"contrato\"}")));
+                .content("{\"retorno\":\"confirmada\",\"comentario\":\"contrato\","
+                        + "\"condicao_encontrada\":\"avanco_excessivo\"}")));
+
+        // conjunto de treino (rotas do serviço de treino, com a chave)
+        conferir("/api/v1/treino/servico/conjunto/resumo", "get", 200, mvc.perform(get(
+                "/api/v1/treino/servico/conjunto/resumo?simulado=true&maquina_id=" + maquinaId)
+                .header("X-Treino-Chave", "chave-treino-teste")));
+        ResultActions conjunto = mvc.perform(get("/api/v1/treino/servico/conjunto?simulado=true&tamanho=5&maquina_id="
+                + maquinaId).header("X-Treino-Chave", "chave-treino-teste"));
+        conferir("/api/v1/treino/servico/conjunto", "get", 200, conjunto);
+        assertThat(corpo(conjunto).get("conteudo")).isNotEmpty();
     }
 
     @Test

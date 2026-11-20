@@ -65,11 +65,12 @@ public class OrdemServicoController {
     @PostMapping("/{id}/concluir")
     @Operation(summary = "Conclui a OS com o retorno do técnico",
             description = "confirmada: havia problema; rejeitada: falso positivo. O retorno fica guardado na OS e "
-                    + "no alerta de origem, como rótulo para o treino.")
+                    + "no alerta de origem, como rótulo para o treino; a condição encontrada (opcional) diz qual classe.")
     @ApiResponse(responseCode = "200", description = "OS concluída")
     @ApiResponse(responseCode = "409", description = "OS já concluída ou cancelada")
     public OrdemServicoResposta concluir(@PathVariable Long id, @Valid @RequestBody ConclusaoRequisicao requisicao,
                                          @AuthenticationPrincipal Jwt jwt) {
-        return ordens.concluir(id, Long.parseLong(jwt.getSubject()), requisicao.retorno(), requisicao.comentario());
+        return ordens.concluir(id, Long.parseLong(jwt.getSubject()), requisicao.retorno(), requisicao.comentario(),
+                requisicao.condicaoEncontrada());
     }
 }

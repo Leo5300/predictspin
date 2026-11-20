@@ -6,6 +6,7 @@ import org.springframework.lang.Nullable;
 
 import br.senai.predictspin.alerta.RetornoTecnico;
 import br.senai.predictspin.ordemservico.StatusOrdemServico;
+import br.senai.predictspin.ordemservico.CondicaoEncontrada;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /** Ordem de serviço aberta pela regra, com o retorno do técnico ao concluir. */
@@ -34,5 +35,7 @@ public record OrdemServicoResposta(
         @Nullable Instant concluidaEm,
         @Schema(description = "confirmada: havia problema; rejeitada: falso positivo. Vira rótulo do treino (parte B)")
         @Nullable RetornoTecnico retornoTecnico,
-        @Nullable String comentarioTecnico) {
+        @Nullable String comentarioTecnico,
+        @Schema(description = "O que o técnico encontrou (uma das 5 classes ou outra); nulo sem informação")
+        @Nullable CondicaoEncontrada condicaoEncontrada) {
 }

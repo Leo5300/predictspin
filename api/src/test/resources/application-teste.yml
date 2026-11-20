@@ -28,3 +28,8 @@ logging:
   level:
     root: WARN
     br.senai.predictspin: INFO
+
+ps:
+  treino:
+    # chave do serviço de treino só dos testes (a real vem de TREINO_CHAVE)
+    chave: chave-treino-teste

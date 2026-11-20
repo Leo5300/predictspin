@@ -36,6 +36,9 @@ import br.senai.predictspin.maquina.CanalRepository;
  * <p>
  * Acrescentadas no FIM pela V6, depois das da V5: {@code vel_rms_mm_s} (vazia quando o dispositivo não
  * mandou), {@code firmware_versao} e, do ponto da linha, {@code calibracao} (identificador) e {@code eixo}.
+ * <p>
+ * Canais criados depois da V8 (a V9 criou {@code nivel_som_db}) vão no FIM da linha, depois de {@code eixo}, em
+ * ordem alfabética: nenhuma coluna existente muda de posição.
  */
 @Service
 public class ExportacaoService {
@@ -44,6 +47,10 @@ public class ExportacaoService {
             "rotacao_alvo_rpm", "avanco_alvo", "repeticao", "simulado", "maquina", "dispositivo", "janela_id",
             "medido_em", "rotacao_rpm", "saturou", "ponto", "papel", "rms_g", "pico_g", "curtose", "ordem_1x",
             "ordem_2x", "ordem_3x", "modo", "amostras", "amostras_esperadas", "uso", "marca");
+
+    /** Canais que existiam até a V8: ficam no meio da linha, em ordem alfabética, como sempre. */
+    static final java.util.Set<String> CANAIS_ATE_V8 = java.util.Set.of("amb_temp_c", "amb_umid_pct", "corrente_a",
+            "temp_cabecote_c", "temp_ferramenta_c");
 
     /** Colunas do fim do arquivo, depois das de canal (acrescentadas sem mudar as anteriores). */
     static final List<String> COLUNAS_DO_FIM = List.of("ferramenta", "profundidade_corte_mm", "diametro_peca_mm",
@@ -66,15 +73,22 @@ public class ExportacaoService {
     /** Devolve o número de linhas de dados escritas (sem o cabeçalho). */
     @Transactional(readOnly = true)
     public long exportar(Boolean simulado, Long maquinaId, Writer saida) {
-        List<String> codigosCanais = canais.codigos(maquinaId);
+        List<String> todos = canais.codigos(maquinaId);
+        // canais até a V8 continuam no meio, em ordem alfabética; os criados depois vão para o FIM da linha, para
+        // nenhuma coluna existente mudar de posição (o contrato do CSV só cresce)
+        List<String> codigosCanais = new ArrayList<>(todos.stream().filter(CANAIS_ATE_V8::contains).toList());
+        List<String> canaisNovos = todos.stream().filter(c -> !CANAIS_ATE_V8.contains(c)).toList();
         List<String> cabecalho = new ArrayList<>(COLUNAS_FIXAS);
         cabecalho.addAll(codigosCanais);
         cabecalho.addAll(COLUNAS_DO_FIM);
+        cabecalho.addAll(canaisNovos);
         escrever(saida, String.join(",", cabecalho));
 
+        List<String> ordemNaConsulta = new ArrayList<>(codigosCanais);
+        ordemNaConsulta.addAll(canaisNovos);
         long[] linhas = {0};
-        repositorio.percorrer(codigosCanais, simulado, maquinaId, rs -> {
-            escrever(saida, linha(rs, codigosCanais.size()));
+        repositorio.percorrer(ordemNaConsulta, simulado, maquinaId, rs -> {
+            escrever(saida, linha(rs, codigosCanais.size(), canaisNovos.size()));
             if (++linhas[0] % LINHAS_ENTRE_FLUSH == 0) {
                 descarregar(saida);
             }
@@ -83,7 +97,7 @@ public class ExportacaoService {
         return linhas[0];
     }
 
-    private static String linha(ResultSet rs, int quantidadeCanais) throws SQLException {
+    private static String linha(ResultSet rs, int quantidadeCanais, int quantidadeNovos) throws SQLException {
         List<String> v = new ArrayList<>(COLUNAS_FIXAS.size() + quantidadeCanais + COLUNAS_DO_FIM.size());
         v.add(texto(rs.getString("ensaio")));
         v.add(rs.getString("etapa"));
@@ -127,6 +141,9 @@ public class ExportacaoService {
         v.add(texto(rs.getString("firmware_versao")));
         v.add(texto(rs.getString("calibracao_ponto")));
         v.add(nulo(rs.getString("eixo_ponto")));
+        for (int i = 0; i < quantidadeNovos; i++) {
+            v.add(numero(rs, "canal_" + (quantidadeCanais + i)));
+        }
         return String.join(",", v);
     }
 

@@ -129,6 +129,63 @@ ps:
     # ou severidade acumulada do ponto acima de 600 z·s desde a última OS (≈ 5 min com z = 5)
     severidade-limite: 600
 
+  # ---------------------------------------------------------------- IA parte B (docs/ia.md)
+  # Todos os números são PROPOSTA a confirmar com os ensaios rotulados no torno.
+  modelo:
+    # limiar do Isolation Forest: percentil 99 do escore nas janelas normais do treino
+    if-percentil: 99
+    # abaixo de 60% de confiança o painel mostra "classe incerta"
+    confianca-min: 0.6
+    # tamanho máximo de cada arquivo de modelo aceito (MB)
+    tamanho-max-mb: 5
+    # parâmetros fixos do treino (modelo pequeno e reprodutível)
+    arvores-if: 100
+    arvores-rf: 60
+    profundidade-max-rf: 10
+    semente: 42
+    # características citadas na explicação de cada janela
+    explicacao-top: 3
+  treino:
+    # endereço do serviço de treino; vazio = o trabalho mostra o comando para rodar no notebook
+    url: ${TREINO_URL:}
+    # segredo compartilhado com o serviço de treino (cabeçalho X-Treino-Chave); nunca no repositório
+    chave: ${TREINO_CHAVE:}
+    # o serviço gratuito dorme: a API espera até 180 s ele acordar
+    espera-acordar-s: 180
+    # trabalho executando há mais de 30 min vira "falhou"
+    prazo-execucao-min: 30
+    # o retorno do técnico na OS vira rótulo do próximo treino
+    usar-retorno-os: true
+    # classe com menos de 2 ensaios fica fora do classificador; validação por ensaio com até 5 partes
+    min-ensaios-por-classe: 2
+    k-max: 5
+    fuso: America/Sao_Paulo
+    pagina-max: 1000
+  fusao:
+    # canais lentos no vetor de características: todos DESABILITADOS até a próxima fase
+    canais:
+      temp_cabecote_c:
+        habilitado: false
+      temp_ferramenta_c:
+        habilitado: false
+      nivel_som_db:
+        habilitado: false
+      corrente_a:
+        habilitado: false
+      amb_temp_c:
+        habilitado: false
+      amb_umid_pct:
+        habilitado: false
+  tendencia:
+    # prognóstico por tendência: pronto e DESABILITADO
+    habilitada: false
+    min-dias: 7
+    janela-dias: 60
+    # limites de cada série (por dia): severidade acumulada (z·s), deriva do RMS (%) e temperatura do cabeçote (°C)
+    limite-severidade: 600
+    limite-deriva-pct: 30
+    limite-temp-cabecote-c: 60
+
 springdoc:
   # As respostas são JSON; sem isto o documento diz "*/*" e o cliente gerado perde o tipo
   default-produces-media-type: application/json

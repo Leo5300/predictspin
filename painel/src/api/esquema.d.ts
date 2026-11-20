@@ -309,7 +309,7 @@ export interface paths {
             cookie?: never;
         };
         /** Duração, número de janelas, janelas saturadas e rotação média do ensaio */
-        get: operations["resumo"];
+        get: operations["resumo_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -812,7 +812,7 @@ export interface paths {
         put?: never;
         /**
          * Conclui a OS com o retorno do técnico
-         * @description confirmada: havia problema; rejeitada: falso positivo. O retorno fica guardado na OS e no alerta de origem, como rótulo para o treino.
+         * @description confirmada: havia problema; rejeitada: falso positivo. O retorno fica guardado na OS e no alerta de origem, como rótulo para o treino; a condição encontrada (opcional) diz qual classe.
          */
         post: operations["concluir"];
         delete?: never;
@@ -855,6 +855,46 @@ export interface paths {
          * @description Autenticação por X-Dispositivo-Id e X-Dispositivo-Chave. Idempotente por (dispositivo, medido_em): o reenvio responde 200 e não grava nada. Contrato em docs/payload.md.
          */
         post: operations["receber"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/treino/servico/conjunto": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Janelas rotuladas com o vetor de características, por página
+         * @description Só janelas com rótulo: ensaios encerrados (T1 e T3, as 5 classes) e, com ps.treino.usar-retorno-os, as janelas do período do alerta de OS concluídas como confirmada (com a condição encontrada) ou rejeitada (como normal). Janela sem vetor vem com o motivo.
+         */
+        get: operations["pagina"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/treino/servico/conjunto/resumo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Colunas, versões e parâmetros do treino
+         * @description Nomes e ordem das características (versão do vetor), referência em uso, classes, total de janelas rotuladas e os parâmetros do treino da application.yml (ps.modelo, ps.treino).
+         */
+        get: operations["resumo"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1054,6 +1094,9 @@ export interface components {
             campo: string;
             mensagem: string;
         };
+        CanalFusao: {
+            habilitado: boolean;
+        };
         CelulaReferenciaResposta: {
             /** @description Calibração das janelas usadas; nula quando o firmware não informava */
             calibracao: string | null;
@@ -1155,6 +1198,12 @@ export interface components {
         ConclusaoRequisicao: {
             /** @example Ferramenta conferida, sem desgaste; vibração veio da máquina ao lado */
             comentario?: string;
+            /**
+             * @description Opcional. O que o técnico encontrou: uma das 5 classes (normal, avanco_excessivo, rotacao_inadequada, ferramenta_desgastada, desbalanceamento) ou outra. Com confirmada e uma das 5, as janelas do período do alerta entram no próximo treino com ela
+             * @example avanco_excessivo
+             * @enum {string}
+             */
+            condicao_encontrada?: "normal" | "avanco_excessivo" | "rotacao_inadequada" | "ferramenta_desgastada" | "desbalanceamento" | "outra";
             /**
              * @description confirmada: havia problema; rejeitada: falso positivo
              * @example rejeitada
@@ -1429,8 +1478,35 @@ export interface components {
         LimitesResposta: {
             alarme: components["schemas"]["PropriedadesAlarme"];
             avaliacao: components["schemas"]["PropriedadesAvaliacao"];
+            fusao: components["schemas"]["PropriedadesFusao"];
+            modelo: components["schemas"]["PropriedadesModelo"];
             os: components["schemas"]["PropriedadesOs"];
             referencia: components["schemas"]["PropriedadesReferencia"];
+            tendencia: components["schemas"]["PropriedadesTendencia"];
+            treino: components["schemas"]["PropriedadesTreino"];
+        };
+        LinhaConjunto: {
+            /**
+             * Format: date
+             * @description Data local da janela (fuso limites.treino.fuso), para a validação por dia
+             */
+            dia: string;
+            /** Format: int64 */
+            ensaio_id: number | null;
+            /** @description Grupo da validação: ensaio-ID ou os-ID */
+            grupo: string;
+            /** Format: int64 */
+            janela_id: number;
+            /** Format: date-time */
+            medido_em: string;
+            /** @description Por que a janela não gerou vetor (evento_marcado, modo_rapido, saturou, calibracao_diferente, sem_referencia_completa...); nulo quando gerou */
+            motivo_exclusao: string | null;
+            /** @description ensaio, os_confirmada ou os_rejeitada */
+            origem: string;
+            /** @description Classe: normal, avanco_excessivo, rotacao_inadequada, ferramenta_desgastada ou desbalanceamento */
+            rotulo: string;
+            /** @description Valores na ordem das características do resumo; nulo = ausente. A lista inteira é nula quando a janela não gera vetor */
+            valores: number[] | null;
         };
         LocalResposta: {
             /** Format: int64 */
@@ -1672,6 +1748,11 @@ export interface components {
             componente: string | null;
             /** Format: date-time */
             concluida_em: string | null;
+            /**
+             * @description O que o técnico encontrou (uma das 5 classes ou outra); nulo sem informação
+             * @enum {string|null}
+             */
+            condicao_encontrada: "normal" | "avanco_excessivo" | "rotacao_inadequada" | "ferramenta_desgastada" | "desbalanceamento" | "outra" | null;
             explicacao: string | null;
             firmware_versao: string | null;
             /** Format: int64 */
@@ -1778,6 +1859,17 @@ export interface components {
         };
         PaginaJanelaResposta: {
             conteudo: components["schemas"]["JanelaResposta"][];
+            /** Format: int32 */
+            pagina: number;
+            /** Format: int32 */
+            tamanho: number;
+            /** Format: int64 */
+            total_elementos: number;
+            /** Format: int32 */
+            total_paginas: number;
+        };
+        PaginaLinhaConjunto: {
+            conteudo: components["schemas"]["LinhaConjunto"][];
             /** Format: int32 */
             pagina: number;
             /** Format: int32 */
@@ -1928,6 +2020,30 @@ export interface components {
             /** Format: int32 */
             fila_max: number;
         };
+        /** @description Canais lentos na fusão (ps.fusao) */
+        PropriedadesFusao: {
+            canais: {
+                [key: string]: components["schemas"]["CanalFusao"];
+            };
+        };
+        PropriedadesModelo: {
+            /** Format: int32 */
+            arvores_if: number;
+            /** Format: int32 */
+            arvores_rf: number;
+            /** Format: double */
+            confianca_min: number;
+            /** Format: int32 */
+            explicacao_top: number;
+            /** Format: double */
+            if_percentil: number;
+            /** Format: int32 */
+            profundidade_max_rf: number;
+            /** Format: int32 */
+            semente: number;
+            /** Format: int32 */
+            tamanho_max_mb: number;
+        };
         PropriedadesOs: {
             /** Format: double */
             alarme_continuo_s: number;
@@ -1944,6 +2060,35 @@ export interface components {
             sigma_min_fracao: number;
             /** Format: double */
             tolerancia_marcha: number;
+        };
+        /** @description Tendência por ponto (ps.tendencia) */
+        PropriedadesTendencia: {
+            habilitada: boolean;
+            /** Format: int32 */
+            janela_dias: number;
+            /** Format: double */
+            limite_deriva_pct: number;
+            /** Format: double */
+            limite_severidade: number;
+            /** Format: double */
+            limite_temp_cabecote_c: number;
+            /** Format: int32 */
+            min_dias: number;
+        };
+        PropriedadesTreino: {
+            /** Format: int32 */
+            espera_acordar_s: number;
+            fuso: string;
+            /** Format: int32 */
+            k_max: number;
+            /** Format: int32 */
+            min_ensaios_por_classe: number;
+            /** Format: int32 */
+            pagina_max: number;
+            /** Format: int32 */
+            prazo_execucao_min: number;
+            servico_configurado: boolean;
+            usar_retorno_os: boolean;
         };
         /** @description Campos da receita do corte e a observação. Só os presentes no corpo mudam; null apaga. */
         ReceitaRequisicao: {
@@ -2013,6 +2158,32 @@ export interface components {
             piso_ruido_medido: boolean;
             simulado: boolean;
             versao: components["schemas"]["VersaoReferenciaResposta"] | null;
+        };
+        ResumoConjunto: {
+            /** @description Canais da fusão habilitados (fazem parte do vetor) */
+            canais: string[];
+            caracteristicas: string[];
+            classes: string[];
+            /** Format: int64 */
+            maquina_id: number;
+            modelo: components["schemas"]["PropriedadesModelo"];
+            /**
+             * Format: int32
+             * @description Número da versão da referência em uso; nulo sem referência
+             */
+            referencia_numero: number | null;
+            /** Format: int64 */
+            referencia_versao_id: number | null;
+            simulado: boolean;
+            /** Format: int64 */
+            total_candidatas: number;
+            treino: components["schemas"]["PropriedadesTreino"];
+            versao_vetor: string;
+            /**
+             * Format: double
+             * @description z de atenção da regra (ps.alarme.z-atencao), para comparar regra × modelo
+             */
+            z_atencao: number;
         };
         ResumoEnsaioResposta: {
             aberto: boolean;
@@ -3371,7 +3542,7 @@ export interface operations {
             };
         };
     };
-    resumo: {
+    resumo_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -5541,6 +5712,109 @@ export interface operations {
                 };
             };
             /** @description Campo 'dispositivo' diferente do cabeçalho */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    pagina: {
+        parameters: {
+            query: {
+                maquina_id: number;
+                simulado?: boolean;
+                pagina?: number;
+                /** @description Linhas por página (até limites.treino.pagina_max) */
+                tamanho?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaLinhaConjunto"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    resumo: {
+        parameters: {
+            query: {
+                maquina_id: number;
+                simulado?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResumoConjunto"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
             403: {
                 headers: {
                     [name: string]: unknown;

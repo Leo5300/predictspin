@@ -102,7 +102,9 @@ Uma linha por janela e ponto, só de ensaios encerrados e não descartados. Orde
    diametro_peca_mm, fluido_corte, evento_marcado`. O material e o avanço da receita já estavam nas
    colunas fixas (`material` passa a ser o nome do item do catálogo);
 4. **acrescentadas no fim pela V6**: `vel_rms_mm_s` (vazia quando a janela não trouxe),
-   `firmware_versao` e, do ponto da linha, `calibracao` (identificador) e `eixo`.
+   `firmware_versao` e, do ponto da linha, `calibracao` (identificador) e `eixo`;
+5. **canais criados depois da V8**, no fim, em ordem alfabética (a V9 criou `nivel_som_db`). Os 5 canais
+   anteriores continuam no meio (item 2), para nenhuma coluna existente mudar de posição.
 
 `evento_marcado` é `true` na janela cujo intervalo contém um evento marcado durante a gravação
 (pancada na bancada, cavaco enroscado, máquina vizinha ligada...) e na janela seguinte; `medido_em` é o
@@ -120,6 +122,16 @@ Canais cadastrados no torno `TORNO-01`:
 | `amb_temp_c` | temperatura ambiente | °C |
 | `amb_umid_pct` | umidade relativa | % |
 | `corrente_a` | corrente do motor | A |
+| `nivel_som_db` | nível de som (V9, 19/11/2026) | dB |
+
+### Canais lentos e a fusão (IA parte B)
+
+Os canais são todos **opcionais** no envio (o objeto `canais` e cada chave dentro dele) e são gravados em
+`LEITURA`, uma linha compacta por canal e janela (`janela_id`, `canal_id`, `valor`). O firmware atual não
+manda nenhum canal; o simulador manda os 5 de sempre e, com `--canais-lentos todos`, também o nível de som
+(valores SIMULADOS). Na IA, cada canal só entra no vetor de características quando
+`ps.fusao.canais.<código>.habilitado` é `true`; todos estão **desabilitados** por padrão (detalhes em
+[`ia.md`](ia.md)).
 
 Rotação não é canal: é atributo da janela, porque define as ordens 1X/2X/3X.
 

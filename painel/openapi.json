@@ -454,6 +454,16 @@
           "mensagem"
         ]
       },
+      "CanalFusao": {
+        "properties": {
+          "habilitado": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "habilitado"
+        ]
+      },
       "CelulaReferenciaResposta": {
         "properties": {
           "calibracao": {
@@ -725,6 +735,19 @@
             "example": "Ferramenta conferida, sem desgaste; vibração veio da máquina ao lado",
             "maxLength": 2000,
             "minLength": 0,
+            "type": "string"
+          },
+          "condicao_encontrada": {
+            "description": "Opcional. O que o técnico encontrou: uma das 5 classes (normal, avanco_excessivo, rotacao_inadequada, ferramenta_desgastada, desbalanceamento) ou outra. Com confirmada e uma das 5, as janelas do período do alerta entram no próximo treino com ela",
+            "enum": [
+              "normal",
+              "avanco_excessivo",
+              "rotacao_inadequada",
+              "ferramenta_desgastada",
+              "desbalanceamento",
+              "outra"
+            ],
+            "example": "avanco_excessivo",
             "type": "string"
           },
           "retorno": {
@@ -1497,18 +1520,100 @@
           "avaliacao": {
             "$ref": "#/components/schemas/PropriedadesAvaliacao"
           },
+          "fusao": {
+            "$ref": "#/components/schemas/PropriedadesFusao"
+          },
+          "modelo": {
+            "$ref": "#/components/schemas/PropriedadesModelo"
+          },
           "os": {
             "$ref": "#/components/schemas/PropriedadesOs"
           },
           "referencia": {
             "$ref": "#/components/schemas/PropriedadesReferencia"
+          },
+          "tendencia": {
+            "$ref": "#/components/schemas/PropriedadesTendencia"
+          },
+          "treino": {
+            "$ref": "#/components/schemas/PropriedadesTreino"
           }
         },
         "required": [
           "alarme",
           "avaliacao",
+          "fusao",
+          "modelo",
           "os",
-          "referencia"
+          "referencia",
+          "tendencia",
+          "treino"
+        ]
+      },
+      "LinhaConjunto": {
+        "properties": {
+          "dia": {
+            "description": "Data local da janela (fuso limites.treino.fuso), para a validação por dia",
+            "format": "date",
+            "type": "string"
+          },
+          "ensaio_id": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "grupo": {
+            "description": "Grupo da validação: ensaio-ID ou os-ID",
+            "type": "string"
+          },
+          "janela_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "medido_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "motivo_exclusao": {
+            "description": "Por que a janela não gerou vetor (evento_marcado, modo_rapido, saturou, calibracao_diferente, sem_referencia_completa...); nulo quando gerou",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "origem": {
+            "description": "ensaio, os_confirmada ou os_rejeitada",
+            "type": "string"
+          },
+          "rotulo": {
+            "description": "Classe: normal, avanco_excessivo, rotacao_inadequada, ferramenta_desgastada ou desbalanceamento",
+            "type": "string"
+          },
+          "valores": {
+            "description": "Valores na ordem das características do resumo; nulo = ausente. A lista inteira é nula quando a janela não gera vetor",
+            "items": {
+              "description": "Valores na ordem das características do resumo; nulo = ausente. A lista inteira é nula quando a janela não gera vetor",
+              "format": "double",
+              "type": "number"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "dia",
+          "ensaio_id",
+          "grupo",
+          "janela_id",
+          "medido_em",
+          "motivo_exclusao",
+          "origem",
+          "rotulo",
+          "valores"
         ]
       },
       "LocalResposta": {
@@ -2112,6 +2217,21 @@
               "null"
             ]
           },
+          "condicao_encontrada": {
+            "description": "O que o técnico encontrou (uma das 5 classes ou outra); nulo sem informação",
+            "enum": [
+              "normal",
+              "avanco_excessivo",
+              "rotacao_inadequada",
+              "ferramenta_desgastada",
+              "desbalanceamento",
+              "outra"
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "explicacao": {
             "type": [
               "string",
@@ -2205,6 +2325,7 @@
           "comentario_tecnico",
           "componente",
           "concluida_em",
+          "condicao_encontrada",
           "explicacao",
           "firmware_versao",
           "id",
@@ -2424,6 +2545,39 @@
           "conteudo": {
             "items": {
               "$ref": "#/components/schemas/JanelaResposta"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
+        ]
+      },
+      "PaginaLinhaConjunto": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/LinhaConjunto"
             },
             "type": "array"
           },
@@ -2884,6 +3038,66 @@
           "fila_max"
         ]
       },
+      "PropriedadesFusao": {
+        "description": "Canais lentos na fusão (ps.fusao)",
+        "properties": {
+          "canais": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CanalFusao"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "canais"
+        ]
+      },
+      "PropriedadesModelo": {
+        "properties": {
+          "arvores_if": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "arvores_rf": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "confianca_min": {
+            "format": "double",
+            "type": "number"
+          },
+          "explicacao_top": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "if_percentil": {
+            "format": "double",
+            "type": "number"
+          },
+          "profundidade_max_rf": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "semente": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho_max_mb": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "arvores_if",
+          "arvores_rf",
+          "confianca_min",
+          "explicacao_top",
+          "if_percentil",
+          "profundidade_max_rf",
+          "semente",
+          "tamanho_max_mb"
+        ]
+      },
       "PropriedadesOs": {
         "properties": {
           "alarme_continuo_s": {
@@ -2928,6 +3142,85 @@
           "min_janelas",
           "sigma_min_fracao",
           "tolerancia_marcha"
+        ]
+      },
+      "PropriedadesTendencia": {
+        "description": "Tendência por ponto (ps.tendencia)",
+        "properties": {
+          "habilitada": {
+            "type": "boolean"
+          },
+          "janela_dias": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "limite_deriva_pct": {
+            "format": "double",
+            "type": "number"
+          },
+          "limite_severidade": {
+            "format": "double",
+            "type": "number"
+          },
+          "limite_temp_cabecote_c": {
+            "format": "double",
+            "type": "number"
+          },
+          "min_dias": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "habilitada",
+          "janela_dias",
+          "limite_deriva_pct",
+          "limite_severidade",
+          "limite_temp_cabecote_c",
+          "min_dias"
+        ]
+      },
+      "PropriedadesTreino": {
+        "properties": {
+          "espera_acordar_s": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "fuso": {
+            "type": "string"
+          },
+          "k_max": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "min_ensaios_por_classe": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "pagina_max": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "prazo_execucao_min": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "servico_configurado": {
+            "type": "boolean"
+          },
+          "usar_retorno_os": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "espera_acordar_s",
+          "fuso",
+          "k_max",
+          "min_ensaios_por_classe",
+          "pagina_max",
+          "prazo_execucao_min",
+          "servico_configurado",
+          "usar_retorno_os"
         ]
       },
       "ReceitaRequisicao": {
@@ -3068,6 +3361,84 @@
           "piso_ruido_medido",
           "simulado",
           "versao"
+        ]
+      },
+      "ResumoConjunto": {
+        "properties": {
+          "canais": {
+            "description": "Canais da fusão habilitados (fazem parte do vetor)",
+            "items": {
+              "description": "Canais da fusão habilitados (fazem parte do vetor)",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "caracteristicas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "classes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "maquina_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "modelo": {
+            "$ref": "#/components/schemas/PropriedadesModelo"
+          },
+          "referencia_numero": {
+            "description": "Número da versão da referência em uso; nulo sem referência",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "referencia_versao_id": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "simulado": {
+            "type": "boolean"
+          },
+          "total_candidatas": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "treino": {
+            "$ref": "#/components/schemas/PropriedadesTreino"
+          },
+          "versao_vetor": {
+            "type": "string"
+          },
+          "z_atencao": {
+            "description": "z de atenção da regra (ps.alarme.z-atencao), para comparar regra × modelo",
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "canais",
+          "caracteristicas",
+          "classes",
+          "maquina_id",
+          "modelo",
+          "referencia_numero",
+          "referencia_versao_id",
+          "simulado",
+          "total_candidatas",
+          "treino",
+          "versao_vetor",
+          "z_atencao"
         ]
       },
       "ResumoEnsaioResposta": {
@@ -3816,6 +4187,11 @@
         "bearerFormat": "JWT",
         "scheme": "bearer",
         "type": "http"
+      },
+      "treinoChave": {
+        "in": "header",
+        "name": "X-Treino-Chave",
+        "type": "apiKey"
       }
     }
   },
@@ -5227,7 +5603,7 @@
     },
     "/api/v1/ensaios/{id}/resumo": {
       "get": {
-        "operationId": "resumo",
+        "operationId": "resumo_1",
         "parameters": [
           {
             "in": "path",
@@ -8120,7 +8496,7 @@
     },
     "/api/v1/ordens-servico/{id}/concluir": {
       "post": {
-        "description": "confirmada: havia problema; rejeitada: falso positivo. O retorno fica guardado na OS e no alerta de origem, como rótulo para o treino.",
+        "description": "confirmada: havia problema; rejeitada: falso positivo. O retorno fica guardado na OS e no alerta de origem, como rótulo para o treino; a condição encontrada (opcional) diz qual classe.",
         "operationId": "concluir",
         "parameters": [
           {
@@ -8416,6 +8792,183 @@
         ]
       }
     },
+    "/api/v1/treino/servico/conjunto": {
+      "get": {
+        "description": "Só janelas com rótulo: ensaios encerrados (T1 e T3, as 5 classes) e, com ps.treino.usar-retorno-os, as janelas do período do alerta de OS concluídas como confirmada (com a condição encontrada) ou rejeitada (como normal). Janela sem vetor vem com o motivo.",
+        "operationId": "pagina",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "maquina_id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pagina",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Linhas por página (até limites.treino.pagina_max)",
+            "in": "query",
+            "name": "tamanho",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "format": "int32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaLinhaConjunto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          }
+        },
+        "security": [
+          {
+            "treinoChave": []
+          }
+        ],
+        "summary": "Janelas rotuladas com o vetor de características, por página",
+        "tags": [
+          "Serviço de treino"
+        ]
+      }
+    },
+    "/api/v1/treino/servico/conjunto/resumo": {
+      "get": {
+        "description": "Nomes e ordem das características (versão do vetor), referência em uso, classes, total de janelas rotuladas e os parâmetros do treino da application.yml (ps.modelo, ps.treino).",
+        "operationId": "resumo",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "maquina_id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumoConjunto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          }
+        },
+        "security": [
+          {
+            "treinoChave": []
+          }
+        ],
+        "summary": "Colunas, versões e parâmetros do treino",
+        "tags": [
+          "Serviço de treino"
+        ]
+      }
+    },
     "/api/v1/usuarios": {
       "get": {
         "operationId": "listar",
@@ -8661,6 +9214,10 @@
     {
       "description": "Materiais e ferramentas da receita do corte. Listar e criar: ADMIN e TECNICO. Renomear e desativar: ADMIN.",
       "name": "Catálogos"
+    },
+    {
+      "description": "Conjunto rotulado e resultado do treino (só com X-Treino-Chave)",
+      "name": "Serviço de treino"
     },
     {
       "description": "OS abertas pela regra; assumir e concluir só ADMIN e TECNICO",

@@ -147,21 +147,22 @@ class RastreabilidadeIntegracaoTest extends IntegracaoBase {
         List<String> cabecalho = List.of(linhas[0].split(",", -1));
         assertThat(String.join(",", cabecalho.subList(0, ExportacaoService.COLUNAS_FIXAS.size())))
                 .isEqualTo(String.join(",", ExportacaoService.COLUNAS_FIXAS));
-        assertThat(cabecalho.subList(cabecalho.size() - 4, cabecalho.size()))
-                .containsExactly("vel_rms_mm_s", "firmware_versao", "calibracao", "eixo");
-        assertThat(cabecalho.indexOf("evento_marcado")).isEqualTo(cabecalho.size() - 5);
+        // V6 no fim, seguida só pelos canais criados depois da V8 (nível de som, V9)
+        assertThat(cabecalho.subList(cabecalho.size() - 5, cabecalho.size()))
+                .containsExactly("vel_rms_mm_s", "firmware_versao", "calibracao", "eixo", "nivel_som_db");
+        assertThat(cabecalho.indexOf("evento_marcado")).isEqualTo(cabecalho.size() - 6);
 
         int ponto = cabecalho.indexOf("ponto");
         // 1ª janela: A, B e C com rastreabilidade; 2ª janela (envio antigo): colunas novas vazias
         String[] a = linhas[1].split(",", -1);
         assertThat(a[ponto]).isEqualTo("A");
-        assertThat(List.of(a).subList(a.length - 4, a.length))
+        assertThat(List.of(a).subList(a.length - 5, a.length - 1))
                 .containsExactly("1.85", "2026-11-17+76951bf", "A-20261117T143200Z", "z");
         String[] c = linhas[3].split(",", -1);
         assertThat(c[ponto]).isEqualTo("C");
-        assertThat(List.of(c).subList(c.length - 4, c.length))
+        assertThat(List.of(c).subList(c.length - 5, c.length - 1))
                 .containsExactly("", "2026-11-17+76951bf", "C-semhora-3", "x");
         String[] antiga = linhas[4].split(",", -1);
-        assertThat(List.of(antiga).subList(antiga.length - 4, antiga.length)).containsExactly("", "", "", "");
+        assertThat(List.of(antiga).subList(antiga.length - 5, antiga.length - 1)).containsExactly("", "", "", "");
     }
 }

@@ -31,12 +31,14 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 
+import br.senai.predictspin.ia.PropriedadesTreino;
 import br.senai.predictspin.maquina.DispositivoService;
 
 /**
- * Duas cadeias de segurança independentes:
+ * Três cadeias de segurança independentes:
  * <ol>
  *   <li>POST /api/v1/telemetria: só dispositivo, autenticado por cabeçalho;</li>
+ *   <li>/api/v1/treino/servico/**: só o serviço de treino, pela chave TREINO_CHAVE no cabeçalho;</li>
  *   <li>todo o resto: usuário com JWT stateless, autorização por papel.</li>
  * </ol>
  */
@@ -63,8 +65,23 @@ public class SegurancaConfig {
         return http.build();
     }
 
+    /** Rotas do serviço de treino: só com a chave TREINO_CHAVE no cabeçalho X-Treino-Chave, sem JWT. */
     @Bean
     @Order(2)
+    SecurityFilterChain cadeiaServicoTreino(HttpSecurity http, PropriedadesTreino treino,
+                                            RespostaErroSeguranca erros) throws Exception {
+        http.securityMatcher("/api/v1/treino/servico/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(new TreinoAutenticacaoFiltro(treino), AnonymousAuthenticationFilter.class)
+                .authorizeHttpRequests(a -> a.anyRequest().hasRole("SERVICO_TREINO"))
+                .exceptionHandling(e -> e.authenticationEntryPoint(erros).accessDeniedHandler(erros))
+                .headers(h -> h.referrerPolicy(r -> r.policy(ReferrerPolicy.NO_REFERRER)));
+        return http.build();
+    }
+
+    @Bean
+    @Order(3)
     SecurityFilterChain cadeiaUsuario(HttpSecurity http, RespostaErroSeguranca erros,
                                       JwtAuthenticationConverter conversorJwt) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
@@ -95,6 +112,10 @@ public class SegurancaConfig {
                                 "/api/v1/alertas/*/cancelar-supressao").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/ordens-servico/*/assumir",
                                 "/api/v1/ordens-servico/*/concluir").hasAnyRole("ADMIN", "TECNICO")
+                        // modelos: treinar, ADMIN e TECNICO; ativar, só ADMIN; ver, qualquer usuário
+                        .requestMatchers(HttpMethod.POST, "/api/v1/maquinas/*/modelos/treinar")
+                        .hasAnyRole("ADMIN", "TECNICO")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/modelos/*/ativar").hasRole("ADMIN")
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(o -> o

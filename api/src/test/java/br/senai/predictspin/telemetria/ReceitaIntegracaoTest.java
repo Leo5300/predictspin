@@ -181,8 +181,9 @@ class ReceitaIntegracaoTest extends IntegracaoBase {
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         List<String> linhas = Arrays.asList(csv.split("\n"));
         List<String> cabecalho = Arrays.asList(linhas.get(0).split(","));
-        // as colunas da V5 continuam juntas; as da V6 vêm depois delas, no fim
-        assertThat(cabecalho.subList(cabecalho.size() - 9, cabecalho.size() - 4)).containsExactly("ferramenta",
+        // as colunas da V5 continuam juntas; as da V6 vêm depois delas e, no fim, o canal criado pela V9
+        assertThat(cabecalho.get(cabecalho.size() - 1)).isEqualTo("nivel_som_db");
+        assertThat(cabecalho.subList(cabecalho.size() - 10, cabecalho.size() - 5)).containsExactly("ferramenta",
                 "profundidade_corte_mm", "diametro_peca_mm", "fluido_corte", "evento_marcado");
         int medido = cabecalho.indexOf("medido_em");
         int evento = cabecalho.indexOf("evento_marcado");

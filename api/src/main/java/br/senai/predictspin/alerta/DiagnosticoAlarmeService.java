@@ -20,6 +20,10 @@ import br.senai.predictspin.alarme.AvaliacaoService;
 import br.senai.predictspin.alarme.PropriedadesAlarme;
 import br.senai.predictspin.alerta.dto.DiagnosticoAlarmeResposta;
 import br.senai.predictspin.alerta.dto.LimitesResposta;
+import br.senai.predictspin.ia.PropriedadesFusao;
+import br.senai.predictspin.ia.PropriedadesModelo;
+import br.senai.predictspin.ia.PropriedadesTendencia;
+import br.senai.predictspin.ia.PropriedadesTreino;
 import br.senai.predictspin.telemetria.FilaDeAvaliacao;
 import br.senai.predictspin.comum.RecursoNaoEncontradoException;
 import br.senai.predictspin.maquina.Maquina;
@@ -60,14 +64,16 @@ public class DiagnosticoAlarmeService {
     public DiagnosticoAlarmeService(JdbcTemplate jdbc, AlertaService alertas, ReferenciaService referencias,
                                     MaquinaRepository maquinas, PropriedadesReferencia ref, PropriedadesAlarme alarme,
                                     PropriedadesOs os, Clock relogio, AvaliacaoService avaliacoes,
-                                    FilaDeAvaliacao fila) {
+                                    FilaDeAvaliacao fila, PropriedadesModelo modelo, PropriedadesTreino treino,
+                                    PropriedadesFusao fusao, PropriedadesTendencia tendencia) {
         this.avaliacoes = avaliacoes;
         this.fila = fila;
         this.jdbc = jdbc;
         this.alertas = alertas;
         this.referencias = referencias;
         this.maquinas = maquinas;
-        this.limites = new LimitesResposta(ref, alarme, os, fila.propriedades());
+        this.limites = new LimitesResposta(ref, alarme, os, fila.propriedades(), modelo, treino.publicas(), fusao,
+                tendencia);
         this.relogio = relogio;
     }
 

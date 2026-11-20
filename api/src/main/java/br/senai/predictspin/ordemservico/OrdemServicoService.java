@@ -146,12 +146,19 @@ public class OrdemServicoService {
 
     @Transactional
     public OrdemServicoResposta concluir(long id, long usuarioId, RetornoTecnico retorno, String comentario) {
+        return concluir(id, usuarioId, retorno, comentario, null);
+    }
+
+    /** Conclui com o retorno do técnico e, opcionalmente, a condição encontrada (rótulo do próximo treino). */
+    @Transactional
+    public OrdemServicoResposta concluir(long id, long usuarioId, RetornoTecnico retorno, String comentario,
+                                         CondicaoEncontrada condicao) {
         StatusOrdemServico status = travar(id);
         if (status != StatusOrdemServico.ABERTA && status != StatusOrdemServico.EM_ANDAMENTO) {
             throw new ConflitoException("OS " + id + " já está " + status.valor());
         }
         sql.concluir(id, usuarioId, retorno, comentario == null || comentario.isBlank() ? null : comentario.trim(),
-                relogio.instant());
+                condicao, relogio.instant());
         OrdemServicoResposta os = buscar(id);
         anunciar("concluida", os);
         return os;

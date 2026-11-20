@@ -95,13 +95,15 @@ public class OrdemServicoSql {
     }
 
     /** Conclui com o retorno; quem conclui sem ter assumido vira o responsável. */
-    public void concluir(long id, long usuarioId, RetornoTecnico retorno, String comentario, Instant agora) {
+    public void concluir(long id, long usuarioId, RetornoTecnico retorno, String comentario,
+                         CondicaoEncontrada condicao, Instant agora) {
         jdbc.update("""
                 UPDATE ordem_servico SET status = 'concluida', concluida_em = ?, retorno_tecnico = ?,
-                       comentario_tecnico = ?, responsavel_id = coalesce(responsavel_id, ?),
+                       comentario_tecnico = ?, condicao_encontrada = ?, responsavel_id = coalesce(responsavel_id, ?),
                        assumida_em = coalesce(assumida_em, ?)
                 WHERE id = ?
-                """, utc(agora), retorno.valor(), comentario, usuarioId, utc(agora), id);
+                """, utc(agora), retorno.valor(), comentario, condicao == null ? null : condicao.valor(), usuarioId,
+                utc(agora), id);
         // o retorno também fica no alerta de origem: é o rótulo do treino da parte B
         jdbc.update("""
                 UPDATE alerta SET retorno_tecnico = ?
@@ -157,6 +159,7 @@ public class OrdemServicoSql {
 
     private static OrdemServicoResposta resposta(ResultSet rs) throws SQLException {
         String retorno = rs.getString("retorno_tecnico");
+        String condicao = rs.getString("condicao_encontrada");
         return new OrdemServicoResposta(rs.getLong("id"), rs.getString("numero"), rs.getLong("maquina_id"),
                 rs.getString("maquina_codigo"), rs.getString("ponto_codigo"), rs.getString("componente_tipo"),
                 StatusOrdemServico.de(rs.getString("status")), rs.getString("motivo_abertura"),
@@ -165,7 +168,7 @@ public class OrdemServicoSql {
                 rs.getString("firmware_versao"), rs.getString("calibracao"), rs.getBoolean("simulado"),
                 rs.getString("responsavel_nome"), instante(rs, "aberta_em"), instante(rs, "assumida_em"),
                 instante(rs, "concluida_em"), retorno == null ? null : RetornoTecnico.de(retorno),
-                rs.getString("comentario_tecnico"));
+                rs.getString("comentario_tecnico"), condicao == null ? null : CondicaoEncontrada.de(condicao));
     }
 
     private static Instant instante(ResultSet rs, String coluna) throws SQLException {

@@ -283,6 +283,7 @@ const ordem = (
   concluida_em: status === 'concluida' ? '2026-11-12T11:00:00Z' : null,
   retorno_tecnico: retorno,
   comentario_tecnico: retorno ? 'Exemplo: peça desbalanceada, recolocada na placa.' : null,
+  condicao_encontrada: retorno === 'confirmada' ? 'desbalanceamento' : null,
 })
 
 export const ORDENS_EXEMPLO: OrdemServico[] = [

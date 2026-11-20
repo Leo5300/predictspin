@@ -50,6 +50,7 @@ public class OpenApiConfig {
     public static final String ESQUEMA_JWT = "jwt";
     public static final String ESQUEMA_DISPOSITIVO_ID = "dispositivoId";
     public static final String ESQUEMA_DISPOSITIVO_CHAVE = "dispositivoChave";
+    public static final String ESQUEMA_TREINO = "treinoChave";
 
     private static final String ROTA_LOGIN = "/api/v1/auth/login";
     private static final String ROTA_INGESTAO = "/api/v1/telemetria";
@@ -97,7 +98,9 @@ public class OpenApiConfig {
                         .addSecuritySchemes(ESQUEMA_DISPOSITIVO_ID, new SecurityScheme()
                                 .type(SecurityScheme.Type.APIKEY).in(SecurityScheme.In.HEADER).name("X-Dispositivo-Id"))
                         .addSecuritySchemes(ESQUEMA_DISPOSITIVO_CHAVE, new SecurityScheme()
-                                .type(SecurityScheme.Type.APIKEY).in(SecurityScheme.In.HEADER).name("X-Dispositivo-Chave")))
+                                .type(SecurityScheme.Type.APIKEY).in(SecurityScheme.In.HEADER).name("X-Dispositivo-Chave"))
+                        .addSecuritySchemes(ESQUEMA_TREINO, new SecurityScheme()
+                                .type(SecurityScheme.Type.APIKEY).in(SecurityScheme.In.HEADER).name("X-Treino-Chave")))
                 .addSecurityItem(new SecurityRequirement().addList(ESQUEMA_JWT));
     }
 
