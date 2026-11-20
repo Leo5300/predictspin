@@ -7,6 +7,7 @@ import org.springframework.lang.Nullable;
 import br.senai.predictspin.alerta.RetornoTecnico;
 import br.senai.predictspin.ordemservico.StatusOrdemServico;
 import br.senai.predictspin.ordemservico.CondicaoEncontrada;
+import br.senai.predictspin.ia.dto.SegundaOpiniaoResposta;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /** Ordem de serviço aberta pela regra, com o retorno do técnico ao concluir. */
@@ -37,5 +38,10 @@ public record OrdemServicoResposta(
         @Nullable RetornoTecnico retornoTecnico,
         @Nullable String comentarioTecnico,
         @Schema(description = "O que o técnico encontrou (uma das 5 classes ou outra); nulo sem informação")
-        @Nullable CondicaoEncontrada condicaoEncontrada) {
+        @Nullable CondicaoEncontrada condicaoEncontrada,
+        @Schema(description = "Segunda opinião do modelo na abertura (estimativa; o alarme é da regra); nulo sem modelo "
+                + "ativo")
+        @Nullable SegundaOpiniaoResposta opiniaoAbertura,
+        @Schema(description = "Segunda opinião mais recente enquanto ativo; nulo sem modelo ativo")
+        @Nullable SegundaOpiniaoResposta opiniaoRecente) {
 }

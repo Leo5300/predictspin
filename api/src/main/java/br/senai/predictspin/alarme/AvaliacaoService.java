@@ -111,12 +111,22 @@ public class AvaliacaoService {
      */
     @EventListener
     public void aoReceber(JanelaRecebida janela) {
+        ResultadoJanela resultado;
         try {
-            transacao.executeWithoutResult(status -> avaliar(janela));
+            resultado = transacao.execute(status -> avaliar(janela));
         } catch (RuntimeException e) {
             falhas.incrementAndGet();
             log.error("Falha ao avaliar a janela {} da máquina {}: a janela está gravada, sem avaliação",
                     janela.janelaId(), janela.maquinaId(), e);
+            return;
+        }
+        // depois do commit: a segunda opinião do modelo (quem escuta trata os próprios erros; mesmo assim, nada que
+        // aconteça lá volta para cá)
+        try {
+            anuncios.publishEvent(new JanelaAvaliadaGravada(resultado));
+        } catch (RuntimeException e) {
+            log.error("Falha depois da avaliação da janela {} (segunda opinião): a regra não foi afetada",
+                    janela.janelaId(), e);
         }
     }
 

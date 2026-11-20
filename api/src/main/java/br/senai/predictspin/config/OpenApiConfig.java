@@ -57,7 +57,8 @@ public class OpenApiConfig {
 
     /** Esquemas que não são corpo de nenhuma rota JSON, mas que o cliente precisa conhecer. */
     private static final List<Class<?>> ESQUEMAS_EXTRAS = List.of(ErroResposta.class, EnsaioEvento.class,
-            RecuperacaoEvento.class, AlertaEvento.class, OrdemServicoEvento.class);
+            RecuperacaoEvento.class, AlertaEvento.class, OrdemServicoEvento.class,
+            br.senai.predictspin.ia.dto.TreinoEvento.Treino.class, br.senai.predictspin.ia.dto.TreinoEvento.Modelo.class);
 
     /** Marca interna de propriedade que pode não vir no JSON; é retirada antes de o documento sair. */
     private static final String EXTENSAO_OPCIONAL = "x-opcional";
@@ -140,7 +141,11 @@ public class OpenApiConfig {
     /** Propriedades que são outro esquema ($ref) e podem vir nulas, por esquema. */
     private static final Map<String, Set<String>> OBJETOS_NULAVEIS = Map.of(
             "EnsaioResposta", Set.of("material_item", "ferramenta_item"),
-            "ReferenciaResposta", Set.of("versao"));
+            "ReferenciaResposta", Set.of("versao"),
+            "AlertaResposta", Set.of("opiniao_abertura", "opiniao_recente"),
+            "OrdemServicoResposta", Set.of("opiniao_abertura", "opiniao_recente"),
+            "IaDiagnostico", Set.of("ativo"),
+            "ValidacaoModelo", Set.of("comparacao", "classificador"));
 
     /** No documento 3.1, "pode ser nulo" é o tipo "null" ao lado do tipo do valor. */
     private static void permitirNulo(Schema<?> propriedade) {

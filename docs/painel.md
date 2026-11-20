@@ -725,6 +725,34 @@ Evidências: [`docs/evidencias/painel/`](evidencias/painel/) (16 prints novos, 1
 telas Alarmes, máquina, Diagnóstico, Coleta e ponto; os antigos das mesmas telas foram substituídos). Os
 prints foram tirados com o simulador em modo severo, para aparecerem atenção, alarme e OS: dado simulado,
 prova o encadeamento, não a detecção real.
+## IA parte B: Modelos, detalhes de alerta e OS, Diagnóstico da IA
+
+Contrato em [`docs/ia.md`](ia.md). As telas só falam com [`api/adaptadores/modelos.ts`](../painel/src/api/adaptadores/modelos.ts)
+e com o adaptador de alarmes; textos e contas em [`dominio/modelos.ts`](../painel/src/dominio/modelos.ts).
+
+- **Modelos** (`/coleta/modelos`, no menu "Modelos"; ADMIN e TECNICO treinam, só ADMIN ativa, OPERADOR só vê):
+  botão Treinar com o trabalho ao vivo pelo evento `treino` ("acordando o serviço de treino", treinando,
+  concluído, falhou; sem serviço, o comando do notebook); lista de versões (estado com marca e texto, data,
+  autor, janelas por classe e por origem); detalhe com a matriz de confusão (tabela com os números; intensidade
+  num tom só, a fração da linha), recall por classe, F1 macro, validação por ensaio e por dia, regra × modelo,
+  importância top 10 (barras num tom só); Ativar com a comparação com a versão ativa antes de confirmar; selo
+  "dado simulado: não é resultado".
+- **Detalhe do alerta** (`/alarmes/{id}`): estado, nível, prioridade, explicação, ação recomendada, versões,
+  ensaio e condição, histórico, segunda opinião na abertura e a mais recente, link para a OS e para o ponto no
+  período do alerta.
+- **Detalhe da OS** (`/ordens/{id}`): dados, alerta de origem, segunda opinião, assumir e concluir com
+  confirmada/rejeitada, comentário e a condição encontrada opcional (também no formulário da lista).
+- **Diagnóstico**: módulo "Segunda opinião (IA)" com a versão ativa, caminho (ONNX), se roda e por quê, avisos
+  (referência mudou), erros de inferência, última hora (janelas, anomalias, classes), limites da IA lidos da API,
+  canais da fusão e tendência (desabilitados). O módulo da regra ganhou "na fila" e "descartadas da fila".
+- **Glossário**: oito termos (modelo, escore de anomalia, classe provável e confiança, validação por ensaio,
+  matriz de confusão, recall, versão ativa, tendência); `{confianca_min}` vem de `GET /alarmes/limites`.
+- **Cor**: a segunda opinião não usa âmbar nem vermelho; a cor de sinal continua só no que a regra pôs em desvio.
+
+**Não feito nesta rodada:** prints (1920 e 390, dois temas), rodada de revisão de design e a execução dos testes
+de ponta a ponta (`e2e/ia.spec.ts`, `e2e/acessibilidade-ia.spec.ts`, escritos e ainda não rodados). Conferidos:
+tipos, lint e Vitest (147 testes).
+
 ## Publicação
 
 O painel é publicado no Render como site estático (`predictspin-painel` no [`render.yaml`](../render.yaml));

@@ -398,17 +398,55 @@ da ingestão esperavam conexão. Com a máquina carregada, quem segura a trava p
 de 64, ordem preservada, erro isolado e contado; ver [`alarmes.md`](alarmes.md#visão-geral)). Uma avaliação
 por máquina de cada vez: não há mais disputa pela trava nem segunda conexão por pedido.
 
-| Execução depois (20 VUs, 60 s) | Requisições | Erros | p95 ingestão | p99 ingestão |
-|---|---|---|---|---|
-| 1ª | 2 342 | 0% | 44,5 ms | 83,4 ms |
-| 2ª | 2 312 | 0% | 123,3 ms | 419,1 ms |
-| 3ª | 2 364 | 0% | 19,6 ms | 43,7 ms |
-| com 8 laços de CPU em paralelo | 2 256 | 0% | 126,5 ms | 387,8 ms |
+**Depois (correção de 20/11/2026).** A primeira medição "depois" (19/11) saiu **enviesada** e foi descartada: o
+script do k6 não mandava `calibracao`, e com a regra nova de calibração (só compara quando janela e referência
+têm a mesma) as janelas do k6 ficaram "calibração diferente" da referência simulada, sem cálculo de z (12 429
+avaliações nessa situação no banco). A avaliação ficou mais leve que no "antes", e os números não serviam para
+comparar. O script passou a mandar a mesma rastreabilidade do simulador (`firmware_versao`, `calibracao`,
+`eixos`) e a velocidade estimada das ordens; as janelas voltaram a ser avaliadas por inteiro.
 
-As 2 496 janelas das duas primeiras execuções foram todas avaliadas (nenhuma sem linha em `avaliacao`), com 0
-na fila, 0 descartadas e 0 falhas no Diagnóstico ao fim. A meta de 500 ms é atendida antes e depois nesta
-medição; a variação entre execuções seguidas (19,6 a 123,3 ms) é desta máquina de desenvolvimento, e o p99 da
-2ª execução mostra que ainda há picos que não vêm da avaliação.
+Medido de novo em 20/11/2026, mesmo método (compose padrão, pool de 10, sem modelo ativo, imagem com o código
+da IA parte B), 20 VUs por 60 s:
+
+| Execução depois (20 VUs, 60 s) | Erros | p95 ingestão | p99 ingestão |
+|---|---|---|---|
+| 1ª, logo depois de reiniciar a API (houve uma parada de cerca de 10 s) | 0% | 1,16 s | 2,51 s |
+| 2ª | 0% | 1,15 s | 1,78 s |
+| 3ª | 0% | 230,8 ms | 926,0 ms |
+| 4ª | 0% | 203,7 ms | 416,2 ms |
+| 5ª | 0% | 398,1 ms | 4,68 s |
+| 6ª (com amostragem do banco) | 0% | 295,8 ms | 702,5 ms |
+
+Nenhuma janela foi descartada da fila e nenhuma ficou sem avaliação. Nesta máquina, **o p95 sob estresse não
+melhorou** em relação ao "antes" (86,7 a 227,4 ms). As paradas não vêm do banco: 110 amostras do
+`pg_stat_activity` (a cada 0,4 s, na 6ª execução) não mostraram nenhuma consulta acima de 300 ms. Com as opções
+de JVM da produção (512 MB, `-Xmx220m`, `-XX:ReservedCodeCacheSize=48m`, SerialGC) e o log do GC ligado, uma
+execução de 20 VUs teve 17 pausas completas "CodeCache GC Threshold" de até 4,9 s: o cache de código de 48 MB
+enche sob carga e força coletas completas, que param tudo. Por isso o `render.yaml` passou a reservar 96 MB de
+cache de código (só ocupa memória o que a JVM compilar).
+
+**Escopo.** Os cenários de 20 e 50 usuários são de **estresse**: o uso real é 1 ESP32 mandando uma janela a cada
+5 s e até 4 pessoas no painel. Esse cenário realista foi medido uma vez, com o modelo ativo, na etapa 4.7 da IA
+parte B (seção seguinte). Por decisão do projeto, não foram feitas mais rodadas de estresse só para reduzir a
+variação do p95.
+
+## Cenário realista com o modelo ativo (IA parte B, 4.7, 20/11/2026)
+
+O uso real é 1 ESP32 mandando uma janela a cada 5 s e até 4 pessoas no painel. `CENARIO=realista` no
+`carga/telemetria.js`: 1 VU manda uma janela a cada 5 s (1120 rpm) e 4 VUs fazem uma consulta a cada 5 s. Uma
+execução de 300 s, no compose local, API com limite de 512 MB e as opções de JVM da produção (com o cache de código
+de 96 MB), pool de 5 conexões e o modelo de fixture ativo (ONNX Runtime):
+
+| Medida | Resultado |
+|---|---|
+| Requisições / erros | 282 / 0% |
+| Ingestão: p95, p99, máx. | 1,50 s, 5,38 s, 6,48 s |
+| Consultas: p95, p99, máx. | 1,47 s, 6,05 s, 6,80 s |
+| Memória do contêiner (RSS máx. / anônima máx. / cgroup máx.) | 431,3 / 389,1 / 448,9 MiB |
+
+A meta de 500 ms de p95 **não foi atendida** neste cenário, mesmo com carga leve; com a memória do contêiner perto
+do limite, a hipótese é a pressão de memória, não confirmada. Não foram feitas outras rodadas (decisão do
+projeto). Detalhes e a decisão ONNX × Java em [`ia.md`](ia.md#onnx--java-memória-medida).
 
 ### Como medir em produção
 

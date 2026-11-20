@@ -65,8 +65,16 @@ public abstract class IntegracaoBase {
     @Autowired
     protected FilaDeAvaliacao filaDeAvaliacao;
 
+    @Autowired
+    protected br.senai.predictspin.ia.InferenciaService inferenciaService;
+
     @BeforeEach
     void limparBase() {
+        jdbc.update("DELETE FROM inferencia");
+        jdbc.update("UPDATE trabalho_treino SET modelo_id = NULL");
+        jdbc.update("DELETE FROM modelo");
+        jdbc.update("DELETE FROM trabalho_treino");
+        inferenciaService.esquecer();
         jdbc.update("DELETE FROM alerta_historico");
         jdbc.update("DELETE FROM ordem_servico");
         jdbc.update("DELETE FROM alerta");

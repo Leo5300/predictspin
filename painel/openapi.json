@@ -163,6 +163,26 @@
               "null"
             ]
           },
+          "opiniao_abertura": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SegundaOpiniao"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "opiniao_recente": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SegundaOpiniao"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "ordem_servico_id": {
             "description": "OS aberta a partir deste alerta",
             "format": "int64",
@@ -278,6 +298,8 @@
           "motivo_supressao",
           "nivel",
           "normalizado_em",
+          "opiniao_abertura",
+          "opiniao_recente",
           "ordem_servico_id",
           "pior_nivel",
           "pior_z",
@@ -581,6 +603,21 @@
           "suficiente"
         ]
       },
+      "ClasseForaDoModelo": {
+        "properties": {
+          "classe": {
+            "type": "string"
+          },
+          "ensaios": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "classe",
+          "ensaios"
+        ]
+      },
       "Cobertura": {
         "properties": {
           "etapa": {
@@ -729,6 +766,21 @@
           "simulado"
         ]
       },
+      "ComparacaoRegraModelo": {
+        "description": "Nas mesmas janelas de validação: regra (nível bruto, z ≥ z de atenção, sem atraso) × Isolation Forest",
+        "properties": {
+          "isolation_forest": {
+            "$ref": "#/components/schemas/TaxasDeteccao"
+          },
+          "regra": {
+            "$ref": "#/components/schemas/TaxasDeteccao"
+          }
+        },
+        "required": [
+          "isolation_forest",
+          "regra"
+        ]
+      },
       "ConclusaoRequisicao": {
         "properties": {
           "comentario": {
@@ -796,6 +848,56 @@
           "timestamp"
         ]
       },
+      "ConjuntoDoModelo": {
+        "properties": {
+          "dias": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "ensaios_por_classe": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "excluidas": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "janelas": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "por_classe": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "por_origem": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "dias",
+          "ensaios_por_classe",
+          "excluidas",
+          "janelas",
+          "por_classe",
+          "por_origem"
+        ]
+      },
       "Deriva": {
         "properties": {
           "dias": {
@@ -814,6 +916,22 @@
           "dias",
           "fracao_maxima",
           "habilitada"
+        ]
+      },
+      "DiaTendencia": {
+        "properties": {
+          "dia": {
+            "format": "date",
+            "type": "string"
+          },
+          "valor": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "dia",
+          "valor"
         ]
       },
       "DiagnosticoAlarmeResposta": {
@@ -1174,6 +1292,171 @@
           "motivo",
           "nota",
           "ocorrido_em"
+        ]
+      },
+      "FalhaTreinoRequisicao": {
+        "properties": {
+          "mensagem": {
+            "maxLength": 2000,
+            "minLength": 0,
+            "type": "string"
+          }
+        }
+      },
+      "IaCanalFusao": {
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "habilitado": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "codigo",
+          "habilitado"
+        ]
+      },
+      "IaDiagnostico": {
+        "properties": {
+          "ativo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModeloResumo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "avisos": {
+            "description": "Avisos prontos (referência mudou: treine de novo...)",
+            "items": {
+              "description": "Avisos prontos (referência mudou: treine de novo...)",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "caminho": {
+            "description": "onnx ou java",
+            "type": "string"
+          },
+          "canais": {
+            "items": {
+              "$ref": "#/components/schemas/IaCanalFusao"
+            },
+            "type": "array"
+          },
+          "erros": {
+            "description": "Erros na segunda opinião desde que a API subiu (a regra não é afetada)",
+            "format": "int64",
+            "type": "integer"
+          },
+          "fusao": {
+            "$ref": "#/components/schemas/PropriedadesFusao"
+          },
+          "inferencias": {
+            "description": "Janelas com segunda opinião desde que a API subiu",
+            "format": "int64",
+            "type": "integer"
+          },
+          "modelo": {
+            "$ref": "#/components/schemas/PropriedadesModelo"
+          },
+          "motivo_nao_roda": {
+            "description": "Por que o modelo ativo não roda (versão do vetor, canal exigido desabilitado...)",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "roda": {
+            "description": "O modelo ativo está rodando nas janelas",
+            "type": "boolean"
+          },
+          "simulado": {
+            "type": "boolean"
+          },
+          "tendencia": {
+            "$ref": "#/components/schemas/PropriedadesTendencia"
+          },
+          "tendencia_habilitada": {
+            "description": "Tendência habilitada (ps.tendencia.habilitada)",
+            "type": "boolean"
+          },
+          "treino": {
+            "$ref": "#/components/schemas/PropriedadesTreino"
+          },
+          "ultima_hora": {
+            "$ref": "#/components/schemas/IaUltimaHora"
+          },
+          "ultimo_erro": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "ativo",
+          "avisos",
+          "caminho",
+          "canais",
+          "erros",
+          "fusao",
+          "inferencias",
+          "modelo",
+          "motivo_nao_roda",
+          "roda",
+          "simulado",
+          "tendencia",
+          "tendencia_habilitada",
+          "treino",
+          "ultima_hora",
+          "ultimo_erro"
+        ]
+      },
+      "IaUltimaHora": {
+        "description": "Segunda opinião nas janelas da última hora (modelo ativo)",
+        "properties": {
+          "anomalias": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "janelas": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "por_classe": {
+            "additionalProperties": {
+              "description": "Janelas por classe mais provável",
+              "format": "int64",
+              "type": "integer"
+            },
+            "description": "Janelas por classe mais provável",
+            "type": "object"
+          }
+        },
+        "required": [
+          "anomalias",
+          "janelas",
+          "por_classe"
+        ]
+      },
+      "ImportanciaCaracteristica": {
+        "description": "Importância por permutação, as 10 maiores",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "valor": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "nome",
+          "valor"
         ]
       },
       "IndicadoresAlarme": {
@@ -1878,6 +2161,395 @@
           "rms_g"
         ]
       },
+      "MetadadosModelo": {
+        "properties": {
+          "aviso_simulado": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "avisos": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "bibliotecas": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "canais": {
+            "description": "Canais da fusão que o modelo exige",
+            "items": {
+              "description": "Canais da fusão que o modelo exige",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "caracteristicas": {
+            "description": "Características usadas, na ordem das colunas do modelo",
+            "items": {
+              "description": "Características usadas, na ordem das colunas do modelo",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "caracteristicas_removidas": {
+            "description": "Características do vetor que ficaram fora (faltavam em alguma janela)",
+            "items": {
+              "description": "Características do vetor que ficaram fora (faltavam em alguma janela)",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "classes": {
+            "description": "Classes do classificador, na ordem das probabilidades; vazio = só anomalia",
+            "items": {
+              "description": "Classes do classificador, na ordem das probabilidades; vazio = só anomalia",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "classes_fora": {
+            "items": {
+              "$ref": "#/components/schemas/ClasseForaDoModelo"
+            },
+            "type": "array"
+          },
+          "conjunto": {
+            "$ref": "#/components/schemas/ConjuntoDoModelo"
+          },
+          "gerado_em": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "importancia": {
+            "description": "Importância por permutação, as 10 maiores",
+            "items": {
+              "$ref": "#/components/schemas/ImportanciaCaracteristica"
+            },
+            "type": "array"
+          },
+          "limiar_anomalia": {
+            "format": "double",
+            "type": "number"
+          },
+          "metricas": {
+            "$ref": "#/components/schemas/MetricasModelo"
+          },
+          "offset_anomalia": {
+            "description": "Para o escore de anomalia a partir da saída do ONNX: -(scores + offset)",
+            "format": "double",
+            "type": "number"
+          },
+          "pesos": {
+            "additionalProperties": {
+              "description": "Importância de cada característica (usada na explicação)",
+              "format": "double",
+              "type": "number"
+            },
+            "description": "Importância de cada característica (usada na explicação)",
+            "type": "object"
+          },
+          "referencia_numero": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "referencia_versao_id": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "simulado": {
+            "type": "boolean"
+          },
+          "versao_vetor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "aviso_simulado",
+          "avisos",
+          "bibliotecas",
+          "canais",
+          "caracteristicas",
+          "caracteristicas_removidas",
+          "classes",
+          "classes_fora",
+          "conjunto",
+          "gerado_em",
+          "importancia",
+          "limiar_anomalia",
+          "metricas",
+          "offset_anomalia",
+          "pesos",
+          "referencia_numero",
+          "referencia_versao_id",
+          "simulado",
+          "versao_vetor"
+        ]
+      },
+      "MetricasClassificador": {
+        "properties": {
+          "classes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "f1_macro": {
+            "format": "double",
+            "type": "number"
+          },
+          "janelas": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "matriz_confusao": {
+            "description": "Linha = classe real, coluna = classe prevista",
+            "items": {
+              "description": "Linha = classe real, coluna = classe prevista",
+              "items": {
+                "description": "Linha = classe real, coluna = classe prevista",
+                "format": "int32",
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "array"
+          },
+          "recall": {
+            "additionalProperties": {
+              "format": "double",
+              "type": "number"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "classes",
+          "f1_macro",
+          "janelas",
+          "matriz_confusao",
+          "recall"
+        ]
+      },
+      "MetricasModelo": {
+        "properties": {
+          "if_percentil": {
+            "format": "double",
+            "type": "number"
+          },
+          "limiar_anomalia": {
+            "format": "double",
+            "type": "number"
+          },
+          "por_dia": {
+            "$ref": "#/components/schemas/ValidacaoModelo"
+          },
+          "por_ensaio": {
+            "$ref": "#/components/schemas/ValidacaoModelo"
+          }
+        },
+        "required": [
+          "if_percentil",
+          "limiar_anomalia",
+          "por_dia",
+          "por_ensaio"
+        ]
+      },
+      "ModeloDetalhe": {
+        "properties": {
+          "avisos": {
+            "description": "Avisos prontos: referência mudou depois do treino, canal desabilitado, dado simulado...",
+            "items": {
+              "description": "Avisos prontos: referência mudou depois do treino, canal desabilitado, dado simulado...",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "caminho": {
+            "description": "Como a API executa o modelo: onnx (ONNX Runtime) ou java (árvores em Java puro)",
+            "type": "string"
+          },
+          "metadados": {
+            "$ref": "#/components/schemas/MetadadosModelo"
+          },
+          "modelo": {
+            "$ref": "#/components/schemas/ModeloResumo"
+          }
+        },
+        "required": [
+          "avisos",
+          "caminho",
+          "metadados",
+          "modelo"
+        ]
+      },
+      "ModeloEvento": {
+        "description": "Corpo do evento \"modelo\": candidato (versão nova) ou ativado",
+        "properties": {
+          "acao": {
+            "enum": [
+              "candidato",
+              "ativado"
+            ],
+            "type": "string"
+          },
+          "arquivada": {
+            "description": "Versão que estava ativa e foi arquivada",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "modelo": {
+            "$ref": "#/components/schemas/ModeloResumo"
+          }
+        },
+        "required": [
+          "acao",
+          "arquivada",
+          "modelo"
+        ]
+      },
+      "ModeloResumo": {
+        "properties": {
+          "ativado_em": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ativado_por": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "aviso_simulado": {
+            "description": "\"dado simulado: não é resultado\" quando o treino foi com dado simulado",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "classes": {
+            "description": "Classes do classificador; vazio = só anomalia",
+            "items": {
+              "description": "Classes do classificador; vazio = só anomalia",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "conjunto": {
+            "$ref": "#/components/schemas/ConjuntoDoModelo"
+          },
+          "criado_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "criado_por": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "estado": {
+            "description": "candidato, ativo ou arquivado",
+            "enum": [
+              "candidato",
+              "ativo",
+              "arquivado"
+            ],
+            "type": "string"
+          },
+          "f1_macro_por_ensaio": {
+            "description": "F1 macro da validação por ensaio; nulo sem classificador ou sem validação",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "limiar_anomalia": {
+            "format": "double",
+            "type": "number"
+          },
+          "maquina_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "referencia_numero": {
+            "description": "Versão da referência usada no treino",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "simulado": {
+            "type": "boolean"
+          },
+          "tamanho_bytes": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "trabalho_id": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "versao": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "versao_vetor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ativado_em",
+          "ativado_por",
+          "aviso_simulado",
+          "classes",
+          "conjunto",
+          "criado_em",
+          "criado_por",
+          "estado",
+          "f1_macro_por_ensaio",
+          "id",
+          "limiar_anomalia",
+          "maquina_id",
+          "referencia_numero",
+          "simulado",
+          "tamanho_bytes",
+          "trabalho_id",
+          "versao",
+          "versao_vetor"
+        ]
+      },
       "ModoRapidoResposta": {
         "properties": {
           "ativo": {
@@ -2268,6 +2940,26 @@
             "example": "OS-2026-0001",
             "type": "string"
           },
+          "opiniao_abertura": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SegundaOpiniao"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "opiniao_recente": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SegundaOpiniao"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "ponto": {
             "example": "B",
             "type": "string"
@@ -2333,6 +3025,8 @@
           "maquina_id",
           "motivo_abertura",
           "numero",
+          "opiniao_abertura",
+          "opiniao_recente",
           "ponto",
           "referencia_versao",
           "responsavel",
@@ -2639,6 +3333,39 @@
           "total_paginas"
         ]
       },
+      "PaginaModeloResumo": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/ModeloResumo"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
+        ]
+      },
       "PaginaOrdemServicoResposta": {
         "properties": {
           "conteudo": {
@@ -2710,6 +3437,39 @@
           "conteudo": {
             "items": {
               "$ref": "#/components/schemas/TelemetriaPontoResposta"
+            },
+            "type": "array"
+          },
+          "pagina": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "tamanho": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total_elementos": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total_paginas": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conteudo",
+          "pagina",
+          "tamanho",
+          "total_elementos",
+          "total_paginas"
+        ]
+      },
+      "PaginaTrabalhoTreino": {
+        "properties": {
+          "conteudo": {
+            "items": {
+              "$ref": "#/components/schemas/TrabalhoTreino"
             },
             "type": "array"
           },
@@ -2947,6 +3707,23 @@
           "papel"
         ]
       },
+      "PontoTendencia": {
+        "properties": {
+          "ponto": {
+            "type": "string"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/SerieTendencia"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ponto",
+          "series"
+        ]
+      },
       "PropriedadesAlarme": {
         "properties": {
           "atraso_s": {
@@ -3039,7 +3816,6 @@
         ]
       },
       "PropriedadesFusao": {
-        "description": "Canais lentos na fusão (ps.fusao)",
         "properties": {
           "canais": {
             "additionalProperties": {
@@ -3145,7 +3921,6 @@
         ]
       },
       "PropriedadesTendencia": {
-        "description": "Tendência por ponto (ps.tendencia)",
         "properties": {
           "habilitada": {
             "type": "boolean"
@@ -3154,7 +3929,7 @@
             "format": "int32",
             "type": "integer"
           },
-          "limite_deriva_pct": {
+          "limite_deriva_z": {
             "format": "double",
             "type": "number"
           },
@@ -3174,7 +3949,7 @@
         "required": [
           "habilitada",
           "janela_dias",
-          "limite_deriva_pct",
+          "limite_deriva_z",
           "limite_severidade",
           "limite_temp_cabecote_c",
           "min_dias"
@@ -3580,6 +4355,88 @@
           "severidade_semana"
         ]
       },
+      "SegundaOpiniao": {
+        "description": "Segunda opinião mais recente enquanto ativo; nulo sem modelo ativo",
+        "properties": {
+          "anomalia": {
+            "description": "O escore passou do limiar",
+            "type": "boolean"
+          },
+          "classe": {
+            "description": "Classe mais provável (normal, avanco_excessivo, rotacao_inadequada, ferramenta_desgastada, desbalanceamento); nulo sem classificador",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "concordancia": {
+            "description": "\"o modelo também vê anomalia\" ou \"o modelo não vê anomalia\"",
+            "type": "string"
+          },
+          "confianca": {
+            "description": "Probabilidade da classe mais provável (0 a 1); nulo sem classificador",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "escore": {
+            "description": "Escore de anomalia: quanto maior, mais diferente do normal gravado",
+            "format": "double",
+            "type": "number"
+          },
+          "explicacao": {
+            "description": "Texto pronto: classe e confiança, as 3 características que mais pesaram e a versão",
+            "type": "string"
+          },
+          "incerta": {
+            "description": "Confiança abaixo de limites.modelo.confianca_min: o painel mostra \"classe incerta\"",
+            "type": "boolean"
+          },
+          "janela_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "limiar": {
+            "description": "Acima disto, o modelo também vê anomalia (limites.modelo.if_percentil do treino)",
+            "format": "double",
+            "type": "number"
+          },
+          "medido_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "modelo_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "simulado": {
+            "description": "Modelo treinado com dado simulado: não é resultado",
+            "type": "boolean"
+          },
+          "versao": {
+            "description": "Número da versão do modelo",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "anomalia",
+          "classe",
+          "concordancia",
+          "confianca",
+          "escore",
+          "explicacao",
+          "incerta",
+          "janela_id",
+          "limiar",
+          "medido_em",
+          "modelo_id",
+          "simulado",
+          "versao"
+        ]
+      },
       "SerieAgregadaResposta": {
         "properties": {
           "ate": {
@@ -3748,6 +4605,81 @@
           "rms_media_g"
         ]
       },
+      "SerieTendencia": {
+        "properties": {
+          "dias": {
+            "items": {
+              "$ref": "#/components/schemas/DiaTendencia"
+            },
+            "type": "array"
+          },
+          "dias_max": {
+            "description": "...e no máximo; nulo quando o intervalo de 95% inclui não subir",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "dias_min": {
+            "description": "Se continuar assim, cruza o limite em pelo menos... dias",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "inclinacao_maxima": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "inclinacao_minima": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "inclinacao_por_dia": {
+            "description": "Nulo com menos de min_dias dias",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "limite": {
+            "format": "double",
+            "type": "number"
+          },
+          "serie": {
+            "description": "severidade (z·s por dia), deriva (mediana do z do RMS no dia) ou temp_cabecote_c",
+            "type": "string"
+          },
+          "texto": {
+            "description": "Frase pronta (\"se continuar assim, entre X e Y dias\")",
+            "type": "string"
+          },
+          "unidade": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dias",
+          "dias_max",
+          "dias_min",
+          "inclinacao_maxima",
+          "inclinacao_minima",
+          "inclinacao_por_dia",
+          "limite",
+          "serie",
+          "texto",
+          "unidade"
+        ]
+      },
       "SseEmitter": {
         "properties": {
           "timeout": {
@@ -3781,6 +4713,40 @@
         "required": [
           "minutos",
           "motivo"
+        ]
+      },
+      "TaxasDeteccao": {
+        "properties": {
+          "deteccao": {
+            "description": "Fração das janelas não normais em que acusou desvio",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "falso_positivo": {
+            "description": "Fração das janelas normais em que acusou desvio",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "janelas_nao_normais": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "janelas_normais": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deteccao",
+          "falso_positivo",
+          "janelas_nao_normais",
+          "janelas_normais"
         ]
       },
       "TelemetriaPontoResposta": {
@@ -3969,6 +4935,144 @@
           "saturou"
         ]
       },
+      "Tendencia": {
+        "properties": {
+          "habilitada": {
+            "description": "false: desabilitada por configuração (ps.tendencia.habilitada)",
+            "type": "boolean"
+          },
+          "mensagem": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "min_dias": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "pontos": {
+            "items": {
+              "$ref": "#/components/schemas/PontoTendencia"
+            },
+            "type": "array"
+          },
+          "simulado": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "habilitada",
+          "mensagem",
+          "min_dias",
+          "pontos",
+          "simulado"
+        ]
+      },
+      "TrabalhoTreino": {
+        "properties": {
+          "comando": {
+            "description": "Sem serviço de treino configurado: o comando que faz o mesmo no notebook",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "concluido_em": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "criado_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "criado_por": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "estado": {
+            "description": "pendente, acordando, executando, concluido ou falhou",
+            "enum": [
+              "pendente",
+              "acordando",
+              "executando",
+              "concluido",
+              "falhou"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "iniciado_em": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "maquina_id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "mensagem": {
+            "description": "O que está acontecendo, pronto para a tela (\"acordando o serviço de treino\", erro...)",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "modelo_id": {
+            "description": "Versão criada (como candidata) quando o trabalho conclui",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "modelo_versao": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "simulado": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "comando",
+          "concluido_em",
+          "criado_em",
+          "criado_por",
+          "estado",
+          "id",
+          "iniciado_em",
+          "maquina_id",
+          "mensagem",
+          "modelo_id",
+          "modelo_versao",
+          "simulado"
+        ]
+      },
+      "TreinoEvento": {
+        "description": "Corpo do evento \"treino\": o trabalho com o estado novo",
+        "properties": {
+          "trabalho": {
+            "$ref": "#/components/schemas/TrabalhoTreino"
+          }
+        },
+        "required": [
+          "trabalho"
+        ]
+      },
       "UltimaJanelaResposta": {
         "properties": {
           "amostras": {
@@ -4103,6 +5207,72 @@
           "id",
           "nome",
           "papel"
+        ]
+      },
+      "ValidacaoModelo": {
+        "description": "Validação por ensaio (GroupKFold) ou por dia (um dia de fora)",
+        "properties": {
+          "aplicavel": {
+            "type": "boolean"
+          },
+          "classificador": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MetricasClassificador"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "comparacao": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ComparacaoRegraModelo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dias": {
+            "description": "Dias da validação por dia",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "janelas_testadas": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "k": {
+            "description": "Partes da validação por ensaio",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "motivo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "aplicavel",
+          "classificador",
+          "comparacao",
+          "dias",
+          "janelas_testadas",
+          "k",
+          "motivo"
         ]
       },
       "VersaoReferenciaResposta": {
@@ -6150,7 +7320,7 @@
     },
     "/api/v1/maquinas/{id}/alarmes/diagnostico": {
       "get": {
-        "operationId": "diagnostico",
+        "operationId": "diagnostico_1",
         "parameters": [
           {
             "in": "path",
@@ -6872,7 +8042,7 @@
     },
     "/api/v1/maquinas/{id}/eventos": {
       "get": {
-        "description": "Fluxo text/event-stream. O token vai no cabeçalho Authorization, nunca na URL. Eventos:\n\n- `janela`: janela nova gravada com medido_em de até 30 s atrás, com o corpo de JanelaResposta (reenvio não gera evento);\n- `recuperacao`: janelas mais antigas que 30 s (a fila do dispositivo sendo esvaziada depois de uma queda de rede), juntadas no máximo a cada 5 s por máquina, com o corpo de RecuperacaoEvento (de, ate, quantidade); as janelas estão gravadas e aparecem nas consultas;\n- `ensaio`: ensaio aberto, encerrado ou descartado, com o corpo de EnsaioEvento (só ADMIN e TECNICO);\n- `alerta`: alerta aberto, piorado, normalizado, reconhecido, suprimido ou encerrado, com o corpo de AlertaEvento;\n- `os`: ordem de serviço aberta, assumida ou concluída, com o corpo de OrdemServicoEvento;\n- `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o primeiro evento de toda conexão, com o estado atual.\n\nLinhas de comentário (`:batimento`) chegam a cada 15 s sem evento. A conexão é encerrada pelo servidor depois de 30 min; o cliente deve reconectar. Cliente que não consome é descartado.\n",
+        "description": "Fluxo text/event-stream. O token vai no cabeçalho Authorization, nunca na URL. Eventos:\n\n- `janela`: janela nova gravada com medido_em de até 30 s atrás, com o corpo de JanelaResposta (reenvio não gera evento);\n- `recuperacao`: janelas mais antigas que 30 s (a fila do dispositivo sendo esvaziada depois de uma queda de rede), juntadas no máximo a cada 5 s por máquina, com o corpo de RecuperacaoEvento (de, ate, quantidade); as janelas estão gravadas e aparecem nas consultas;\n- `ensaio`: ensaio aberto, encerrado ou descartado, com o corpo de EnsaioEvento (só ADMIN e TECNICO);\n- `alerta`: alerta aberto, piorado, normalizado, reconhecido, suprimido ou encerrado, com o corpo de AlertaEvento;\n- `os`: ordem de serviço aberta, assumida ou concluída, com o corpo de OrdemServicoEvento;\n- `treino`: trabalho de treino mudou de estado (acordando, executando, concluído, falhou), com o                     corpo de TreinoEvento;\n- `modelo`: versão de modelo nova (candidata) ou ativada, com o corpo de ModeloEvento;\n- `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o primeiro evento de toda conexão, com o estado atual.\n\nLinhas de comentário (`:batimento`) chegam a cada 15 s sem evento. A conexão é encerrada pelo servidor depois de 30 min; o cliente deve reconectar. Cliente que não consome é descartado.\n",
         "operationId": "eventos",
         "parameters": [
           {
@@ -6969,6 +8139,87 @@
         "summary": "Eventos ao vivo da máquina (Server-Sent Events)",
         "tags": [
           "Eventos ao vivo"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/ia/diagnostico": {
+      "get": {
+        "operationId": "diagnostico",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IaDiagnostico"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Diagnóstico da IA: modelo ativo, se roda e por quê, erros, canais da fusão, tendência",
+        "tags": [
+          "Modelos"
         ]
       }
     },
@@ -7121,6 +8372,203 @@
         "summary": "Janelas completas da máquina (envio, pontos e canais), paginadas",
         "tags": [
           "Telemetria"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/modelos": {
+      "get": {
+        "operationId": "modelos",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaModeloResumo"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Versões de modelo da máquina, mais recente primeiro",
+        "tags": [
+          "Modelos"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/modelos/treinar": {
+      "post": {
+        "description": "Cria um trabalho de treino. Com o serviço de treino configurado, a API o acorda e pede o treino; sem ele, o trabalho traz o comando para rodar no notebook. Acompanhe pelo evento \"treino\" ou por GET /treino/trabalhos/{id}.",
+        "operationId": "treinar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "true: treina com o dado simulado",
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrabalhoTreino"
+                }
+              }
+            },
+            "description": "Trabalho criado"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Já há um treino em andamento nesta máquina e tipo de dado"
+          }
+        },
+        "summary": "Botão Treinar (ADMIN e TECNICO)",
+        "tags": [
+          "Modelos"
         ]
       }
     },
@@ -7815,6 +9263,192 @@
         ]
       }
     },
+    "/api/v1/maquinas/{id}/tendencia": {
+      "get": {
+        "description": "Séries diárias de severidade acumulada, deriva e, com o canal habilitado, temperatura do cabeçote; inclinação de Theil-Sen com intervalo de 95% e, quando sobe, em quantos dias cruzaria o limite (faixa, nunca data de quebra). Desabilitada: habilitada = false e a mensagem.",
+        "operationId": "tendencia",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tendencia"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Tendência por ponto (desabilitada por padrão)",
+        "tags": [
+          "Modelos"
+        ]
+      }
+    },
+    "/api/v1/maquinas/{id}/treino/trabalhos": {
+      "get": {
+        "operationId": "trabalhos",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "simulado",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaTrabalhoTreino"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Trabalhos de treino da máquina, mais recente primeiro",
+        "tags": [
+          "Modelos"
+        ]
+      }
+    },
     "/api/v1/maquinas/{id}/ultima-janela": {
       "get": {
         "operationId": "ultimaJanela",
@@ -8220,6 +9854,161 @@
         "summary": "Desativa o material (ADMIN): some da escolha, os ensaios continuam apontando para ele",
         "tags": [
           "Catálogos"
+        ]
+      }
+    },
+    "/api/v1/modelos/{id}": {
+      "get": {
+        "operationId": "modelo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModeloDetalhe"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Uma versão com as métricas da validação, a comparação com a regra e a importância",
+        "tags": [
+          "Modelos"
+        ]
+      }
+    },
+    "/api/v1/modelos/{id}/ativar": {
+      "post": {
+        "description": "Uma versão ativa por máquina e tipo de dado; a anterior vira arquivada. O modelo nunca muda estado, prioridade nem abertura de alerta: só acrescenta a segunda opinião.",
+        "operationId": "ativar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModeloDetalhe"
+                }
+              }
+            },
+            "description": "Versão ativada"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "A versão já está ativa"
+          }
+        },
+        "summary": "Ativa a versão (só ADMIN)",
+        "tags": [
+          "Modelos"
         ]
       }
     },
@@ -8969,6 +10758,438 @@
         ]
       }
     },
+    "/api/v1/treino/servico/trabalhos/{id}": {
+      "get": {
+        "operationId": "trabalho_1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrabalhoTreino"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "security": [
+          {
+            "treinoChave": []
+          }
+        ],
+        "summary": "Trabalho de treino (máquina e tipo de dado a treinar)",
+        "tags": [
+          "Serviço de treino"
+        ]
+      }
+    },
+    "/api/v1/treino/servico/trabalhos/{id}/falha": {
+      "post": {
+        "operationId": "falha",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FalhaTreinoRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrabalhoTreino"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "security": [
+          {
+            "treinoChave": []
+          }
+        ],
+        "summary": "O treino falhou: o trabalho passa a falhou, com a mensagem",
+        "tags": [
+          "Serviço de treino"
+        ]
+      }
+    },
+    "/api/v1/treino/servico/trabalhos/{id}/inicio": {
+      "post": {
+        "operationId": "inicio",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrabalhoTreino"
+                }
+              }
+            },
+            "description": "Trabalho executando"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Trabalho já concluído ou falhou"
+          }
+        },
+        "security": [
+          {
+            "treinoChave": []
+          }
+        ],
+        "summary": "O serviço começou a treinar: o trabalho passa a executando",
+        "tags": [
+          "Serviço de treino"
+        ]
+      }
+    },
+    "/api/v1/treino/servico/trabalhos/{id}/resultado": {
+      "post": {
+        "description": "anomalia (ONNX do Isolation Forest, obrigatório), classe (ONNX do Random Forest, quando houve classes suficientes), arvores (JSON, plano B) e metadados (JSON, obrigatório). A versão nasce candidata; resultado inválido é recusado (400) e o trabalho falha.",
+        "operationId": "resultado",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "anomalia": {
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "arvores": {
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "classe": {
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "metadados": {
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "anomalia",
+                  "metadados"
+                ],
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModeloResumo"
+                }
+              }
+            },
+            "description": "Versão candidata criada"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "security": [
+          {
+            "treinoChave": []
+          }
+        ],
+        "summary": "Resultado do treino: arquivos do modelo (multipart)",
+        "tags": [
+          "Serviço de treino"
+        ]
+      }
+    },
+    "/api/v1/treino/trabalhos/{id}": {
+      "get": {
+        "operationId": "trabalho",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrabalhoTreino"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Recurso não encontrado"
+          }
+        },
+        "summary": "Estado de um trabalho de treino",
+        "tags": [
+          "Modelos"
+        ]
+      }
+    },
     "/api/v1/usuarios": {
       "get": {
         "operationId": "listar",
@@ -9186,6 +11407,10 @@
     {
       "description": "Alertas no padrão ISA-18.2 e diagnóstico da regra de alarme",
       "name": "Alertas"
+    },
+    {
+      "description": "Segunda opinião: treinar, versões, métricas e ativação (o alarme continua sendo a regra)",
+      "name": "Modelos"
     },
     {
       "description": "Máquinas, pontos de medição e dispositivos. Qualquer usuário autenticado.",

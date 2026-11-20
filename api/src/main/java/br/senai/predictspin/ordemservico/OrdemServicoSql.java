@@ -168,7 +168,9 @@ public class OrdemServicoSql {
                 rs.getString("firmware_versao"), rs.getString("calibracao"), rs.getBoolean("simulado"),
                 rs.getString("responsavel_nome"), instante(rs, "aberta_em"), instante(rs, "assumida_em"),
                 instante(rs, "concluida_em"), retorno == null ? null : RetornoTecnico.de(retorno),
-                rs.getString("comentario_tecnico"), condicao == null ? null : CondicaoEncontrada.de(condicao));
+                rs.getString("comentario_tecnico"), condicao == null ? null : CondicaoEncontrada.de(condicao),
+                br.senai.predictspin.ia.OpiniaoJson.ler(rs.getString("opiniao_abertura")),
+                br.senai.predictspin.ia.OpiniaoJson.ler(rs.getString("opiniao_recente")));
     }
 
     private static Instant instante(ResultSet rs, String coluna) throws SQLException {

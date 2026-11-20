@@ -11,9 +11,11 @@ import java.util.Map;
  *
  * @param aoVivo        false quando medido_em é mais antigo que o limite do ao vivo (fila do dispositivo)
  * @param pontosAtivos  código → id de todos os pontos ativos da máquina (os ausentes do envio também)
+ * @param canais        código → valor dos canais lentos enviados (vazio sem canais); usado pela fusão da IA
  */
 public record JanelaRecebida(Long maquinaId, boolean simulado, long janelaId, Instant medidoEm, boolean aoVivo,
                              double rotacaoRpm, boolean saturou, ModoJanela modo, Integer amostras,
                              Integer amostrasEsperadas, String firmwareVersao, String calibracaoJson, Long ensaioId,
-                             Map<String, Long> pontosAtivos, List<IngestaoRepository.LinhaTelemetria> linhas) {
+                             Map<String, Long> pontosAtivos, List<IngestaoRepository.LinhaTelemetria> linhas,
+                             Map<String, Double> canais) {
 }

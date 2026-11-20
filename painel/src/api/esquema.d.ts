@@ -412,7 +412,7 @@ export interface paths {
             cookie?: never;
         };
         /** Diagnóstico da regra de alarme: indicadores, severidade, deriva, piso e calibração */
-        get: operations["diagnostico"];
+        get: operations["diagnostico_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -535,11 +535,30 @@ export interface paths {
          *     - `ensaio`: ensaio aberto, encerrado ou descartado, com o corpo de EnsaioEvento (só ADMIN e TECNICO);
          *     - `alerta`: alerta aberto, piorado, normalizado, reconhecido, suprimido ou encerrado, com o corpo de AlertaEvento;
          *     - `os`: ordem de serviço aberta, assumida ou concluída, com o corpo de OrdemServicoEvento;
+         *     - `treino`: trabalho de treino mudou de estado (acordando, executando, concluído, falhou), com o                     corpo de TreinoEvento;
+         *     - `modelo`: versão de modelo nova (candidata) ou ativada, com o corpo de ModeloEvento;
          *     - `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o primeiro evento de toda conexão, com o estado atual.
          *
          *     Linhas de comentário (`:batimento`) chegam a cada 15 s sem evento. A conexão é encerrada pelo servidor depois de 30 min; o cliente deve reconectar. Cliente que não consome é descartado.
          */
         get: operations["eventos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maquinas/{id}/ia/diagnostico": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Diagnóstico da IA: modelo ativo, se roda e por quê, erros, canais da fusão, tendência */
+        get: operations["diagnostico"];
         put?: never;
         post?: never;
         delete?: never;
@@ -562,6 +581,43 @@ export interface paths {
         get: operations["janelasDaMaquina"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maquinas/{id}/modelos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Versões de modelo da máquina, mais recente primeiro */
+        get: operations["modelos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maquinas/{id}/modelos/treinar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Botão Treinar (ADMIN e TECNICO)
+         * @description Cria um trabalho de treino. Com o serviço de treino configurado, a API o acorda e pede o treino; sem ele, o trabalho traz o comando para rodar no notebook. Acompanhe pelo evento "treino" ou por GET /treino/trabalhos/{id}.
+         */
+        post: operations["treinar"];
         delete?: never;
         options?: never;
         head?: never;
@@ -681,6 +737,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/maquinas/{id}/tendencia": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tendência por ponto (desabilitada por padrão)
+         * @description Séries diárias de severidade acumulada, deriva e, com o canal habilitado, temperatura do cabeçote; inclinação de Theil-Sen com intervalo de 95% e, quando sobe, em quantos dias cruzaria o limite (faixa, nunca data de quebra). Desabilitada: habilitada = false e a mensagem.
+         */
+        get: operations["tendencia"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/maquinas/{id}/treino/trabalhos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Trabalhos de treino da máquina, mais recente primeiro */
+        get: operations["trabalhos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/maquinas/{id}/ultima-janela": {
         parameters: {
             query?: never;
@@ -744,6 +837,43 @@ export interface paths {
         put?: never;
         /** Desativa o material (ADMIN): some da escolha, os ensaios continuam apontando para ele */
         post: operations["desativarMaterial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/modelos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Uma versão com as métricas da validação, a comparação com a regra e a importância */
+        get: operations["modelo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/modelos/{id}/ativar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ativa a versão (só ADMIN)
+         * @description Uma versão ativa por máquina e tipo de dado; a anterior vira arquivada. O modelo nunca muda estado, prioridade nem abertura de alerta: só acrescenta a segunda opinião.
+         */
+        post: operations["ativar"];
         delete?: never;
         options?: never;
         head?: never;
@@ -901,6 +1031,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/treino/servico/trabalhos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Trabalho de treino (máquina e tipo de dado a treinar) */
+        get: operations["trabalho_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/treino/servico/trabalhos/{id}/falha": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** O treino falhou: o trabalho passa a falhou, com a mensagem */
+        post: operations["falha"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/treino/servico/trabalhos/{id}/inicio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** O serviço começou a treinar: o trabalho passa a executando */
+        post: operations["inicio"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/treino/servico/trabalhos/{id}/resultado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resultado do treino: arquivos do modelo (multipart)
+         * @description anomalia (ONNX do Isolation Forest, obrigatório), classe (ONNX do Random Forest, quando houve classes suficientes), arvores (JSON, plano B) e metadados (JSON, obrigatório). A versão nasce candidata; resultado inválido é recusado (400) e o trabalho falha.
+         */
+        post: operations["resultado"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/treino/trabalhos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Estado de um trabalho de treino */
+        get: operations["trabalho"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/usuarios": {
         parameters: {
             query?: never;
@@ -998,6 +1216,8 @@ export interface components {
             nivel: "normal" | "atencao" | "alarme";
             /** Format: date-time */
             normalizado_em: string | null;
+            opiniao_abertura: components["schemas"]["SegundaOpiniao"] | null;
+            opiniao_recente: components["schemas"]["SegundaOpiniao"] | null;
             /**
              * Format: int64
              * @description OS aberta a partir deste alerta
@@ -1144,6 +1364,11 @@ export interface components {
             /** @description false: menos janelas que o mínimo, não gera z */
             suficiente: boolean;
         };
+        ClasseForaDoModelo: {
+            classe: string;
+            /** Format: int32 */
+            ensaios: number;
+        };
         Cobertura: {
             /** @example T1 */
             etapa: string;
@@ -1195,6 +1420,11 @@ export interface components {
             rotacoes_rpm: number[];
             simulado: boolean | null;
         };
+        /** @description Nas mesmas janelas de validação: regra (nível bruto, z ≥ z de atenção, sem atraso) × Isolation Forest */
+        ComparacaoRegraModelo: {
+            isolation_forest: components["schemas"]["TaxasDeteccao"];
+            regra: components["schemas"]["TaxasDeteccao"];
+        };
         ConclusaoRequisicao: {
             /** @example Ferramenta conferida, sem desgaste; vibração veio da máquina ao lado */
             comentario?: string;
@@ -1221,12 +1451,35 @@ export interface components {
             /** Format: date-time */
             timestamp: string;
         };
+        ConjuntoDoModelo: {
+            dias: string[];
+            ensaios_por_classe: {
+                [key: string]: number;
+            };
+            excluidas: {
+                [key: string]: number;
+            };
+            /** Format: int32 */
+            janelas: number;
+            por_classe: {
+                [key: string]: number;
+            };
+            por_origem: {
+                [key: string]: number;
+            };
+        };
         Deriva: {
             /** Format: int32 */
             dias: number;
             /** Format: double */
             fracao_maxima: number;
             habilitada: boolean;
+        };
+        DiaTendencia: {
+            /** Format: date */
+            dia: string;
+            /** Format: double */
+            valor: number;
         };
         DiagnosticoAlarmeResposta: {
             /**
@@ -1332,6 +1585,61 @@ export interface components {
             nota: string | null;
             /** Format: date-time */
             ocorrido_em: string;
+        };
+        FalhaTreinoRequisicao: {
+            mensagem?: string;
+        };
+        IaCanalFusao: {
+            codigo: string;
+            habilitado: boolean;
+        };
+        IaDiagnostico: {
+            ativo: components["schemas"]["ModeloResumo"] | null;
+            /** @description Avisos prontos (referência mudou: treine de novo...) */
+            avisos: string[];
+            /** @description onnx ou java */
+            caminho: string;
+            canais: components["schemas"]["IaCanalFusao"][];
+            /**
+             * Format: int64
+             * @description Erros na segunda opinião desde que a API subiu (a regra não é afetada)
+             */
+            erros: number;
+            fusao: components["schemas"]["PropriedadesFusao"];
+            /**
+             * Format: int64
+             * @description Janelas com segunda opinião desde que a API subiu
+             */
+            inferencias: number;
+            modelo: components["schemas"]["PropriedadesModelo"];
+            /** @description Por que o modelo ativo não roda (versão do vetor, canal exigido desabilitado...) */
+            motivo_nao_roda: string | null;
+            /** @description O modelo ativo está rodando nas janelas */
+            roda: boolean;
+            simulado: boolean;
+            tendencia: components["schemas"]["PropriedadesTendencia"];
+            /** @description Tendência habilitada (ps.tendencia.habilitada) */
+            tendencia_habilitada: boolean;
+            treino: components["schemas"]["PropriedadesTreino"];
+            ultima_hora: components["schemas"]["IaUltimaHora"];
+            ultimo_erro: string | null;
+        };
+        /** @description Segunda opinião nas janelas da última hora (modelo ativo) */
+        IaUltimaHora: {
+            /** Format: int64 */
+            anomalias: number;
+            /** Format: int64 */
+            janelas: number;
+            /** @description Janelas por classe mais provável */
+            por_classe: {
+                [key: string]: number;
+            };
+        };
+        /** @description Importância por permutação, as 10 maiores */
+        ImportanciaCaracteristica: {
+            nome: string;
+            /** Format: double */
+            valor: number;
         };
         /** @description Últimas limites.alarme.indicadores_h horas (24 por padrão), sem os alertas de ensaio de condição */
         IndicadoresAlarme: {
@@ -1611,6 +1919,125 @@ export interface components {
              */
             vel_rms_mm_s?: number;
         };
+        MetadadosModelo: {
+            aviso_simulado: string | null;
+            avisos: string[];
+            bibliotecas: {
+                [key: string]: string;
+            } | null;
+            /** @description Canais da fusão que o modelo exige */
+            canais: string[];
+            /** @description Características usadas, na ordem das colunas do modelo */
+            caracteristicas: string[];
+            /** @description Características do vetor que ficaram fora (faltavam em alguma janela) */
+            caracteristicas_removidas: string[];
+            /** @description Classes do classificador, na ordem das probabilidades; vazio = só anomalia */
+            classes: string[];
+            classes_fora: components["schemas"]["ClasseForaDoModelo"][];
+            conjunto: components["schemas"]["ConjuntoDoModelo"];
+            gerado_em: string | null;
+            /** @description Importância por permutação, as 10 maiores */
+            importancia: components["schemas"]["ImportanciaCaracteristica"][];
+            /** Format: double */
+            limiar_anomalia: number;
+            metricas: components["schemas"]["MetricasModelo"];
+            /**
+             * Format: double
+             * @description Para o escore de anomalia a partir da saída do ONNX: -(scores + offset)
+             */
+            offset_anomalia: number;
+            /** @description Importância de cada característica (usada na explicação) */
+            pesos: {
+                [key: string]: number;
+            };
+            /** Format: int32 */
+            referencia_numero: number | null;
+            /** Format: int64 */
+            referencia_versao_id: number | null;
+            simulado: boolean;
+            versao_vetor: string;
+        };
+        MetricasClassificador: {
+            classes: string[];
+            /** Format: double */
+            f1_macro: number;
+            /** Format: int32 */
+            janelas: number;
+            /** @description Linha = classe real, coluna = classe prevista */
+            matriz_confusao: number[][];
+            recall: {
+                [key: string]: number;
+            };
+        };
+        MetricasModelo: {
+            /** Format: double */
+            if_percentil: number;
+            /** Format: double */
+            limiar_anomalia: number;
+            por_dia: components["schemas"]["ValidacaoModelo"];
+            por_ensaio: components["schemas"]["ValidacaoModelo"];
+        };
+        ModeloDetalhe: {
+            /** @description Avisos prontos: referência mudou depois do treino, canal desabilitado, dado simulado... */
+            avisos: string[];
+            /** @description Como a API executa o modelo: onnx (ONNX Runtime) ou java (árvores em Java puro) */
+            caminho: string;
+            metadados: components["schemas"]["MetadadosModelo"];
+            modelo: components["schemas"]["ModeloResumo"];
+        };
+        /** @description Corpo do evento "modelo": candidato (versão nova) ou ativado */
+        ModeloEvento: {
+            /** @enum {string} */
+            acao: "candidato" | "ativado";
+            /**
+             * Format: int32
+             * @description Versão que estava ativa e foi arquivada
+             */
+            arquivada: number | null;
+            modelo: components["schemas"]["ModeloResumo"];
+        };
+        ModeloResumo: {
+            /** Format: date-time */
+            ativado_em: string | null;
+            ativado_por: string | null;
+            /** @description "dado simulado: não é resultado" quando o treino foi com dado simulado */
+            aviso_simulado: string | null;
+            /** @description Classes do classificador; vazio = só anomalia */
+            classes: string[];
+            conjunto: components["schemas"]["ConjuntoDoModelo"];
+            /** Format: date-time */
+            criado_em: string;
+            criado_por: string | null;
+            /**
+             * @description candidato, ativo ou arquivado
+             * @enum {string}
+             */
+            estado: "candidato" | "ativo" | "arquivado";
+            /**
+             * Format: double
+             * @description F1 macro da validação por ensaio; nulo sem classificador ou sem validação
+             */
+            f1_macro_por_ensaio: number | null;
+            /** Format: int64 */
+            id: number;
+            /** Format: double */
+            limiar_anomalia: number;
+            /** Format: int64 */
+            maquina_id: number;
+            /**
+             * Format: int32
+             * @description Versão da referência usada no treino
+             */
+            referencia_numero: number | null;
+            simulado: boolean;
+            /** Format: int32 */
+            tamanho_bytes: number;
+            /** Format: int64 */
+            trabalho_id: number | null;
+            /** Format: int32 */
+            versao: number;
+            versao_vetor: string;
+        };
         ModoRapidoResposta: {
             /** @description true enquanto o prazo estiver no futuro */
             ativo: boolean;
@@ -1768,6 +2195,8 @@ export interface components {
             motivo_abertura: "alarme_continuo" | "severidade";
             /** @example OS-2026-0001 */
             numero: string;
+            opiniao_abertura: components["schemas"]["SegundaOpiniao"] | null;
+            opiniao_recente: components["schemas"]["SegundaOpiniao"] | null;
             /** @example B */
             ponto: string;
             /** Format: int32 */
@@ -1890,6 +2319,17 @@ export interface components {
             /** Format: int32 */
             total_paginas: number;
         };
+        PaginaModeloResumo: {
+            conteudo: components["schemas"]["ModeloResumo"][];
+            /** Format: int32 */
+            pagina: number;
+            /** Format: int32 */
+            tamanho: number;
+            /** Format: int64 */
+            total_elementos: number;
+            /** Format: int32 */
+            total_paginas: number;
+        };
         PaginaOrdemServicoResposta: {
             conteudo: components["schemas"]["OrdemServicoResposta"][];
             /** Format: int32 */
@@ -1914,6 +2354,17 @@ export interface components {
         };
         PaginaTelemetriaPontoResposta: {
             conteudo: components["schemas"]["TelemetriaPontoResposta"][];
+            /** Format: int32 */
+            pagina: number;
+            /** Format: int32 */
+            tamanho: number;
+            /** Format: int64 */
+            total_elementos: number;
+            /** Format: int32 */
+            total_paginas: number;
+        };
+        PaginaTrabalhoTreino: {
+            conteudo: components["schemas"]["TrabalhoTreino"][];
             /** Format: int32 */
             pagina: number;
             /** Format: int32 */
@@ -1986,6 +2437,10 @@ export interface components {
             /** @enum {string} */
             papel: "acionamento" | "ferramenta" | "estrutura";
         };
+        PontoTendencia: {
+            ponto: string;
+            series: components["schemas"]["SerieTendencia"][];
+        };
         PropriedadesAlarme: {
             /** Format: double */
             atraso_s: number;
@@ -2020,7 +2475,6 @@ export interface components {
             /** Format: int32 */
             fila_max: number;
         };
-        /** @description Canais lentos na fusão (ps.fusao) */
         PropriedadesFusao: {
             canais: {
                 [key: string]: components["schemas"]["CanalFusao"];
@@ -2061,13 +2515,12 @@ export interface components {
             /** Format: double */
             tolerancia_marcha: number;
         };
-        /** @description Tendência por ponto (ps.tendencia) */
         PropriedadesTendencia: {
             habilitada: boolean;
             /** Format: int32 */
             janela_dias: number;
             /** Format: double */
-            limite_deriva_pct: number;
+            limite_deriva_z: number;
             /** Format: double */
             limite_severidade: number;
             /** Format: double */
@@ -2251,6 +2704,47 @@ export interface components {
              */
             severidade_semana: number;
         };
+        /** @description Segunda opinião mais recente enquanto ativo; nulo sem modelo ativo */
+        SegundaOpiniao: {
+            /** @description O escore passou do limiar */
+            anomalia: boolean;
+            /** @description Classe mais provável (normal, avanco_excessivo, rotacao_inadequada, ferramenta_desgastada, desbalanceamento); nulo sem classificador */
+            classe: string | null;
+            /** @description "o modelo também vê anomalia" ou "o modelo não vê anomalia" */
+            concordancia: string;
+            /**
+             * Format: double
+             * @description Probabilidade da classe mais provável (0 a 1); nulo sem classificador
+             */
+            confianca: number | null;
+            /**
+             * Format: double
+             * @description Escore de anomalia: quanto maior, mais diferente do normal gravado
+             */
+            escore: number;
+            /** @description Texto pronto: classe e confiança, as 3 características que mais pesaram e a versão */
+            explicacao: string;
+            /** @description Confiança abaixo de limites.modelo.confianca_min: o painel mostra "classe incerta" */
+            incerta: boolean;
+            /** Format: int64 */
+            janela_id: number;
+            /**
+             * Format: double
+             * @description Acima disto, o modelo também vê anomalia (limites.modelo.if_percentil do treino)
+             */
+            limiar: number;
+            /** Format: date-time */
+            medido_em: string;
+            /** Format: int64 */
+            modelo_id: number;
+            /** @description Modelo treinado com dado simulado: não é resultado */
+            simulado: boolean;
+            /**
+             * Format: int32
+             * @description Número da versão do modelo
+             */
+            versao: number;
+        };
         SerieAgregadaResposta: {
             /** Format: date-time */
             ate: string;
@@ -2334,6 +2828,35 @@ export interface components {
                 [key: string]: number;
             };
         };
+        SerieTendencia: {
+            dias: components["schemas"]["DiaTendencia"][];
+            /**
+             * Format: double
+             * @description ...e no máximo; nulo quando o intervalo de 95% inclui não subir
+             */
+            dias_max: number | null;
+            /**
+             * Format: double
+             * @description Se continuar assim, cruza o limite em pelo menos... dias
+             */
+            dias_min: number | null;
+            /** Format: double */
+            inclinacao_maxima: number | null;
+            /** Format: double */
+            inclinacao_minima: number | null;
+            /**
+             * Format: double
+             * @description Nulo com menos de min_dias dias
+             */
+            inclinacao_por_dia: number | null;
+            /** Format: double */
+            limite: number;
+            /** @description severidade (z·s por dia), deriva (mediana do z do RMS no dia) ou temp_cabecote_c */
+            serie: string;
+            /** @description Frase pronta ("se continuar assim, entre X e Y dias") */
+            texto: string;
+            unidade: string;
+        };
         SseEmitter: {
             /** Format: int64 */
             timeout: number | null;
@@ -2347,6 +2870,22 @@ export interface components {
             minutos: number;
             /** @example Máquina ao lado em manutenção fazendo o C vibrar */
             motivo: string;
+        };
+        TaxasDeteccao: {
+            /**
+             * Format: double
+             * @description Fração das janelas não normais em que acusou desvio
+             */
+            deteccao: number | null;
+            /**
+             * Format: double
+             * @description Fração das janelas normais em que acusou desvio
+             */
+            falso_positivo: number | null;
+            /** Format: int32 */
+            janelas_nao_normais: number;
+            /** Format: int32 */
+            janelas_normais: number;
         };
         TelemetriaPontoResposta: {
             /** Format: double */
@@ -2439,6 +2978,49 @@ export interface components {
              */
             saturou: boolean;
         };
+        Tendencia: {
+            /** @description false: desabilitada por configuração (ps.tendencia.habilitada) */
+            habilitada: boolean;
+            mensagem: string | null;
+            /** Format: int32 */
+            min_dias: number;
+            pontos: components["schemas"]["PontoTendencia"][];
+            simulado: boolean;
+        };
+        TrabalhoTreino: {
+            /** @description Sem serviço de treino configurado: o comando que faz o mesmo no notebook */
+            comando: string | null;
+            /** Format: date-time */
+            concluido_em: string | null;
+            /** Format: date-time */
+            criado_em: string;
+            criado_por: string | null;
+            /**
+             * @description pendente, acordando, executando, concluido ou falhou
+             * @enum {string}
+             */
+            estado: "pendente" | "acordando" | "executando" | "concluido" | "falhou";
+            /** Format: int64 */
+            id: number;
+            /** Format: date-time */
+            iniciado_em: string | null;
+            /** Format: int64 */
+            maquina_id: number;
+            /** @description O que está acontecendo, pronto para a tela ("acordando o serviço de treino", erro...) */
+            mensagem: string | null;
+            /**
+             * Format: int64
+             * @description Versão criada (como candidata) quando o trabalho conclui
+             */
+            modelo_id: number | null;
+            /** Format: int32 */
+            modelo_versao: number | null;
+            simulado: boolean;
+        };
+        /** @description Corpo do evento "treino": o trabalho com o estado novo */
+        TreinoEvento: {
+            trabalho: components["schemas"]["TrabalhoTreino"];
+        };
         UltimaJanelaResposta: {
             /**
              * Format: int32
@@ -2488,6 +3070,25 @@ export interface components {
             nome: string;
             /** @enum {string} */
             papel: "ADMIN" | "TECNICO" | "OPERADOR";
+        };
+        /** @description Validação por ensaio (GroupKFold) ou por dia (um dia de fora) */
+        ValidacaoModelo: {
+            aplicavel: boolean;
+            classificador: components["schemas"]["MetricasClassificador"] | null;
+            comparacao: components["schemas"]["ComparacaoRegraModelo"] | null;
+            /**
+             * Format: int32
+             * @description Dias da validação por dia
+             */
+            dias: number | null;
+            /** Format: int32 */
+            janelas_testadas: number | null;
+            /**
+             * Format: int32
+             * @description Partes da validação por ensaio
+             */
+            k: number | null;
+            motivo: string | null;
         };
         VersaoReferenciaResposta: {
             /** @description Nome de quem recalculou */
@@ -3951,7 +4552,7 @@ export interface operations {
             };
         };
     };
-    diagnostico: {
+    diagnostico_1: {
         parameters: {
             query?: {
                 simulado?: boolean;
@@ -4483,6 +5084,66 @@ export interface operations {
             };
         };
     };
+    diagnostico: {
+        parameters: {
+            query?: {
+                simulado?: boolean;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IaDiagnostico"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
     janelasDaMaquina: {
         parameters: {
             query?: {
@@ -4545,6 +5206,138 @@ export interface operations {
             };
             /** @description Recurso não encontrado */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    modelos: {
+        parameters: {
+            query?: {
+                simulado?: boolean;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaModeloResumo"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    treinar: {
+        parameters: {
+            query?: {
+                /** @description true: treina com o dado simulado */
+                simulado?: boolean;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trabalho criado */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrabalhoTreino"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Já há um treino em andamento nesta máquina e tipo de dado */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5039,6 +5832,128 @@ export interface operations {
             };
         };
     };
+    tendencia: {
+        parameters: {
+            query?: {
+                simulado?: boolean;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tendencia"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    trabalhos: {
+        parameters: {
+            query?: {
+                simulado?: boolean;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaTrabalhoTreino"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
     ultimaJanela: {
         parameters: {
             query?: {
@@ -5334,6 +6249,131 @@ export interface operations {
             };
             /** @description Recurso não encontrado */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    modelo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloDetalhe"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    ativar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Versão ativada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloDetalhe"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description A versão já está ativa */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5816,6 +6856,322 @@ export interface operations {
             };
             /** @description Sem permissão para esta operação */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    trabalho_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrabalhoTreino"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    falha: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FalhaTreinoRequisicao"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrabalhoTreino"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    inicio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trabalho executando */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrabalhoTreino"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Trabalho já concluído ou falhou */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    resultado: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    anomalia: string;
+                    /** Format: binary */
+                    arvores?: string;
+                    /** Format: binary */
+                    classe?: string;
+                    /** Format: binary */
+                    metadados: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Versão candidata criada */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModeloResumo"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    trabalho: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrabalhoTreino"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Recurso não encontrado */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

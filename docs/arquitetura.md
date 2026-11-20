@@ -85,7 +85,8 @@ br.senai.predictspin
 ├── catalogo       materiais e ferramentas (nome normalizado único, desativar sem apagar)
 ├── eventos        eventos ao vivo para o painel (SSE)
 ├── alerta         avaliação contra baseline, classificação, severidade acumulada
-└── ordemservico   abertura automática, atribuição, ciclo de vida
+├── ordemservico   abertura automática, atribuição, ciclo de vida
+└── ia             vetor de características, conjunto de treino, modelos (ONNX), segunda opinião, tendência
 ```
 
 Regra: `Controller` não conhece entidade, só DTO. `Service` concentra regra de negócio e é onde os
@@ -115,9 +116,10 @@ sequenceDiagram
     end
 ```
 
-A avaliação contra a referência, o alerta e a abertura de ordem de serviço acontecem na mesma
-transação da gravação (regra estatística em Java, sem modelo de aprendizado de máquina; detalhes em
-[`alarmes.md`](alarmes.md)). Janela antiga reenviada pela fila do dispositivo é avaliada e gravada, mas não abre
+A resposta ao dispositivo sai logo depois do commit da gravação. A avaliação contra a referência, o alerta e a
+abertura de ordem de serviço rodam depois, numa fila por máquina (regra estatística em Java; detalhes em
+[`alarmes.md`](alarmes.md)), e em seguida a segunda opinião do modelo ativo, que nunca muda a decisão da regra
+([`ia.md`](ia.md)). Janela antiga reenviada pela fila do dispositivo é avaliada e gravada, mas não abre
 alerta ao vivo nem OS. O contrato do payload está em [`payload.md`](payload.md). A resposta da ingestão também é
 o canal de volta para o dispositivo: enquanto a máquina estiver em modo rápido, ela traz
 `modo_rapido_ate`.
@@ -284,8 +286,8 @@ tiver a regra, só eles mudam. Detalhes, decisões e revisão em [`painel.md`](p
 | DA · Aquisição de dados | leitura sincronizada dos 3 acelerômetros e do sensor de rotação; calibração de ganho e offset por sensor; largura do pulso do FC-51 | firmware (ESP32) | 1 sensor medido em bancada (firmware antigo); firmware de 3 sensores compilado e com testes nativos, **não testado em hardware**; calibração implementada e **não testada em hardware** |
 | DM · Manipulação de dados | RMS, pico, curtose, ordens 1X–3X e velocidade RMS em mm/s (10 Hz a ~800 Hz) por janela, com a versão do firmware e a calibração de cada ponto | firmware (borda) | no simulador (velocidade estimada das ordens); no firmware compilado, **não testado em hardware**; velocidade em mm/s implementada e **não testada em hardware**, sem comparação com zonas da ISO 20816 |
 | SD · Detecção de estado | referência aprendida por ponto, medida, marcha, etapa e receita (mediana e 1,4826·MAD); z por medida; NORMAL, ATENÇÃO e ALARME com atraso e histerese em segundos; alerta de instrumento | API | **implementada** com dado simulado e testes; limites são proposta, a confirmar com o torno ([larmes.md](alarmes.md)) |
-| HA · Avaliação de saúde | alertas no padrão ISA-18.2 (estados, prioridade, supressão), explicação, componente provável e indicadores de desempenho do alarme; classificação por aprendizado de máquina fica na parte B | API | **implementada** (regra estatística); classificação da condição: parte B |
-| PA · Avaliação de prognóstico | tendência e vida útil restante (a severidade acumulada já é gravada por ponto e dia, mas não é prognóstico) | API | **trabalho futuro** |
+| HA · Avaliação de saúde | alertas no padrão ISA-18.2 (estados, prioridade, supressão), explicação, componente provável e indicadores de desempenho do alarme; segunda opinião por modelo (Isolation Forest para anomalia, Random Forest para a classe provável), treinado em Python e executado na API com ONNX Runtime ([ia.md](ia.md)) | API (regra e inferência) e Python (só treino) | **implementada**: regra estatística decide; modelo é segunda opinião, provado só com dado simulado |
+| PA · Avaliação de prognóstico | tendência por ponto (Theil-Sen com intervalo de 95%) da severidade acumulada, da deriva e, com o canal habilitado, da temperatura do cabeçote, com estimativa de quando cruzaria o limite (faixa, nunca data de quebra) | API | **implementada e desabilitada por configuração** (`ps.tendencia.habilitada`), com estimativa de tendência; testada com séries sintéticas |
 | AG · Geração de recomendação | ordem de serviço com ação recomendada e retorno do técnico (rótulo para o treino) | API e painel | **implementada** com dado simulado; aplicativo móvel fora do escopo |
 
 A apresentação (ISO 13374-4) é o painel, desenhado pela ISA-101; a integração vertical do trabalho é

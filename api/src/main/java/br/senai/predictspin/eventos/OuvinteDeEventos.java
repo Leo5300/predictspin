@@ -61,4 +61,14 @@ class OuvinteDeEventos {
     void aoAlterarModoRapido(ModoRapidoAlterado evento) {
         eventos.publicarModoRapido(evento.estado());
     }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    void aoAlterarTreino(br.senai.predictspin.ia.TreinoService.TreinoAlterado evento) {
+        eventos.publicarTreino(evento.maquinaId(), evento.simulado(), evento.evento());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    void aoAlterarModelo(br.senai.predictspin.ia.TreinoService.ModeloAlterado evento) {
+        eventos.publicarModelo(evento.maquinaId(), evento.simulado(), evento.evento());
+    }
 }

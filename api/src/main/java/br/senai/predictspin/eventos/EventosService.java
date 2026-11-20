@@ -58,6 +58,8 @@ public class EventosService implements SmartLifecycle {
     public static final String EVENTO_RECUPERACAO = "recuperacao";
     public static final String EVENTO_ALERTA = "alerta";
     public static final String EVENTO_OS = "os";
+    public static final String EVENTO_TREINO = "treino";
+    public static final String EVENTO_MODELO = "modelo";
 
     private static final Logger log = LoggerFactory.getLogger(EventosService.class);
     private static final int FILA_DA_DIFUSAO = 256;
@@ -196,6 +198,16 @@ public class EventosService implements SmartLifecycle {
     /** OS aberta, assumida ou concluída: para quem vê o tipo de dado. */
     public void publicarOrdemServico(Long maquinaId, boolean simulado, Object evento) {
         publicarParaTodos(EVENTO_OS, maquinaId, simulado, evento);
+    }
+
+    /** Trabalho de treino mudou de estado: para quem vê o tipo de dado. */
+    public void publicarTreino(Long maquinaId, boolean simulado, Object evento) {
+        publicarParaTodos(EVENTO_TREINO, maquinaId, simulado, evento);
+    }
+
+    /** Versão de modelo nova (candidata) ou ativada: para quem vê o tipo de dado. */
+    public void publicarModelo(Long maquinaId, boolean simulado, Object evento) {
+        publicarParaTodos(EVENTO_MODELO, maquinaId, simulado, evento);
     }
 
     private void publicarParaTodos(String nome, Long maquinaId, boolean simulado, Object evento) {

@@ -270,6 +270,62 @@ class ContratoOpenApiIntegracaoTest extends AlarmeIntegracaoBase {
     }
 
     @Test
+    void modelosTreinoESegundaOpiniao() throws Exception {
+        java.nio.file.Path fixture = java.nio.file.Path.of("src", "test", "resources", "modelo-fixture");
+        prepararReferencia(admin);
+        ResultActions treinar = mvc.perform(comToken(post("/api/v1/maquinas/" + maquinaId
+                + "/modelos/treinar?simulado=true"), admin));
+        conferir("/api/v1/maquinas/{id}/modelos/treinar", "post", 202, treinar);
+        long trabalho = corpo(treinar).get("id").asLong();
+        conferir("/api/v1/treino/trabalhos/{id}", "get", 200,
+                mvc.perform(comToken(get("/api/v1/treino/trabalhos/" + trabalho), admin)));
+        conferir("/api/v1/maquinas/{id}/treino/trabalhos", "get", 200, mvc.perform(comToken(get(
+                "/api/v1/maquinas/" + maquinaId + "/treino/trabalhos?simulado=true"), admin)));
+        conferir("/api/v1/treino/servico/trabalhos/{id}", "get", 200, mvc.perform(get("/api/v1/treino/servico/trabalhos/"
+                + trabalho).header("X-Treino-Chave", "chave-treino-teste")));
+        conferir("/api/v1/treino/servico/trabalhos/{id}/inicio", "post", 200, mvc.perform(post(
+                "/api/v1/treino/servico/trabalhos/" + trabalho + "/inicio").header("X-Treino-Chave", "chave-treino-teste")));
+        ResultActions resultado = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .multipart("/api/v1/treino/servico/trabalhos/" + trabalho + "/resultado")
+                .file(new org.springframework.mock.web.MockMultipartFile("anomalia", "anomalia.onnx",
+                        "application/octet-stream", java.nio.file.Files.readAllBytes(fixture.resolve("anomalia.onnx"))))
+                .file(new org.springframework.mock.web.MockMultipartFile("classe", "classe.onnx",
+                        "application/octet-stream", java.nio.file.Files.readAllBytes(fixture.resolve("classe.onnx"))))
+                .file(new org.springframework.mock.web.MockMultipartFile("arvores", "arvores.json",
+                        "application/json", java.nio.file.Files.readAllBytes(fixture.resolve("arvores.json"))))
+                .file(new org.springframework.mock.web.MockMultipartFile("metadados", "metadados.json",
+                        "application/json", json.writeValueAsBytes(((com.fasterxml.jackson.databind.node.ObjectNode)
+                        json.readTree(java.nio.file.Files.readAllBytes(fixture.resolve("metadados.json"))))
+                        .putNull("referencia_versao_id"))))
+                .header("X-Treino-Chave", "chave-treino-teste"));
+        conferir("/api/v1/treino/servico/trabalhos/{id}/resultado", "post", 201, resultado);
+        long modelo = corpo(resultado).get("id").asLong();
+        conferir("/api/v1/maquinas/{id}/modelos", "get", 200, mvc.perform(comToken(get("/api/v1/maquinas/" + maquinaId
+                + "/modelos?simulado=true"), admin)));
+        conferir("/api/v1/modelos/{id}", "get", 200, mvc.perform(comToken(get("/api/v1/modelos/" + modelo), admin)));
+        conferir("/api/v1/modelos/{id}/ativar", "post", 200,
+                mvc.perform(comToken(post("/api/v1/modelos/" + modelo + "/ativar"), admin)));
+        enviarSequencia(Instant.now().truncatedTo(ChronoUnit.SECONDS), 4, 1120, SEVERO);
+        conferir("/api/v1/maquinas/{id}/ia/diagnostico", "get", 200, mvc.perform(comToken(get("/api/v1/maquinas/"
+                + maquinaId + "/ia/diagnostico?simulado=true"), admin)));
+        ResultActions alertas = mvc.perform(comToken(get("/api/v1/alertas?simulado=true"), admin));
+        conferir("/api/v1/alertas", "get", 200, alertas);
+        assertThat(corpo(alertas).at("/conteudo/0/opiniao_abertura/versao").asInt()).isEqualTo(1);
+        ResultActions ordens = mvc.perform(comToken(get("/api/v1/ordens-servico?simulado=true"), admin));
+        conferir("/api/v1/ordens-servico", "get", 200, ordens);
+        long os = corpo(ordens).get("conteudo").get(0).get("id").asLong();
+        conferir("/api/v1/ordens-servico/{id}", "get", 200,
+                mvc.perform(comToken(get("/api/v1/ordens-servico/" + os), admin)));
+
+        // segundo trabalho: falha relatada pelo serviço
+        long outro = corpo(mvc.perform(comToken(post("/api/v1/maquinas/" + maquinaId
+                + "/modelos/treinar?simulado=true"), admin))).get("id").asLong();
+        conferir("/api/v1/treino/servico/trabalhos/{id}/falha", "post", 200, mvc.perform(post(
+                "/api/v1/treino/servico/trabalhos/" + outro + "/falha").header("X-Treino-Chave", "chave-treino-teste")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"mensagem\":\"contrato\"}")));
+    }
+
+    @Test
     void ensaioResumoECobertura() throws Exception {
         ResultActions aberto = mvc.perform(comToken(post("/api/v1/maquinas/" + maquinaId + "/ensaios"), admin)
                 .contentType(MediaType.APPLICATION_JSON)

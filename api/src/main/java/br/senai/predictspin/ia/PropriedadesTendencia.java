@@ -12,7 +12,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @param minDias               dias com dado exigidos antes de qualquer estimativa
  * @param janelaDias            quantos dias para trás entram na série
  * @param limiteSeveridade      severidade acumulada diária (z·s por dia) considerada o limite
- * @param limiteDerivaPct       deriva diária do RMS (% acima do típico) considerada o limite
+ * @param limiteDerivaZ         deriva diária: mediana do z do RMS no dia (σ) considerada o limite
  * @param limiteTempCabecoteC   temperatura do cabeçote (°C, média do dia) considerada o limite
  */
 @ConfigurationProperties("ps.tendencia")
@@ -22,6 +22,6 @@ public record PropriedadesTendencia(
         @DefaultValue("7") int minDias,
         @DefaultValue("60") int janelaDias,
         @DefaultValue("600") double limiteSeveridade,
-        @DefaultValue("30") double limiteDerivaPct,
+        @DefaultValue("3") double limiteDerivaZ,
         @DefaultValue("60") double limiteTempCabecoteC) {
 }

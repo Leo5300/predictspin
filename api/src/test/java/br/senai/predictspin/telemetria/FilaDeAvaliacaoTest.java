@@ -111,4 +111,34 @@ class FilaDeAvaliacaoTest {
             Thread.currentThread().interrupt();
         }
     }
+
+    @Test
+    void depoisDeDesligarODescarteEhContado() throws InterruptedException {
+        fila = new FilaDeAvaliacao(new FilaDeAvaliacao.Propriedades(4, 50));
+        fila.enfileirar(1, true, () -> { });
+        assertThat(fila.aguardarOcioso(Duration.ofSeconds(5))).isTrue();
+        fila.destroy();
+        fila.enfileirar(1, true, () -> { });
+        assertThat(fila.descartadas()).isEqualTo(1);
+    }
+
+    @Test
+    void quemEsperaVagaEInterrompidoDesisteEContaODescarte() throws InterruptedException {
+        fila = new FilaDeAvaliacao(new FilaDeAvaliacao.Propriedades(1, 10_000));
+        CountDownLatch solta = new CountDownLatch(1);
+        fila.enfileirar(1, true, () -> esperar(solta));
+        fila.enfileirar(1, true, () -> { });
+        Thread quem = new Thread(() -> fila.enfileirar(1, true, () -> { }));
+        quem.start();
+        Thread.sleep(100);
+        quem.interrupt();
+        quem.join(5_000);
+        assertThat(fila.descartadas()).isEqualTo(1);
+        // quem espera o ocioso e é interrompido também desiste
+        Thread.currentThread().interrupt();
+        assertThat(fila.aguardarOcioso(Duration.ofSeconds(5))).isFalse();
+        assertThat(Thread.interrupted()).isTrue();
+        solta.countDown();
+        assertThat(fila.aguardarOcioso(Duration.ofSeconds(5))).isTrue();
+    }
 }

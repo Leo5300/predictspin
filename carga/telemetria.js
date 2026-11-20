@@ -15,7 +15,8 @@
 //   MAQUINA                código da máquina consultada (padrão TORNO-01)
 //   DURACAO_S              duração de cada cenário em segundos (padrão 60)
 //   PAUSA_S                espera de cada usuário virtual entre iterações (padrão 1)
-//   CENARIO                "20", "50" ou vazio para rodar os dois em sequência
+//   CENARIO                "20", "50" ou vazio para rodar os dois em sequência (estresse); "realista" para o
+//                          uso real: 1 dispositivo a cada 5 s e 4 usuários consultando a cada 5 s
 
 import http from 'k6/http';
 import exec from 'k6/execution';
@@ -44,10 +45,21 @@ function cenario(vus, inicioS) {
   };
 }
 
+// Uso real (etapa 4.7 da IA parte B): 1 ESP32 mandando uma janela a cada 5 s e até 4 pessoas no painel, cada uma
+// consultando a cada 5 s. Os cenários de 20 e 50 usuários são de estresse.
+function cenarioRealista() {
+  const comum = { executor: 'constant-vus', duration: `${DURACAO_S}s`, gracefulStop: '10s', tags: { carga: 'realista' } };
+  return {
+    dispositivo: { ...comum, vus: 1, exec: 'dispositivo' },
+    usuarios: { ...comum, vus: 4, exec: 'usuario' },
+  };
+}
+
 function montarCenarios() {
   if (CENARIO === '20') return { vus20: cenario(20, 0) };
   if (CENARIO === '50') return { vus50: cenario(50, 0) };
-  if (CENARIO !== '') throw new Error('CENARIO deve ser 20, 50 ou vazio');
+  if (CENARIO === 'realista') return cenarioRealista();
+  if (CENARIO !== '') throw new Error('CENARIO deve ser 20, 50, realista ou vazio');
   return {
     vus20: cenario(20, 0),
     vus50: cenario(50, DURACAO_S + INTERVALO_ENTRE_CENARIOS_S),
@@ -121,7 +133,17 @@ function arredondar(valor, casas) {
   return Math.round(valor * fator) / fator;
 }
 
-function medida(base) {
+// Velocidade RMS (mm/s) ESTIMADA das ordens, como no simulador (analise/simulador.py): não é medição
+function velocidade(o1x, o2x, o3x, rotacao) {
+  const f = rotacao / 60;
+  let soma = 0;
+  [o1x, o2x, o3x].forEach((a, i) => {
+    soma += Math.pow(((a / Math.SQRT2) * 9806.65) / (2 * Math.PI * (i + 1) * f), 2);
+  });
+  return Math.sqrt(soma);
+}
+
+function medida(base, rotacao) {
   const o1x = base * sortear(0.9, 1.1);
   const rms = o1x * sortear(0.75, 0.95);
   return {
@@ -131,6 +153,7 @@ function medida(base) {
     o1x: arredondar(o1x, 5),
     o2x: arredondar(o1x * 0.3, 5),
     o3x: arredondar(o1x * 0.12, 5),
+    vel_rms_mm_s: arredondar(velocidade(o1x, o1x * 0.3, o1x * 0.12, rotacao), 4),
   };
 }
 
@@ -142,14 +165,20 @@ function instanteUnico() {
 }
 
 function payload() {
-  const rotacao = sortear(380, 1250);
+  // no cenário realista o torno fica numa marcha só (1120 rpm, como no roteiro de demonstração)
+  const rotacao = CENARIO === 'realista' ? 1120 * sortear(0.99, 1.0) : sortear(380, 1250);
   const base = 0.04 * Math.pow(rotacao / 1000, 2);
   return {
     dispositivo: DISPOSITIVO,
     medido_em: instanteUnico(),
     rotacao_rpm: arredondar(rotacao, 1),
     saturou: false,
-    pontos: { A: medida(base), B: medida(base * 0.6), C: medida(base * 0.4) },
+    pontos: { A: medida(base, rotacao), B: medida(base * 0.6, rotacao), C: medida(base * 0.4, rotacao) },
+    // rastreabilidade igual à do simulador: sem ela, desde 19/11/2026 a janela seria "calibração diferente"
+    // da referência simulada e não teria z (a avaliação ficaria mais leve do que no uso real)
+    firmware_versao: 'simulado',
+    calibracao: { A: 'simulada', B: 'simulada', C: 'simulada' },
+    eixos: { A: 'z', B: 'z', C: 'z' },
     canais: {
       temp_cabecote_c: arredondar(sortear(38, 46), 2),
       temp_ferramenta_c: arredondar(sortear(28, 40), 2),
@@ -197,4 +226,15 @@ export default function (dados) {
   enviarJanela(dados);
   consultar(dados);
   sleep(PAUSA_S);
+}
+
+// Cenário realista: o dispositivo manda uma janela a cada 5 s; cada usuário faz uma consulta a cada 5 s.
+export function dispositivo(dados) {
+  enviarJanela(dados);
+  sleep(5);
+}
+
+export function usuario(dados) {
+  consultar(dados);
+  sleep(5);
 }

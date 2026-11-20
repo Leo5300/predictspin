@@ -41,7 +41,7 @@ services:
       # --- JVM: limites para a instância de 512 MB ---
       - key: JAVA_OPTS
         value: >-
-          -Xmx220m -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=48m
+          -Xmx220m -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=96m
           -Xss512k -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError
 
       - key: ADMIN_NOME

@@ -127,7 +127,7 @@ public class IngestaoService {
         JanelaRecebida recebida = new JanelaRecebida(dispositivo.maquinaId(), dispositivo.simulado(), janelaId,
                 medidoEm, aoVivo, req.rotacaoRpm(), req.saturou(), req.modoOuNormal(), req.amostras(),
                 req.amostrasEsperadas(), rastreio.firmwareVersao(), rastreio.calibracao(), ensaioId, pontoPorCodigo,
-                linhas);
+                linhas, canaisPorCodigo(req.canais()));
         return new Resultado(new IngestaoResposta(janelaId, false, ensaioId, medidoEm, modoRapidoAte), recebida);
     }
 
@@ -185,6 +185,14 @@ public class IngestaoService {
         Map<Long, Double> leituras = new LinkedHashMap<>();
         valores.forEach((codigo, valor) -> leituras.put(idPorCodigo.get(codigo.trim()), valor));
         return leituras;
+    }
+
+    private static Map<String, Double> canaisPorCodigo(Map<String, Double> canais) {
+        Map<String, Double> porCodigo = new java.util.HashMap<>();
+        if (canais != null) {
+            canais.forEach((codigo, valor) -> porCodigo.put(codigo.trim(), valor));
+        }
+        return porCodigo;
     }
 
     private static Map<String, Long> mapa(List<CodigoId> codigos) {

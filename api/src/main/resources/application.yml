@@ -17,6 +17,11 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      # resultado do treino: até 3 arquivos de modelo de ps.modelo.tamanho-max-mb (5 MB) mais os metadados
+      max-file-size: 6MB
+      max-request-size: 20MB
   jackson:
     property-naming-strategy: SNAKE_CASE
     serialization:
@@ -181,9 +186,10 @@ ps:
     habilitada: false
     min-dias: 7
     janela-dias: 60
-    # limites de cada série (por dia): severidade acumulada (z·s), deriva do RMS (%) e temperatura do cabeçote (°C)
+    # limites de cada série (por dia): severidade acumulada (z·s), deriva (mediana do z do RMS no dia, σ) e
+    # temperatura do cabeçote (°C, média do dia; só com o canal habilitado na fusão)
     limite-severidade: 600
-    limite-deriva-pct: 30
+    limite-deriva-z: 3
     limite-temp-cabecote-c: 60
 
 springdoc:

@@ -51,6 +51,8 @@ public class EventosController {
                     - `alerta`: alerta aberto, piorado, normalizado, reconhecido, suprimido ou encerrado, com o \
                     corpo de AlertaEvento;
                     - `os`: ordem de serviço aberta, assumida ou concluída, com o corpo de OrdemServicoEvento;
+                    - `treino`: trabalho de treino mudou de estado (acordando, executando, concluído, falhou), com o                     corpo de TreinoEvento;
+                    - `modelo`: versão de modelo nova (candidata) ou ativada, com o corpo de ModeloEvento;
                     - `modo_rapido`: modo rápido ligado ou desligado, com o corpo de ModoRapidoResposta; é também o \
                     primeiro evento de toda conexão, com o estado atual.
 

@@ -261,7 +261,9 @@ public class AlertaSql {
                 instante(rs, "atualizado_em"), instante(rs, "reconhecido_em"), rs.getString("reconhecido_por"),
                 instante(rs, "normalizado_em"), instante(rs, "encerrado_em"), instante(rs, "suprimido_ate"),
                 rs.getString("motivo_supressao"), rs.getString("suprimido_por"),
-                (Long) rs.getObject("ordem_servico_id"));
+                (Long) rs.getObject("ordem_servico_id"),
+                br.senai.predictspin.ia.OpiniaoJson.ler(rs.getString("opiniao_abertura")),
+                br.senai.predictspin.ia.OpiniaoJson.ler(rs.getString("opiniao_recente")));
     }
 
     // ------------------------------------------------------------------ indicadores

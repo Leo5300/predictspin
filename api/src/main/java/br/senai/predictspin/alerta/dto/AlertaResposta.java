@@ -6,6 +6,7 @@ import org.springframework.lang.Nullable;
 
 import br.senai.predictspin.alarme.Nivel;
 import br.senai.predictspin.alerta.EstadoAlerta;
+import br.senai.predictspin.ia.dto.SegundaOpiniaoResposta;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /** Um alerta de máquina ou de instrumento, com o ciclo de vida da ISA-18.2. */
@@ -47,5 +48,10 @@ public record AlertaResposta(
         @Nullable Instant suprimidoAte,
         @Nullable String motivoSupressao,
         @Nullable String suprimidoPor,
-        @Schema(description = "OS aberta a partir deste alerta") @Nullable Long ordemServicoId) {
+        @Schema(description = "OS aberta a partir deste alerta") @Nullable Long ordemServicoId,
+        @Schema(description = "Segunda opinião do modelo na abertura (estimativa; o alarme é da regra); nulo sem modelo "
+                + "ativo")
+        @Nullable SegundaOpiniaoResposta opiniaoAbertura,
+        @Schema(description = "Segunda opinião mais recente enquanto ativo; nulo sem modelo ativo")
+        @Nullable SegundaOpiniaoResposta opiniaoRecente) {
 }

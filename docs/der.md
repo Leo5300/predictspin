@@ -125,6 +125,24 @@ usada e fica como está; a referência vive em tabelas novas. Todos os limites n
 - **`ORDEM_SERVICO`** ganha ponto, motivo de abertura, explicação, ação, versões, `simulado`, assumida em e
   comentário do técnico; um índice único permite uma OS aberta por ponto e tipo de dado.
 
+## O que mudou com a migração V9 (19/11/2026, IA parte B)
+
+Só acrescenta (nenhuma coluna ou restrição existente ficou mais estreita):
+
+| Objeto | Conteúdo |
+|---|---|
+| `canal` | grandeza `som` aceita; canal `nivel_som_db` (dB) do `TORNO-01` |
+| `ordem_servico.condicao_encontrada` | opcional: uma das 5 classes ou `outra` (rótulo do próximo treino) |
+| `trabalho_treino` | botão Treinar: máquina, tipo de dado, estado (`pendente`, `acordando`, `executando`, `concluido`, `falhou`), mensagem, quem criou, tempos e o modelo gerado; no máximo um em andamento por máquina e tipo de dado (índice único parcial) |
+| `modelo` | versão por máquina e tipo de dado; estado `candidato`, `ativo` ou `arquivado` (uma ativa por máquina e tipo, índice único parcial); quem criou e ativou, versão do vetor e da referência, limiar, características, canais, classes, metadados com as métricas (jsonb), conjunto (jsonb), arquivos ONNX e árvores (bytea) e o tamanho |
+| `inferencia` | uma linha compacta por janela avaliada pelo modelo: modelo, escore (real), anomalia, classe (posição em `modelo.classes`) e confiança (real) |
+| `alerta.opiniao_abertura`, `alerta.opiniao_recente`, os mesmos em `ordem_servico` | segunda opinião (jsonb) na abertura e a mais recente |
+
+**Bytes por janela** (`pg_total_relation_size` das tabelas com índices, banco local, depois de `VACUUM ANALYZE`):
+antes da V9, 2 065 bytes por janela (janela + 3 telemetrias + 5 leituras + 3 avaliações), cerca de 35,7 MB por dia
+a uma janela a cada 5 s, 24 h. A V9 acrescenta a linha de `inferencia` nas janelas com modelo ativo; o "depois"
+**não foi medido**.
+
 ## Diagrama
 
 ```mermaid
@@ -442,6 +460,9 @@ enlace; baseline versionado; severidade acumulada como tabela, não campo calcul
 | `alerta (severidade, reconhecido_em)` | fila do CCO, não reconhecidos primeiro |
 | `ordem_servico (status, aberta_em DESC)` | painel de ordens abertas |
 | `baseline (ponto_medicao_id, condicao, metrica, versao DESC)` | comparação de leitura contra referência |
+| `inferencia (janela_id)` — chave primária; `inferencia (modelo_id)` | opinião da janela; resumo da última hora por modelo |
+| `modelo (maquina_id, simulado) WHERE estado = 'ativo'` — único | uma versão ativa por máquina e tipo de dado |
+| `trabalho_treino (maquina_id, simulado, id DESC)` e o único parcial dos em andamento | lista de trabalhos; um treino por vez |
 
 ## Dados iniciais
 
