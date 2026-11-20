@@ -80,6 +80,7 @@ export function BarraSuperior({
           {podeAbrir(usuario.papel, 'coleta') ? (
             <LinkDeNavegacao para="/coleta">Coleta</LinkDeNavegacao>
           ) : null}
+          <LinkDeNavegacao para="/coleta/modelos">Modelos</LinkDeNavegacao>
           <LinkDeNavegacao para="/diagnostico">Diagnóstico</LinkDeNavegacao>
           <LinkDeNavegacao para="/alarmes">Alarmes</LinkDeNavegacao>
         </nav>
@@ -141,7 +142,7 @@ function LinkDeNavegacao({
   para,
   children,
 }: {
-  para: '/' | '/coleta' | '/diagnostico' | '/alarmes'
+  para: '/' | '/coleta' | '/coleta/modelos' | '/diagnostico' | '/alarmes'
   children: string
 }) {
   return (

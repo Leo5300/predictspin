@@ -43,6 +43,7 @@ import { paresParecidos } from '@/dominio/nomes'
 import { podeAbrir, ROTULO_PAPEL_USUARIO } from '@/dominio/papeis'
 import { useFonte } from '@/estado/preferencias'
 import { ModuloDiagnosticoAlarme } from '@/componentes/alarmes/ModuloDiagnosticoAlarme'
+import { ModuloDiagnosticoIa } from '@/componentes/alarmes/ModuloDiagnosticoIa'
 import { useMaquinaDaColeta } from '@/hooks/useMaquinaDaColeta'
 import { cn } from '@/lib/utils'
 
@@ -91,6 +92,7 @@ export function TelaDiagnostico() {
         </Painel>
       )}
       {id === undefined ? null : <ModuloDiagnosticoAlarme maquinaId={id} simulado={simulado} />}
+      {id === undefined ? null : <ModuloDiagnosticoIa maquinaId={id} simulado={simulado} />}
       {podeAbrir(papel, 'catalogos') ? (
         <Painel className="lg:grid-cols-2">
           <Catalogo tipo="materiais" admin={papel === 'ADMIN'} />

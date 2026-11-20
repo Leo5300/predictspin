@@ -77,15 +77,27 @@ export function assumirOrdem(id: number): Promise<OrdemServico> {
   return exigir(api.POST('/api/v1/ordens-servico/{id}/assumir', { params: { path: { id } } }))
 }
 
+export type CondicaoEncontrada = NonNullable<OrdemServico['condicao_encontrada']>
+
+export function consultaOrdem(id: number) {
+  return queryOptions({
+    queryKey: ['ordem-servico', id] as const,
+    queryFn: ({ signal }) =>
+      exigir(api.GET('/api/v1/ordens-servico/{id}', { params: { path: { id } }, signal })),
+  })
+}
+
+/** Retorno do técnico; a condição encontrada (opcional) vira rótulo do próximo treino. */
 export function concluirOrdem(
   id: number,
   retorno: RetornoTecnico,
   comentario: string,
+  condicao?: CondicaoEncontrada,
 ): Promise<OrdemServico> {
   return exigir(
     api.POST('/api/v1/ordens-servico/{id}/concluir', {
       params: { path: { id } },
-      body: { retorno, comentario: comentario.trim() || undefined },
+      body: { retorno, comentario: comentario.trim() || undefined, condicao_encontrada: condicao },
     }),
   )
 }

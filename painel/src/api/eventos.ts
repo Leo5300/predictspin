@@ -16,6 +16,8 @@ export type EventoMarcadoSse = components['schemas']['EventoMarcadoResposta']
 export type AlertaSse = components['schemas']['AlertaEvento']
 export type OrdemServicoSse = components['schemas']['OrdemServicoEvento']
 export type RecuperacaoSse = components['schemas']['RecuperacaoEvento']
+export type TreinoSse = components['schemas']['TreinoEvento']
+export type ModeloSse = components['schemas']['ModeloEvento']
 
 export type EstadoEventos = 'conectando' | 'ao_vivo' | 'reconectando'
 
@@ -33,6 +35,10 @@ export type OpcoesDeEventos = {
   aoReceberOrdemServico?: (evento: OrdemServicoSse) => void
   /** Janelas antigas reenviadas pelo dispositivo depois de uma queda (de, ate, quantidade). */
   aoReceberRecuperacao?: (evento: RecuperacaoSse) => void
+  /** Trabalho de treino mudou de estado (acordando, executando, concluído, falhou). */
+  aoReceberTreino?: (evento: TreinoSse) => void
+  /** Versão de modelo nova (candidata) ou ativada. */
+  aoReceberModelo?: (evento: ModeloSse) => void
   aoMudarEstado: (estado: EstadoEventos) => void
 }
 
@@ -145,6 +151,8 @@ function entregar(nome: string, dados: string, opcoes: OpcoesDeEventos) {
   else if (nome === 'alerta') opcoes.aoReceberAlerta?.(corpo as AlertaSse)
   else if (nome === 'os') opcoes.aoReceberOrdemServico?.(corpo as OrdemServicoSse)
   else if (nome === 'recuperacao') opcoes.aoReceberRecuperacao?.(corpo as RecuperacaoSse)
+  else if (nome === 'treino') opcoes.aoReceberTreino?.(corpo as TreinoSse)
+  else if (nome === 'modelo') opcoes.aoReceberModelo?.(corpo as ModeloSse)
 }
 
 function dormir(ms: number, sinal: AbortSignal): Promise<void> {

@@ -112,6 +112,10 @@ export function ModuloDiagnosticoAlarme({
             <Par rotulo="Sem avaliação por erro (desde que a API subiu)">
               {d.falhas_avaliacao}
             </Par>
+            <Par rotulo="Na fila de avaliação agora">{d.avaliacoes_na_fila}</Par>
+            <Par rotulo={`Descartadas da fila (cheia por ${formatarNumero(d.limites.avaliacao.espera_fila_ms, 0)} ms)`}>
+              {d.avaliacoes_descartadas}
+            </Par>
           </dl>
           <p className="mt-1 text-12 text-apoio">
             Referência de leitura: a EEMUA 191 e a ISA-18.2 citam cerca de 6 alarmes por hora por

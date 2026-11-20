@@ -245,6 +245,8 @@ const alarme = (
   motivo_supressao: estado === 'suprimido' ? 'Exemplo: máquina ao lado em manutenção' : null,
   suprimido_por: null,
   ordem_servico_id: null,
+  opiniao_abertura: null,
+  opiniao_recente: null,
 })
 
 export const ALARMES_EXEMPLO: Alarme[] = [
@@ -284,6 +286,8 @@ const ordem = (
   retorno_tecnico: retorno,
   comentario_tecnico: retorno ? 'Exemplo: peça desbalanceada, recolocada na placa.' : null,
   condicao_encontrada: retorno === 'confirmada' ? 'desbalanceamento' : null,
+  opiniao_abertura: null,
+  opiniao_recente: null,
 })
 
 export const ORDENS_EXEMPLO: OrdemServico[] = [

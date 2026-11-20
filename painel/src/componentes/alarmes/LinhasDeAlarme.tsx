@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Check, X } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import type { Alarme, EstadoAlarme, OrdemServico, RetornoTecnico } from '@/api/adaptadores/alarmes'
@@ -8,6 +9,7 @@ import { SegurarParaConfirmar } from '@/componentes/instrumento/SegurarParaConfi
 import { Button } from '@/componentes/ui/button'
 import { Explica } from '@/componentes/ui/explica'
 import { formatarDataHora, formatarMinutos, formatarNumero } from '@/dominio/formato'
+import { CONDICOES_ENCONTRADAS, nomeDaClasse, type CondicaoEncontrada } from '@/dominio/modelos'
 import { cn } from '@/lib/utils'
 
 const ROTULO_ESTADO: Record<EstadoAlarme, string> = {
@@ -180,7 +182,14 @@ export function LinhaAlarme({
           >
             {nivel}
           </span>
-          <span className="valor font-semibold">{alarme.maquina}</span>
+          <Link
+            to="/alarmes/$alertaId"
+            params={{ alertaId: String(alarme.id) }}
+            className="valor font-semibold underline underline-offset-4"
+            aria-label={`Detalhe do alerta ${alarme.id}`}
+          >
+            {alarme.maquina}
+          </Link>
           <span>
             ponto <span className="valor font-semibold">{alarme.ponto}</span>
             {instrumento ? null : (
@@ -260,20 +269,24 @@ const ROTULO_MOTIVO: Record<string, string> = {
   severidade: 'severidade acumulada',
 }
 
-/** Conclusão inline: retorno obrigatório (confirmada ou rejeitada) e comentário opcional. */
-function FormularioDeConclusao({
+/**
+ * Conclusão: retorno obrigatório (confirmada ou rejeitada), comentário e condição encontrada opcionais. A condição
+ * vira rótulo do próximo treino (confirmada com uma das 5 classes; rejeitada entra como normal).
+ */
+export function FormularioDeConclusao({
   aoConcluir,
 }: {
-  aoConcluir: (retorno: RetornoTecnico, comentario: string) => void
+  aoConcluir: (retorno: RetornoTecnico, comentario: string, condicao?: CondicaoEncontrada) => void
 }) {
   const [retorno, setRetorno] = useState<RetornoTecnico | null>(null)
   const [comentario, setComentario] = useState('')
+  const [condicao, setCondicao] = useState<CondicaoEncontrada | ''>('')
   return (
     <form
       className="flex flex-col gap-2 border border-linha-forte bg-rebaixo p-2"
       onSubmit={(e) => {
         e.preventDefault()
-        if (retorno) aoConcluir(retorno, comentario)
+        if (retorno) aoConcluir(retorno, comentario, condicao || undefined)
       }}
     >
       <fieldset className="flex flex-wrap gap-x-4 gap-y-1 text-13 text-texto">
@@ -308,6 +321,21 @@ function FormularioDeConclusao({
           placeholder="o que foi encontrado"
         />
       </label>
+      <label className="flex flex-col gap-1 text-13">
+        <span className="rotulo">Condição encontrada (opcional)</span>
+        <select
+          value={condicao}
+          onChange={(e) => setCondicao(e.target.value as CondicaoEncontrada | '')}
+          className="h-8 border border-linha-forte bg-modulo px-2 text-13 text-texto"
+        >
+          <option value="">não informar</option>
+          {CONDICOES_ENCONTRADAS.map((c) => (
+            <option key={c} value={c}>
+              {nomeDaClasse(c)}
+            </option>
+          ))}
+        </select>
+      </label>
       <Button type="submit" size="sm" className="self-start" disabled={!retorno}>
         Concluir OS
       </Button>
@@ -324,7 +352,7 @@ export function LinhaOrdemServico({
   ordem: OrdemServico
   /** Só ADMIN e TECNICO. */
   aoAssumir?: (id: number) => void
-  aoConcluir?: (id: number, retorno: RetornoTecnico, comentario: string) => void
+  aoConcluir?: (id: number, retorno: RetornoTecnico, comentario: string, condicao?: CondicaoEncontrada) => void
 }) {
   const emAberto = ordem.status === 'aberta' || ordem.status === 'em_andamento'
   const [concluindo, setConcluindo] = useState(false)
@@ -335,7 +363,13 @@ export function LinhaOrdemServico({
       data-testid="linha-os"
     >
       <span className="flex flex-wrap items-baseline gap-x-3 text-13 text-apoio">
-        <span className="valor text-15 font-semibold text-texto">{ordem.numero}</span>
+        <Link
+          to="/ordens/$osId"
+          params={{ osId: String(ordem.id) }}
+          className="valor text-15 font-semibold text-texto underline underline-offset-4"
+        >
+          {ordem.numero}
+        </Link>
         <span className="valor">{ordem.maquina}</span>
         <span>
           ponto <span className="valor text-texto">{ordem.ponto}</span>
@@ -382,6 +416,9 @@ export function LinhaOrdemServico({
         {ordem.comentario_tecnico ? (
           <span className="text-apoio">· {ordem.comentario_tecnico}</span>
         ) : null}
+        {ordem.condicao_encontrada ? (
+          <span className="text-apoio">· encontrado: {nomeDaClasse(ordem.condicao_encontrada)}</span>
+        ) : null}
       </span>
       {emAberto && (aoAssumir || aoConcluir) && !concluindo ? (
         <span className="flex flex-wrap gap-2">
@@ -399,7 +436,7 @@ export function LinhaOrdemServico({
       ) : null}
       {emAberto && aoConcluir && concluindo ? (
         <FormularioDeConclusao
-          aoConcluir={(retorno, comentario) => aoConcluir(ordem.id, retorno, comentario)}
+          aoConcluir={(retorno, comentario, condicao) => aoConcluir(ordem.id, retorno, comentario, condicao)}
         />
       ) : null}
     </li>

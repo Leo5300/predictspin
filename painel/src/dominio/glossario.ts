@@ -180,6 +180,54 @@ export const GLOSSARIO = {
     exemplo:
       'Exemplo: corte em aço com avanço 0,10 mm/volta não é comparado com corte em alumínio com avanço 0,30.',
   },
+  modelo: {
+    titulo: 'Modelo',
+    explicacao:
+      'Um programa que aprendeu com gravações rotuladas. Aqui ele é segunda opinião: quem acende atenção e alarme continua sendo a comparação com o normal.',
+    exemplo: "Exemplo: o alarme acendeu e o modelo diz 'avanço excessivo'.",
+  },
+  escore_anomalia: {
+    titulo: 'Escore de anomalia',
+    explicacao:
+      'O quanto a janela parece diferente de tudo o que foi gravado como normal. Acima do limite, o modelo também vê anomalia.',
+    exemplo: 'Exemplo: escore alto com o alarme aceso reforça que há algo fora do normal.',
+  },
+  classe_provavel: {
+    titulo: 'Classe provável e confiança',
+    explicacao:
+      "O tipo de situação que mais se parece com a de agora, entre as que foram gravadas, e quanto o modelo aposta nela. Abaixo de {confianca_min}% o painel mostra 'classe incerta'.",
+    exemplo: 'Exemplo: avanço excessivo, 78%.',
+  },
+  validacao_ensaio: {
+    titulo: 'Validação por ensaio',
+    explicacao:
+      'O modelo é testado em gravações inteiras que ele não viu no treino. Testar em pedaços da mesma gravação daria nota alta demais.',
+    exemplo: 'Exemplo: treinou com 4 gravações de avanço excessivo e foi testado na 5ª.',
+  },
+  matriz_confusao: {
+    titulo: 'Matriz de confusão',
+    explicacao:
+      'Tabela que mostra, para cada situação real, o que o modelo respondeu. A diagonal são os acertos.',
+    exemplo:
+      'Exemplo: de 30 janelas de ferramenta desgastada, 24 foram reconhecidas e 6 foram chamadas de avanço excessivo.',
+  },
+  recall: {
+    titulo: 'Recall',
+    explicacao: 'De todas as janelas de uma situação, quantas o modelo reconheceu.',
+    exemplo: 'Exemplo: recall de 80% em desbalanceamento quer dizer que 8 em cada 10 foram reconhecidas.',
+  },
+  versao_ativa: {
+    titulo: 'Versão ativa',
+    explicacao:
+      'O modelo que está rodando agora. Um treino novo só passa a valer quando alguém com permissão ativa.',
+    exemplo: 'Exemplo: v4 treinada hoje, v3 ainda ativa.',
+  },
+  tendencia: {
+    titulo: 'Tendência',
+    explicacao:
+      'Se uma medida vem subindo dia após dia, o painel estima quando ela cruzaria o limite, sempre com uma faixa de incerteza. Não é data de quebra.',
+    exemplo: 'Exemplo: se continuar assim, entre 20 e 45 dias.',
+  },
 } as const satisfies Record<string, Termo>
 
 export type ChaveDoGlossario = keyof typeof GLOSSARIO
@@ -192,6 +240,8 @@ export type ValoresDoGlossario = {
   z_alarme: number
   atraso_s: number
   saida_s: number
+  /** ps.modelo.confianca-min, em % */
+  confianca_min: number
 }
 
 /** Troca {nome} pelo valor em uso; sem os valores (ainda carregando), mostra "…". */

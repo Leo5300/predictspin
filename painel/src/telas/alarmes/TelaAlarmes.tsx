@@ -12,6 +12,7 @@ import {
   reconhecerAlarme,
   suprimirAlarme,
   type Alarme,
+  type CondicaoEncontrada,
   type RetornoTecnico,
 } from '@/api/adaptadores/alarmes'
 import { consultaMaquinas } from '@/api/consultas'
@@ -81,8 +82,12 @@ export function TelaAlarmes() {
   })
   const assumir = useMutation({ mutationFn: assumirOrdem, onSuccess: refazer, onError: aoErrar })
   const concluir = useMutation({
-    mutationFn: (p: { id: number; retorno: RetornoTecnico; comentario: string }) =>
-      concluirOrdem(p.id, p.retorno, p.comentario),
+    mutationFn: (p: {
+      id: number
+      retorno: RetornoTecnico
+      comentario: string
+      condicao?: CondicaoEncontrada
+    }) => concluirOrdem(p.id, p.retorno, p.comentario, p.condicao),
     onSuccess: refazer,
     onError: aoErrar,
   })
@@ -198,7 +203,8 @@ export function TelaAlarmes() {
                   aoAssumir={podeAgirNaOs ? (id) => assumir.mutate(id) : undefined}
                   aoConcluir={
                     podeAgirNaOs
-                      ? (id, retorno, comentario) => concluir.mutate({ id, retorno, comentario })
+                      ? (id, retorno, comentario, condicao) =>
+                          concluir.mutate({ id, retorno, comentario, condicao })
                       : undefined
                   }
                 />

@@ -66,7 +66,7 @@ describe('estado do ponto pela avaliação da API', () => {
 
 describe('glossário com os limites em uso', () => {
   it('troca {nome} pelo valor da API e mostra "…" enquanto carrega', () => {
-    const valores = { z_atencao: 3, z_alarme: 5, atraso_s: 15, saida_s: 15 }
+    const valores = { z_atencao: 3, z_alarme: 5, atraso_s: 15, saida_s: 15, confianca_min: 60 }
     expect(interpolar(GLOSSARIO.atencao_alarme.exemplo, valores)).toBe(
       'Exemplo: o B ficou 15 s acima de 5 e o alarme acendeu.',
     )

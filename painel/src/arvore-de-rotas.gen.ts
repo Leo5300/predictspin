@@ -14,8 +14,11 @@ import { Route as LoginRouteImport } from './rotas/login'
 import { Route as PainelIndexRouteImport } from './rotas/_painel/index'
 import { Route as PainelAlarmesRouteImport } from './rotas/_painel/alarmes'
 import { Route as PainelDiagnosticoRouteImport } from './rotas/_painel/diagnostico'
+import { Route as PainelAlarmesAlertaIdRouteImport } from './rotas/_painel/alarmes_.$alertaId'
 import { Route as PainelColetaIndexRouteImport } from './rotas/_painel/coleta.index'
+import { Route as PainelColetaModelosRouteImport } from './rotas/_painel/coleta.modelos'
 import { Route as PainelColetaPrepararRouteImport } from './rotas/_painel/coleta.preparar'
+import { Route as PainelOrdensOsIdRouteImport } from './rotas/_painel/ordens.$osId'
 import { Route as PainelColetaEnsaiosIndexRouteImport } from './rotas/_painel/coleta.ensaios.index'
 import { Route as PainelMaquinasMaquinaIdIndexRouteImport } from './rotas/_painel/maquinas.$maquinaId.index'
 import { Route as PainelColetaEnsaiosEnsaioIdReplayRouteImport } from './rotas/_painel/coleta.ensaios.$ensaioId.replay'
@@ -45,14 +48,29 @@ const PainelDiagnosticoRoute = PainelDiagnosticoRouteImport.update({
   path: '/diagnostico',
   getParentRoute: () => PainelRoute,
 } as any)
+const PainelAlarmesAlertaIdRoute = PainelAlarmesAlertaIdRouteImport.update({
+  id: '/alarmes_/$alertaId',
+  path: '/alarmes/$alertaId',
+  getParentRoute: () => PainelRoute,
+} as any)
 const PainelColetaIndexRoute = PainelColetaIndexRouteImport.update({
   id: '/coleta/',
   path: '/coleta/',
   getParentRoute: () => PainelRoute,
 } as any)
+const PainelColetaModelosRoute = PainelColetaModelosRouteImport.update({
+  id: '/coleta/modelos',
+  path: '/coleta/modelos',
+  getParentRoute: () => PainelRoute,
+} as any)
 const PainelColetaPrepararRoute = PainelColetaPrepararRouteImport.update({
   id: '/coleta/preparar',
   path: '/coleta/preparar',
+  getParentRoute: () => PainelRoute,
+} as any)
+const PainelOrdensOsIdRoute = PainelOrdensOsIdRouteImport.update({
+  id: '/ordens/$osId',
+  path: '/ordens/$osId',
   getParentRoute: () => PainelRoute,
 } as any)
 const PainelColetaEnsaiosIndexRoute =
@@ -85,7 +103,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/alarmes': typeof PainelAlarmesRoute
   '/diagnostico': typeof PainelDiagnosticoRoute
+  '/alarmes/$alertaId': typeof PainelAlarmesAlertaIdRoute
+  '/coleta/modelos': typeof PainelColetaModelosRoute
   '/coleta/preparar': typeof PainelColetaPrepararRoute
+  '/ordens/$osId': typeof PainelOrdensOsIdRoute
   '/coleta/': typeof PainelColetaIndexRoute
   '/coleta/ensaios/': typeof PainelColetaEnsaiosIndexRoute
   '/maquinas/$maquinaId/': typeof PainelMaquinasMaquinaIdIndexRoute
@@ -97,7 +118,10 @@ export interface FileRoutesByTo {
   '/alarmes': typeof PainelAlarmesRoute
   '/diagnostico': typeof PainelDiagnosticoRoute
   '/': typeof PainelIndexRoute
+  '/alarmes/$alertaId': typeof PainelAlarmesAlertaIdRoute
+  '/coleta/modelos': typeof PainelColetaModelosRoute
   '/coleta/preparar': typeof PainelColetaPrepararRoute
+  '/ordens/$osId': typeof PainelOrdensOsIdRoute
   '/coleta': typeof PainelColetaIndexRoute
   '/coleta/ensaios': typeof PainelColetaEnsaiosIndexRoute
   '/maquinas/$maquinaId': typeof PainelMaquinasMaquinaIdIndexRoute
@@ -111,7 +135,10 @@ export interface FileRoutesById {
   '/_painel/alarmes': typeof PainelAlarmesRoute
   '/_painel/diagnostico': typeof PainelDiagnosticoRoute
   '/_painel/': typeof PainelIndexRoute
+  '/_painel/alarmes_/$alertaId': typeof PainelAlarmesAlertaIdRoute
+  '/_painel/coleta/modelos': typeof PainelColetaModelosRoute
   '/_painel/coleta/preparar': typeof PainelColetaPrepararRoute
+  '/_painel/ordens/$osId': typeof PainelOrdensOsIdRoute
   '/_painel/coleta/': typeof PainelColetaIndexRoute
   '/_painel/coleta/ensaios/': typeof PainelColetaEnsaiosIndexRoute
   '/_painel/maquinas/$maquinaId/': typeof PainelMaquinasMaquinaIdIndexRoute
@@ -125,7 +152,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/alarmes'
     | '/diagnostico'
+    | '/alarmes/$alertaId'
+    | '/coleta/modelos'
     | '/coleta/preparar'
+    | '/ordens/$osId'
     | '/coleta/'
     | '/coleta/ensaios/'
     | '/maquinas/$maquinaId/'
@@ -137,7 +167,10 @@ export interface FileRouteTypes {
     | '/alarmes'
     | '/diagnostico'
     | '/'
+    | '/alarmes/$alertaId'
+    | '/coleta/modelos'
     | '/coleta/preparar'
+    | '/ordens/$osId'
     | '/coleta'
     | '/coleta/ensaios'
     | '/maquinas/$maquinaId'
@@ -150,7 +183,10 @@ export interface FileRouteTypes {
     | '/_painel/alarmes'
     | '/_painel/diagnostico'
     | '/_painel/'
+    | '/_painel/alarmes_/$alertaId'
+    | '/_painel/coleta/modelos'
     | '/_painel/coleta/preparar'
+    | '/_painel/ordens/$osId'
     | '/_painel/coleta/'
     | '/_painel/coleta/ensaios/'
     | '/_painel/maquinas/$maquinaId/'
@@ -200,6 +236,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelDiagnosticoRouteImport
       parentRoute: typeof PainelRoute
     }
+    '/_painel/alarmes_/$alertaId': {
+      id: '/_painel/alarmes_/$alertaId'
+      path: '/alarmes/$alertaId'
+      fullPath: '/alarmes/$alertaId'
+      preLoaderRoute: typeof PainelAlarmesAlertaIdRouteImport
+      parentRoute: typeof PainelRoute
+    }
     '/_painel/coleta/': {
       id: '/_painel/coleta/'
       path: '/coleta'
@@ -207,11 +250,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelColetaIndexRouteImport
       parentRoute: typeof PainelRoute
     }
+    '/_painel/coleta/modelos': {
+      id: '/_painel/coleta/modelos'
+      path: '/coleta/modelos'
+      fullPath: '/coleta/modelos'
+      preLoaderRoute: typeof PainelColetaModelosRouteImport
+      parentRoute: typeof PainelRoute
+    }
     '/_painel/coleta/preparar': {
       id: '/_painel/coleta/preparar'
       path: '/coleta/preparar'
       fullPath: '/coleta/preparar'
       preLoaderRoute: typeof PainelColetaPrepararRouteImport
+      parentRoute: typeof PainelRoute
+    }
+    '/_painel/ordens/$osId': {
+      id: '/_painel/ordens/$osId'
+      path: '/ordens/$osId'
+      fullPath: '/ordens/$osId'
+      preLoaderRoute: typeof PainelOrdensOsIdRouteImport
       parentRoute: typeof PainelRoute
     }
     '/_painel/coleta/ensaios/': {
@@ -249,7 +306,10 @@ interface PainelRouteChildren {
   PainelAlarmesRoute: typeof PainelAlarmesRoute
   PainelDiagnosticoRoute: typeof PainelDiagnosticoRoute
   PainelIndexRoute: typeof PainelIndexRoute
+  PainelAlarmesAlertaIdRoute: typeof PainelAlarmesAlertaIdRoute
+  PainelColetaModelosRoute: typeof PainelColetaModelosRoute
   PainelColetaPrepararRoute: typeof PainelColetaPrepararRoute
+  PainelOrdensOsIdRoute: typeof PainelOrdensOsIdRoute
   PainelColetaIndexRoute: typeof PainelColetaIndexRoute
   PainelColetaEnsaiosIndexRoute: typeof PainelColetaEnsaiosIndexRoute
   PainelMaquinasMaquinaIdIndexRoute: typeof PainelMaquinasMaquinaIdIndexRoute
@@ -261,7 +321,10 @@ const PainelRouteChildren: PainelRouteChildren = {
   PainelAlarmesRoute: PainelAlarmesRoute,
   PainelDiagnosticoRoute: PainelDiagnosticoRoute,
   PainelIndexRoute: PainelIndexRoute,
+  PainelAlarmesAlertaIdRoute: PainelAlarmesAlertaIdRoute,
+  PainelColetaModelosRoute: PainelColetaModelosRoute,
   PainelColetaPrepararRoute: PainelColetaPrepararRoute,
+  PainelOrdensOsIdRoute: PainelOrdensOsIdRoute,
   PainelColetaIndexRoute: PainelColetaIndexRoute,
   PainelColetaEnsaiosIndexRoute: PainelColetaEnsaiosIndexRoute,
   PainelMaquinasMaquinaIdIndexRoute: PainelMaquinasMaquinaIdIndexRoute,

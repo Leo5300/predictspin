@@ -14,6 +14,7 @@ export type Area =
   | 'catalogos'
   | 'usuarios'
   | 'alarmes'
+  | 'modelos'
 
 const PAPEIS_DA_AREA: Record<Area, readonly Papel[]> = {
   visao_geral: ['ADMIN', 'TECNICO', 'OPERADOR'],
@@ -25,6 +26,8 @@ const PAPEIS_DA_AREA: Record<Area, readonly Papel[]> = {
   catalogos: ['ADMIN', 'TECNICO'],
   usuarios: ['ADMIN'],
   alarmes: ['ADMIN', 'TECNICO', 'OPERADOR'],
+  // Treinar: ADMIN e TECNICO; Ativar: só ADMIN; OPERADOR só vê (os botões somem)
+  modelos: ['ADMIN', 'TECNICO', 'OPERADOR'],
 }
 
 export function podeAbrir(papel: Papel | null | undefined, area: Area): boolean {

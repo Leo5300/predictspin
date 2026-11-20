@@ -19,15 +19,18 @@ function Texto({ texto, chave }: { texto: string; chave: ChaveDoGlossario }) {
 }
 
 function TextoComValores({ texto }: { texto: string }) {
-  const alarme = useQuery(consultaLimites()).data?.alarme
-  const valores: ValoresDoGlossario | undefined = alarme
-    ? {
-        z_atencao: alarme.z_atencao,
-        z_alarme: alarme.z_alarme,
-        atraso_s: alarme.atraso_s,
-        saida_s: alarme.saida_s,
-      }
-    : undefined
+  const limites = useQuery(consultaLimites()).data
+  const alarme = limites?.alarme
+  const valores: ValoresDoGlossario | undefined =
+    limites && alarme
+      ? {
+          z_atencao: alarme.z_atencao,
+          z_alarme: alarme.z_alarme,
+          atraso_s: alarme.atraso_s,
+          saida_s: alarme.saida_s,
+          confianca_min: Math.round(limites.modelo.confianca_min * 100),
+        }
+      : undefined
   return <>{interpolar(texto, valores)}</>
 }
 
