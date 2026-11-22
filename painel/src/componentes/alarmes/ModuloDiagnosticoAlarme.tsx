@@ -100,20 +100,18 @@ export function ModuloDiagnosticoAlarme({
             <Par rotulo={`Pior intervalo de ${alarme.rajada_min} min`}>
               {d.indicadores.pior_dez_minutos}
             </Par>
-            <Par
-              rotulo={`Repetitivos (≥ ${alarme.repetitivo_vezes} em ${alarme.rajada_min} min)`}
-            >
+            <Par rotulo={`Repetitivos (≥ ${alarme.repetitivo_vezes} em ${alarme.rajada_min} min)`}>
               {d.indicadores.pontos_repetitivos.length > 0
                 ? d.indicadores.pontos_repetitivos.join(', ')
                 : 'nenhum'}
             </Par>
             <Par rotulo={`Parados há mais de ${alarme.parado_h} h`}>{d.indicadores.parados}</Par>
             <Par rotulo="Suprimidos">{d.indicadores.suprimidos}</Par>
-            <Par rotulo="Sem avaliação por erro (desde que a API subiu)">
-              {d.falhas_avaliacao}
-            </Par>
+            <Par rotulo="Sem avaliação por erro (desde que a API subiu)">{d.falhas_avaliacao}</Par>
             <Par rotulo="Na fila de avaliação agora">{d.avaliacoes_na_fila}</Par>
-            <Par rotulo={`Descartadas da fila (cheia por ${formatarNumero(d.limites.avaliacao.espera_fila_ms, 0)} ms)`}>
+            <Par
+              rotulo={`Descartadas da fila (cheia por ${formatarNumero(d.limites.avaliacao.espera_fila_ms, 0)} ms)`}
+            >
               {d.avaliacoes_descartadas}
             </Par>
           </dl>

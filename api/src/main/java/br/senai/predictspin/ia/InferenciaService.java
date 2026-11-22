@@ -225,7 +225,9 @@ public class InferenciaService {
             if (pesos.getOrDefault(e.getKey(), 0.0) <= 0) {
                 continue;
             }
-            citadas.add(rotulo(e.getKey()) + " " + num.format(e.getValue()) + "σ");
+            // |z| < 0,05 sairia "-0,0σ": arredonda para zero sem sinal
+            double z = Math.abs(e.getValue()) < 0.05 ? 0.0 : e.getValue();
+            citadas.add(rotulo(e.getKey()) + " " + num.format(z) + "σ");
         }
         return parte1 + (citadas.isEmpty() ? "" : " · " + String.join(", ", citadas)) + " · modelo v"
                 + c.linha().versao();

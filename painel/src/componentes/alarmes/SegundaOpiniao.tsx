@@ -32,8 +32,9 @@ export function BlocoSegundaOpiniao({
           <dt className="text-apoio">
             Escore <Explica chave="escore_anomalia" className="inline-flex" />
           </dt>
-          <dd className="valor text-texto">
-            {decimal2(opiniao.escore)} (limite {decimal2(opiniao.limiar)}) · {opiniao.concordancia}
+          <dd className="text-texto">
+            <span className="valor">{decimal2(opiniao.escore)}</span> (limite{' '}
+            <span className="valor">{decimal2(opiniao.limiar)}</span>) · {opiniao.concordancia}
           </dd>
           <dt className="text-apoio">Modelo</dt>
           <dd className="text-texto">

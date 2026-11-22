@@ -749,9 +749,47 @@ e com o adaptador de alarmes; textos e contas em [`dominio/modelos.ts`](../paine
   matriz de confusão, recall, versão ativa, tendência); `{confianca_min}` vem de `GET /alarmes/limites`.
 - **Cor**: a segunda opinião não usa âmbar nem vermelho; a cor de sinal continua só no que a regra pôs em desvio.
 
-**Não feito nesta rodada:** prints (1920 e 390, dois temas), rodada de revisão de design e a execução dos testes
-de ponta a ponta (`e2e/ia.spec.ts`, `e2e/acessibilidade-ia.spec.ts`, escritos e ainda não rodados). Conferidos:
-tipos, lint e Vitest (147 testes).
+**Testes.** Vitest (`dominio/modelos.test.ts`); `e2e/ia.spec.ts` (fluxo pelos botões: grava o conjunto simulado
+acelerado, Treinar com o serviço do compose, trabalho concluído, Ativar com a comparação, simulador com avanço
+excessivo, alerta com a segunda opinião, OS concluída como confirmada com a condição): 1/1 em 2,4 min;
+`e2e/acessibilidade-ia.spec.ts` (axe WCAG 2.1 AA em Modelos, detalhe do alerta, detalhe da OS e Diagnóstico, nos
+dois temas): 8/8 sem violação séria ou crítica; `acessibilidade-alarmes.spec.ts`: 10/10; `diagnostico`, `papeis`:
+passam.
+
+### Revisão de design da parte B
+
+**Rodada B1 (feita por quem construiu).** Defeitos corrigidos: "Coleta" e "Modelos" marcados ao mesmo tempo no
+menu; legenda da matriz de confusão dentro da grade da tabela (virava uma célula alta a 390 px); valores crus no
+detalhe do alerta (`atencao`, `o1x`); nível do alerta só em texto (agora com a cor, a forma e o texto da lista). O axe
+pegou o contraste da diagonal da matriz no tema claro (texto claro sobre cinza médio): texto sempre na cor normal e
+fundo de no máximo 25% do tom.
+
+**Rodada B2 (revisor independente, só com os 16 prints, a direção e a lista "não fazer").** Veredito: 1 grave, 5
+médios, 13 leves; **4 defeitos de direção**, todos corrigidos:
+- triângulo âmbar de ATENÇÃO com cerca de 1,27:1 no tema claro (fere "gráficos e bordas 3:1"): contorno no tom âmbar
+  de texto (vale também na lista de alarmes);
+- formulário de conclusão como cartão dentro do módulo da OS (item 7): sem borda nem fundo próprios na tela de
+  detalhe;
+- fonte mono em texto corrido (item 9): só nos números no módulo da IA, na segunda opinião e na data da OS;
+- "Assumir OS" sem preenchimento (item 2): botão de ação principal.
+
+Também corrigidos: o grave (no Diagnóstico a 390 px, a coluna de valores do módulo da IA ficava com cerca de 70 px e
+quebrava palavras: em módulo estreito o valor desce para baixo do rótulo); a OS ganhou a frase "estimativa do modelo"
+que o alerta já tinha; aviso de que a matriz rola para o lado a 390 px; "−0,0σ" na explicação vira "0,0σ". Não
+aceitos, com o motivo: o peso visual da segunda opinião igual ao da regra (módulos separados, a frase de estimativa e
+nenhuma cor de sinal na opinião já marcam a hierarquia); "Por quê" repete a classe (é o texto pronto que vai para o
+alerta e a OS); os "?" por rótulo (glossário pedido para cada termo); os dados mudam entre os prints dos dois temas
+(vêm ao vivo). Fora do escopo novo, só registrados: a tabela de pontos da regra corta a coluna DERIVA a 390 px; "1
+itens" nos catálogos.
+
+**Pendência herdada encontrada nesta rodada.** `e2e/piores-casos.spec.ts` ("valores no limite do contrato cabem
+inteiros no ponto, a 390 px") falhou em 2 de 3 repetições: o valor 1.000,000 passa 3 px da caixa quando a forma de
+estado aparece ao lado (o ponto B estava em desvio no banco local depois do roteiro). O componente `Leitura` não
+mudou na parte B; trocar o peso do número não resolveu (testado e desfeito). Fica para corrigir; o teste não foi
+mexido.
+
+Evidências: 16 prints novos em [`docs/evidencias/painel/`](evidencias/painel/) (`ia-modelos`, `ia-alerta`, `ia-os`,
+`ia-diagnostico`; 1920 e 390; grafite e claro), com dado SIMULADO do roteiro de [`ia.md`](ia.md).
 
 ## Publicação
 

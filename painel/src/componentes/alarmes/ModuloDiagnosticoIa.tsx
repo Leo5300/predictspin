@@ -7,21 +7,31 @@ import { Modulo } from '@/componentes/instrumento/Modulo'
 import { formatarDataHora, formatarNumero } from '@/dominio/formato'
 import { nomeDaClasse, porcento } from '@/dominio/modelos'
 
+/** Rótulo e valor; em módulo estreito o valor desce para baixo do rótulo (não espreme uma coluna de 70 px). */
 function Par({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
   return (
     <>
-      <dt className="text-apoio">{rotulo}</dt>
-      <dd className="valor min-w-0 text-texto [overflow-wrap:anywhere]">{children}</dd>
+      <dt className="text-apoio @max-[34rem]:mt-1">{rotulo}</dt>
+      <dd className="min-w-0 text-texto">{children}</dd>
     </>
   )
 }
+
+const GRADE =
+  'grid grid-cols-1 gap-x-4 gap-y-0.5 text-13 @min-[34rem]:grid-cols-[16rem_minmax(0,1fr)]'
 
 /**
  * Diagnóstico da IA (segunda opinião): modelo ativo por tipo de dado, caminho (Java ou ONNX), se roda e por quê,
  * avisos (referência mudou...), erros de inferência, estado dos canais da fusão e da tendência e os limites novos
  * lidos da API.
  */
-export function ModuloDiagnosticoIa({ maquinaId, simulado }: { maquinaId: number; simulado: boolean }) {
+export function ModuloDiagnosticoIa({
+  maquinaId,
+  simulado,
+}: {
+  maquinaId: number
+  simulado: boolean
+}) {
   const diag = useQuery(consultaDiagnosticoIa(maquinaId, simulado))
   if (diag.isPending) {
     return (
@@ -66,9 +76,11 @@ export function ModuloDiagnosticoIa({ maquinaId, simulado }: { maquinaId: number
             ))}
           </ul>
         ) : null}
-        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-0.5 text-13">
+        <dl className={GRADE}>
           <Par rotulo="Versão ativa">
-            {d.ativo ? `v${d.ativo.versao} · ${formatarDataHora(d.ativo.ativado_em ?? d.ativo.criado_em)}` : '—'}
+            {d.ativo
+              ? `v${d.ativo.versao} · ${formatarDataHora(d.ativo.ativado_em ?? d.ativo.criado_em)}`
+              : '—'}
           </Par>
           <Par rotulo="Caminho">{d.caminho === 'java' ? 'árvores em Java' : 'ONNX Runtime'}</Par>
           <Par rotulo="Rodando">{d.roda ? 'sim' : 'não'}</Par>
@@ -88,13 +100,18 @@ export function ModuloDiagnosticoIa({ maquinaId, simulado }: { maquinaId: number
         </dl>
         <section aria-label="Limites da IA">
           <h3 className="rotulo mb-1">Limites da IA (proposta a confirmar com dado real)</h3>
-          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-0.5 text-13">
-            <Par rotulo="Limite de anomalia">percentil {formatarNumero(d.modelo.if_percentil, 0)} do normal</Par>
+          <dl className={GRADE}>
+            <Par rotulo="Limite de anomalia">
+              percentil {formatarNumero(d.modelo.if_percentil, 0)} do normal
+            </Par>
             <Par rotulo="Classe incerta abaixo de">{porcento(d.modelo.confianca_min)}</Par>
             <Par rotulo="Árvores e profundidade">
-              IF {d.modelo.arvores_if} · RF {d.modelo.arvores_rf}, até {d.modelo.profundidade_max_rf} níveis
+              IF {d.modelo.arvores_if} · RF {d.modelo.arvores_rf}, até{' '}
+              {d.modelo.profundidade_max_rf} níveis
             </Par>
-            <Par rotulo="Classe no classificador">mín. {d.treino.min_ensaios_por_classe} ensaios</Par>
+            <Par rotulo="Classe no classificador">
+              mín. {d.treino.min_ensaios_por_classe} ensaios
+            </Par>
             <Par rotulo="Serviço de treino">
               {d.treino.servico_configurado
                 ? `configurado (espera até ${d.treino.espera_acordar_s} s para acordar)`
@@ -105,7 +122,7 @@ export function ModuloDiagnosticoIa({ maquinaId, simulado }: { maquinaId: number
         </section>
         <section aria-label="Fusão e tendência">
           <h3 className="rotulo mb-1">Próxima fase (desabilitada por configuração)</h3>
-          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-0.5 text-13">
+          <dl className={GRADE}>
             {d.canais.map((c) => (
               <Par key={c.codigo} rotulo={`Canal ${c.codigo}`}>
                 {c.habilitado ? 'habilitado na fusão' : 'desabilitado'}

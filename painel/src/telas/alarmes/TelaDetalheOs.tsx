@@ -3,7 +3,12 @@ import { Link } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 
-import { assumirOrdem, chavesAlarmes, concluirOrdem, consultaOrdem } from '@/api/adaptadores/alarmes'
+import {
+  assumirOrdem,
+  chavesAlarmes,
+  concluirOrdem,
+  consultaOrdem,
+} from '@/api/adaptadores/alarmes'
 import { mensagemDoErro } from '@/api/erros'
 import { useSessao } from '@/api/sessao'
 import { FormularioDeConclusao } from '@/componentes/alarmes/LinhasDeAlarme'
@@ -33,7 +38,8 @@ export function TelaDetalheOs({ id }: { id: number }) {
 
   const refazer = () => {
     void cliente.invalidateQueries({ queryKey: ['ordem-servico', id] })
-    if (consulta.data) void cliente.invalidateQueries({ queryKey: chavesAlarmes.ordens(consulta.data.simulado) })
+    if (consulta.data)
+      void cliente.invalidateQueries({ queryKey: chavesAlarmes.ordens(consulta.data.simulado) })
   }
   const assumir = useMutation({
     mutationFn: () => assumirOrdem(id),
@@ -72,8 +78,9 @@ export function TelaDetalheOs({ id }: { id: number }) {
               {o.componente ? ` · ${o.componente}` : ''}
             </dd>
             <dt className="text-apoio">Aberta</dt>
-            <dd className="valor">
-              {formatarDataHora(o.aberta_em)} ({o.motivo_abertura === 'severidade' ? 'severidade acumulada' : 'alarme contínuo'})
+            <dd>
+              <span className="valor">{formatarDataHora(o.aberta_em)}</span> (
+              {o.motivo_abertura === 'severidade' ? 'severidade acumulada' : 'alarme contínuo'})
             </dd>
             <dt className="flex items-center gap-1 text-apoio">
               Severidade <Explica chave="severidade" />
@@ -116,12 +123,20 @@ export function TelaDetalheOs({ id }: { id: number }) {
           {emAberto && podeAgir ? (
             <div className="mt-3 flex flex-col gap-2">
               {o.status === 'aberta' ? (
-                <Button className="self-start" onClick={() => assumir.mutate()} disabled={assumir.isPending}>
+                <Button
+                  variant="default"
+                  className="self-start"
+                  onClick={() => assumir.mutate()}
+                  disabled={assumir.isPending}
+                >
                   Assumir OS
                 </Button>
               ) : null}
               <FormularioDeConclusao
-                aoConcluir={(retorno, comentario, condicao) => concluir.mutate([id, retorno, comentario, condicao])}
+                embutido
+                aoConcluir={(retorno, comentario, condicao) =>
+                  concluir.mutate([id, retorno, comentario, condicao])
+                }
               />
             </div>
           ) : null}
@@ -130,6 +145,10 @@ export function TelaDetalheOs({ id }: { id: number }) {
           <div className="flex flex-col gap-4">
             <BlocoSegundaOpiniao titulo="Na abertura" opiniao={o.opiniao_abertura} />
             <BlocoSegundaOpiniao titulo="Mais recente" opiniao={o.opiniao_recente} />
+            <p className="text-12 text-apoio">
+              Estimativa do modelo. Não abre nem fecha a OS e não muda a ação recomendada: isso é da
+              regra.
+            </p>
           </div>
         </Modulo>
       </Painel>

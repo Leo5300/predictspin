@@ -57,7 +57,15 @@ export function IconeDoAlarme({ alarme }: { alarme: Alarme }) {
         aria-hidden="true"
         className={cn('size-4', pisca && 'motion-safe:animate-[piscar-lento_2s_linear_infinite]')}
       >
-        <path d={forma} fill={vazado ? 'none' : cor} stroke={cor} strokeWidth={vazado ? 2 : 1} />
+        {/* contorno: no tema claro o âmbar de preenchimento some contra o fundo; o contorno no tom de texto
+            mantém a forma acima de 3:1 nos dois temas */}
+        <path
+          d={forma}
+          fill={vazado ? 'none' : cor}
+          stroke={apagado || nivel === 'alarme' ? cor : 'var(--estado-atencao-texto)'}
+          strokeWidth={vazado ? 2 : 1.5}
+          strokeLinejoin="round"
+        />
         {estado === 'suprimido' ? (
           <path d="M2 14 14 2" stroke="var(--texto)" strokeWidth={1.5} />
         ) : null}
@@ -180,7 +188,7 @@ export function LinhaAlarme({
             to="/alarmes/$alertaId"
             params={{ alertaId: String(alarme.id) }}
             className="valor font-semibold underline underline-offset-4"
-            aria-label={`Detalhe do alerta ${alarme.id}`}
+            aria-label={`${alarme.maquina}: detalhe do alerta ${alarme.id}`}
           >
             {alarme.maquina}
           </Link>
@@ -269,15 +277,21 @@ const ROTULO_MOTIVO: Record<string, string> = {
  */
 export function FormularioDeConclusao({
   aoConcluir,
+  embutido = false,
 }: {
   aoConcluir: (retorno: RetornoTecnico, comentario: string, condicao?: CondicaoEncontrada) => void
+  /** Já dentro de um módulo (tela de detalhe): sem borda nem fundo próprios, para não virar cartão no cartão. */
+  embutido?: boolean
 }) {
   const [retorno, setRetorno] = useState<RetornoTecnico | null>(null)
   const [comentario, setComentario] = useState('')
   const [condicao, setCondicao] = useState<CondicaoEncontrada | ''>('')
   return (
     <form
-      className="flex flex-col gap-2 border border-linha-forte bg-rebaixo p-2"
+      className={cn(
+        'flex flex-col gap-2',
+        embutido ? 'border-t border-linha pt-3' : 'border border-linha-forte bg-rebaixo p-2',
+      )}
       onSubmit={(e) => {
         e.preventDefault()
         if (retorno) aoConcluir(retorno, comentario, condicao || undefined)

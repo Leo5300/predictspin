@@ -429,6 +429,9 @@ function MatrizConfusao({ classes, matriz }: { classes: string[]; matriz: number
       <p className="flex items-center gap-1 text-13 text-apoio">
         Matriz de confusão (linha: real; coluna: respondido) <Explica chave="matriz_confusao" />
       </p>
+      <p className="text-12 text-apoio md:hidden">
+        A tabela continua à direita: arraste para o lado.
+      </p>
       <div className="overflow-x-auto">
         <table className="text-12" aria-label="Matriz de confusão">
           <thead>
