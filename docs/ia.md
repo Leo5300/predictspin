@@ -207,12 +207,59 @@ de 95% (método de Sen) e, quando a série sobe, "se continuar assim, entre X e 
 `habilitada: false` com "desabilitada por configuração". Testes com séries sintéticas (subindo, estável, ruidosa,
 curta demais) e com tudo ligado num perfil de teste.
 
-## Roteiro de demonstração
+## Roteiro de demonstração (executado em 22/11/2026)
 
-**Não executado nesta rodada.** O script do roteiro (gravar o conjunto acelerado, recalcular a referência, Treinar
-com o serviço do compose, ativar, simulador normal por 5 min, avanço excessivo e desbalanceamento, concluir a OS como
-confirmada e conferir a origem `os_confirmada` no treino seguinte) foi escrito, mas não foi rodado; nenhum número de
-métrica de roteiro existe neste documento. As métricas do treino com sinal sintético estão só nos testes.
+> **DADO SIMULADO.** Prova o encadeamento (gravar → referência → treinar → ativar → segunda opinião no alerta e na
+> OS → retorno do técnico como rótulo), **não** a detecção real. As assinaturas das classes no simulador foram
+> escritas à mão; modelos, métricas e limites só valem depois dos ensaios rotulados no torno.
+
+Contra o compose local, banco vazio (`docker compose --profile treino down -v; docker compose --profile treino up -d
+--build`, com `TREINO_URL=http://treino:8090` e `TREINO_CHAVE` no `.env`), tempos normais, tudo a 1120 rpm:
+
+```powershell
+# 1. conjunto (acelerado): T0, T1 e T3 normais e as 4 condições no T3, 3 ensaios por classe, 30 janelas, 2 dias
+python analise/simulador.py roteiro --etapas T0,T1,T3 --condicoes normal --rotacoes 1120 --janelas 30 --repeticoes 2 --material "aço 1045" --ferramenta "bit de metal duro" --inicio 2026-11-21T13:00:00Z
+python analise/simulador.py roteiro --etapas T3 --condicoes avanco_excessivo,rotacao_inadequada,ferramenta_desgastada,desbalanceamento --rotacoes 1120 --janelas 30 --repeticoes 2 --material "aço 1045" --ferramenta "bit de metal duro" --inicio 2026-11-21T15:00:00Z
+python analise/simulador.py roteiro --etapas T0,T1,T3 --condicoes normal --rotacoes 1120 --janelas 30 --material "aço 1045" --ferramenta "bit de metal duro"
+python analise/simulador.py roteiro --etapas T3 --condicoes avanco_excessivo,rotacao_inadequada,ferramenta_desgastada,desbalanceamento --rotacoes 1120 --janelas 30 --material "aço 1045" --ferramenta "bit de metal duro"
+# 2. referência: Coleta → Referência → Recalcular (ou POST /api/v1/maquinas/1/referencias/recalcular?simulado=true)
+# 3. Modelos → Treinar (ou POST /api/v1/maquinas/1/modelos/treinar?simulado=true); 4. Ativar
+# 5. uso normal por 5 min
+python analise/simulador.py continuo --rotacao 1120
+# 6. condição (depois de cada uma, volte ao normal e reconheça os alertas)
+python analise/simulador.py continuo --rotacao 1120 --condicao avanco_excessivo
+python analise/simulador.py continuo --rotacao 1120 --condicao desbalanceamento
+# 7. OS → Concluir: confirmada, condição encontrada "avanço excessivo"; depois Treinar de novo
+```
+
+Os passos 2 a 4 e 7 foram feitos pelas mesmas rotas que os botões do painel chamam (script de medição); o fluxo pelos
+botões da tela é o do teste `painel/e2e/ia.spec.ts`. Tempos medidos pelo script a partir do início de cada passo:
+
+| Passo | O que foi visto |
+|---|---|
+| 1 | 630 janelas em 50 s (9 ensaios normais T0/T1/T3 e 12 de condição no T3, em 2 dias) |
+| 2 | referência versão 1: 270 janelas usadas, 75 de 75 células suficientes |
+| 3 | trabalho `acordando → executando → concluido` em 19,9 s pelo serviço do compose; conjunto de 540 janelas (normal 180 e 90 de cada condição; 6 ensaios normais e 3 de cada condição; 2 dias); nenhuma classe fora; limiar de anomalia 0,562 |
+| 3 (métricas, simulado) | por ensaio (k = 3): F1 macro 0,872; recall normal 1,00, avanço excessivo 0,81, desbalanceamento 0,83, rotação inadequada 0,82, ferramenta desgastada 0,84. Por dia (2 dias): F1 macro 0,88. Regra × IF nas mesmas janelas: regra acusou 1,1% das normais e 100% das não normais; IF, 3,9% e 96,1% |
+| 4 | versão 1 ativada (ADMIN); 1 305 535 bytes de arquivos |
+| 5 | 5 min de uso normal: máquina NORMAL em todas as 31 leituras, 0 alertas; 62 janelas com segunda opinião, **100% "normal"** e 1 com anomalia |
+| 6 avanço excessivo | alarme pela regra aos **15,6 s**; OS-2026-0001 aos **92,5 s**; segunda opinião nos alertas de B e C: avanço excessivo, confiança 100% na abertura e 97% na mais recente; explicação "classe provável: avanço excessivo (97%) · B·curtose 3,6σ · modelo v1" |
+| 6 desbalanceamento | alarme pela regra aos **15,5 s** em A, B e C; segunda opinião: desbalanceamento, 100% |
+| 7 | OS concluída como confirmada com "avanço excessivo"; o treino seguinte (12,1 s) contou **21 janelas com origem `os_confirmada`** (avanço excessivo foi de 90 para 111) |
+
+**O que o roteiro mostrou além do encadeamento.** A explicação citou só uma característica (B·curtose) nas duas
+condições, inclusive no desbalanceamento, em que se esperaria A·1X. A conta é a pedida (importância por permutação ×
+|z|), mas a importância ficou concentrada em poucas características e as de peso zero não são citadas. Com dado real
+isso precisa ser revisto. Com o sinal do simulador as classes se separam com folga, por isso as confianças ficaram
+perto de 100%: o resultado não diz nada sobre a separação no torno.
+
+## Banco
+
+Antes da V9: 2 065 bytes por janela (janela, 3 telemetrias, 5 leituras e 3 avaliações, com índices; banco local de
+12 923 janelas). A V9 acrescenta uma linha de `inferencia` por janela com modelo ativo: **52 bytes de linha
+medidos** (média de `pg_column_size` em 112 linhas). Somando o ponteiro da linha e as duas entradas de índice
+(estimadas, não medidas), dá cerca de 96 bytes a mais por janela, ou cerca de 1,7 MB por dia a uma janela a cada
+5 s, 24 h (antes: 35,7 MB por dia). Cada versão de modelo ocupa cerca de 1,3 MB (os dois ONNX e as árvores).
 
 ## Limitações e o que só vale com dado real
 

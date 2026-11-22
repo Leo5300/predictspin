@@ -140,8 +140,8 @@ Só acrescenta (nenhuma coluna ou restrição existente ficou mais estreita):
 
 **Bytes por janela** (`pg_total_relation_size` das tabelas com índices, banco local, depois de `VACUUM ANALYZE`):
 antes da V9, 2 065 bytes por janela (janela + 3 telemetrias + 5 leituras + 3 avaliações), cerca de 35,7 MB por dia
-a uma janela a cada 5 s, 24 h. A V9 acrescenta a linha de `inferencia` nas janelas com modelo ativo; o "depois"
-**não foi medido**.
+a uma janela a cada 5 s, 24 h. A V9 acrescenta a linha de `inferencia` nas janelas com modelo ativo: 52 bytes de linha medidos, cerca de 96 com
+ponteiro e índices (estimados); detalhes em [`ia.md`](ia.md#banco).
 
 ## Diagrama
 
