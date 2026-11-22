@@ -9,7 +9,12 @@ import { SegurarParaConfirmar } from '@/componentes/instrumento/SegurarParaConfi
 import { Button } from '@/componentes/ui/button'
 import { Explica } from '@/componentes/ui/explica'
 import { formatarDataHora, formatarMinutos, formatarNumero } from '@/dominio/formato'
-import { CONDICOES_ENCONTRADAS, nomeDaClasse, type CondicaoEncontrada } from '@/dominio/modelos'
+import {
+  CONDICOES_ENCONTRADAS,
+  nomeDaClasse,
+  ROTULO_MEDIDA,
+  type CondicaoEncontrada,
+} from '@/dominio/modelos'
 import { cn } from '@/lib/utils'
 
 const ROTULO_ESTADO: Record<EstadoAlarme, string> = {
@@ -20,23 +25,12 @@ const ROTULO_ESTADO: Record<EstadoAlarme, string> = {
   suprimido: 'suprimido',
 }
 
-const ROTULO_MEDIDA: Record<string, string> = {
-  rms_g: 'RMS',
-  pico_g: 'pico',
-  curtose: 'curtose',
-  o1x: '1X',
-  o2x: '2X',
-  o3x: '3X',
-  vel_rms_mm_s: 'velocidade',
-  instrumento: 'sensor',
-}
-
 /**
  * Ícone do alarme: losango (alarme) ou triângulo (atenção), preenchido na cor do nível. Ativo não
  * reconhecido: só o ícone pisca devagar; com movimento reduzido, um anel parado em volta ocupa o lugar
  * do piscar. Normalizado sem reconhecimento: vazado. Encerrado: vazado e cinza. Suprimido: cinza riscado.
  */
-function IconeDoAlarme({ alarme }: { alarme: Alarme }) {
+export function IconeDoAlarme({ alarme }: { alarme: Alarme }) {
   const { estado, nivel } = alarme
   // cor só no que está em desvio: voltou ao normal, encerrado ou suprimido ficam em cinza
   const apagado =
@@ -352,7 +346,12 @@ export function LinhaOrdemServico({
   ordem: OrdemServico
   /** Só ADMIN e TECNICO. */
   aoAssumir?: (id: number) => void
-  aoConcluir?: (id: number, retorno: RetornoTecnico, comentario: string, condicao?: CondicaoEncontrada) => void
+  aoConcluir?: (
+    id: number,
+    retorno: RetornoTecnico,
+    comentario: string,
+    condicao?: CondicaoEncontrada,
+  ) => void
 }) {
   const emAberto = ordem.status === 'aberta' || ordem.status === 'em_andamento'
   const [concluindo, setConcluindo] = useState(false)
@@ -417,7 +416,9 @@ export function LinhaOrdemServico({
           <span className="text-apoio">· {ordem.comentario_tecnico}</span>
         ) : null}
         {ordem.condicao_encontrada ? (
-          <span className="text-apoio">· encontrado: {nomeDaClasse(ordem.condicao_encontrada)}</span>
+          <span className="text-apoio">
+            · encontrado: {nomeDaClasse(ordem.condicao_encontrada)}
+          </span>
         ) : null}
       </span>
       {emAberto && (aoAssumir || aoConcluir) && !concluindo ? (
@@ -436,7 +437,9 @@ export function LinhaOrdemServico({
       ) : null}
       {emAberto && aoConcluir && concluindo ? (
         <FormularioDeConclusao
-          aoConcluir={(retorno, comentario, condicao) => aoConcluir(ordem.id, retorno, comentario, condicao)}
+          aoConcluir={(retorno, comentario, condicao) =>
+            aoConcluir(ordem.id, retorno, comentario, condicao)
+          }
         />
       ) : null}
     </li>

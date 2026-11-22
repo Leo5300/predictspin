@@ -50,8 +50,14 @@ export function TelaModelos() {
   const maquinaId = maquinas.data?.conteudo[0]?.id
   useModelosAoVivo(maquinaId, simulado)
   const cliente = useQueryClient()
-  const modelos = useQuery({ ...consultaModelos(maquinaId ?? 0, simulado), enabled: maquinaId !== undefined })
-  const trabalhos = useQuery({ ...consultaTrabalhos(maquinaId ?? 0, simulado), enabled: maquinaId !== undefined })
+  const modelos = useQuery({
+    ...consultaModelos(maquinaId ?? 0, simulado),
+    enabled: maquinaId !== undefined,
+  })
+  const trabalhos = useQuery({
+    ...consultaTrabalhos(maquinaId ?? 0, simulado),
+    enabled: maquinaId !== undefined,
+  })
   const [escolhido, setEscolhido] = useState<number | null>(null)
 
   useEffect(() => {
@@ -82,8 +88,8 @@ export function TelaModelos() {
         {simulado ? <SeloSim /> : null}
       </header>
       <p className="max-w-prose text-13 text-apoio">
-        Segunda opinião: quem acende atenção e alarme continua sendo a comparação com o normal. O modelo só
-        acrescenta a classe provável, a confiança e o escore de anomalia.
+        Segunda opinião: quem acende atenção e alarme continua sendo a comparação com o normal. O
+        modelo só acrescenta a classe provável, a confiança e o escore de anomalia.
       </p>
       <Painel className="lg:grid-cols-[2fr_3fr]">
         <div className="grid gap-px bg-linha">
@@ -95,7 +101,9 @@ export function TelaModelos() {
                 <Button
                   variant="default"
                   disabled={
-                    maquinaId === undefined || botaoTreinar.isPending || (trabalho ? emAndamento(trabalho.estado) : false)
+                    maquinaId === undefined ||
+                    botaoTreinar.isPending ||
+                    (trabalho ? emAndamento(trabalho.estado) : false)
                   }
                   onClick={() => botaoTreinar.mutate()}
                 >
@@ -108,16 +116,20 @@ export function TelaModelos() {
               <EstadoCarregando />
             ) : !trabalho ? (
               <p className="text-13 text-apoio">
-                Nenhum treino ainda. O treino usa só janelas rotuladas: ensaios encerrados e o retorno do técnico
-                nas OS.
+                Nenhum treino ainda. O treino usa só janelas rotuladas: ensaios encerrados e o
+                retorno do técnico nas OS.
               </p>
             ) : (
               <div className="flex flex-col gap-1 text-13" aria-live="polite">
                 <p>
                   <span className="text-apoio">Trabalho {trabalho.id}: </span>
-                  <span className="font-medium">{ROTULO_ESTADO_TRABALHO[trabalho.estado] ?? trabalho.estado}</span>
+                  <span className="font-medium">
+                    {ROTULO_ESTADO_TRABALHO[trabalho.estado] ?? trabalho.estado}
+                  </span>
                 </p>
-                {trabalho.mensagem ? <p className="text-apoio [overflow-wrap:anywhere]">{trabalho.mensagem}</p> : null}
+                {trabalho.mensagem ? (
+                  <p className="text-apoio [overflow-wrap:anywhere]">{trabalho.mensagem}</p>
+                ) : null}
                 {trabalho.comando ? (
                   <pre className="valor overflow-x-auto border border-linha bg-fundo p-2 text-12 whitespace-pre-wrap [overflow-wrap:anywhere]">
                     {trabalho.comando}
@@ -138,7 +150,8 @@ export function TelaModelos() {
               <EstadoErro erro={modelos.error} />
             ) : versoes.length === 0 ? (
               <EstadoVazio titulo="Nenhuma versão treinada.">
-                Grave ensaios rotulados (normal e as condições), recalcule a referência e toque em Treinar.
+                Grave ensaios rotulados (normal e as condições), recalcule a referência e toque em
+                Treinar.
               </EstadoVazio>
             ) : (
               <ul aria-label="Versões do modelo">
@@ -155,7 +168,12 @@ export function TelaModelos() {
           </Modulo>
         </div>
         {idDetalhe !== null ? (
-          <DetalheDaVersao id={idDetalhe} ativo={ativo} podeAtivar={papel === 'ADMIN'} aoAtivar={refazer} />
+          <DetalheDaVersao
+            id={idDetalhe}
+            ativo={ativo}
+            podeAtivar={papel === 'ADMIN'}
+            aoAtivar={refazer}
+          />
         ) : (
           <Modulo rotulo="Detalhe">
             <p className="text-13 text-apoio">Escolha uma versão para ver as métricas.</p>
@@ -192,7 +210,11 @@ function LinhaVersao({
         <span className="flex flex-wrap items-center gap-2">
           <span className="font-semibold">v{modelo.versao}</span>
           <span className={modelo.estado === 'ativo' ? 'rotulo text-texto' : 'rotulo text-apoio'}>
-            {modelo.estado === 'ativo' ? '● ativa' : modelo.estado === 'candidato' ? '○ candidata' : '– arquivada'}
+            {modelo.estado === 'ativo'
+              ? '● ativa'
+              : modelo.estado === 'candidato'
+                ? '○ candidata'
+                : '– arquivada'}
           </span>
           <span className="text-apoio">{formatarDataHora(modelo.criado_em)}</span>
         </span>
@@ -200,7 +222,9 @@ function LinhaVersao({
           {modelo.conjunto.janelas} janelas: {porClasse}
         </span>
         <span className="text-12 text-apoio [overflow-wrap:anywhere]">origem: {porOrigem}</span>
-        {modelo.aviso_simulado ? <span className="text-12 text-apoio">{modelo.aviso_simulado}</span> : null}
+        {modelo.aviso_simulado ? (
+          <span className="text-12 text-apoio">{modelo.aviso_simulado}</span>
+        ) : null}
       </button>
     </li>
   )
@@ -218,7 +242,10 @@ function DetalheDaVersao({
   aoAtivar: () => void
 }) {
   const detalhe = useQuery(consultaModelo(id))
-  const doAtivo = useQuery({ ...consultaModelo(ativo?.id ?? 0), enabled: ativo !== undefined && ativo.id !== id })
+  const doAtivo = useQuery({
+    ...consultaModelo(ativo?.id ?? 0),
+    enabled: ativo !== undefined && ativo.id !== id,
+  })
   const [confirmando, setConfirmando] = useState(false)
   const ativar = useMutation({
     mutationFn: () => ativarModelo(id),
@@ -229,14 +256,30 @@ function DetalheDaVersao({
     },
     onError: (e) => toast(mensagemDoErro(e)),
   })
-  if (detalhe.isPending) return <Modulo rotulo="Detalhe"><EstadoCarregando /></Modulo>
-  if (detalhe.isError) return <Modulo rotulo="Detalhe"><EstadoErro erro={detalhe.error} /></Modulo>
+  if (detalhe.isPending)
+    return (
+      <Modulo rotulo="Detalhe">
+        <EstadoCarregando />
+      </Modulo>
+    )
+  if (detalhe.isError)
+    return (
+      <Modulo rotulo="Detalhe">
+        <EstadoErro erro={detalhe.error} />
+      </Modulo>
+    )
   const { modelo, metadados, avisos } = detalhe.data
   return (
     <Modulo
       rotulo={`Versão ${modelo.versao}`}
       simulado={modelo.simulado}
-      detalhe={modelo.estado === 'ativo' ? 'ativa' : modelo.estado === 'candidato' ? 'candidata' : 'arquivada'}
+      detalhe={
+        modelo.estado === 'ativo'
+          ? 'ativa'
+          : modelo.estado === 'candidato'
+            ? 'candidata'
+            : 'arquivada'
+      }
       acoes={
         podeAtivar && modelo.estado !== 'ativo' ? (
           <Button variant="default" onClick={() => setConfirmando(true)}>
@@ -247,7 +290,9 @@ function DetalheDaVersao({
     >
       <div className="flex flex-col gap-4">
         {modelo.simulado ? (
-          <p className="border border-linha-forte px-2 py-1 text-13 font-medium">{AVISO_SIMULADO}</p>
+          <p className="border border-linha-forte px-2 py-1 text-13 font-medium">
+            {AVISO_SIMULADO}
+          </p>
         ) : null}
         {avisos.filter((a) => a !== AVISO_SIMULADO).length > 0 ? (
           <ul className="list-disc pl-5 text-13 text-apoio">
@@ -269,9 +314,11 @@ function DetalheDaVersao({
           />
         ) : null}
         <p className="text-13 text-apoio">
-          Limite de anomalia {decimal2(metadados.limiar_anomalia)} (percentil {metadados.metricas.if_percentil} do
-          escore nas janelas normais) · {metadados.caracteristicas.length} características · referência v
-          {metadados.referencia_numero ?? '—'} · criada por {modelo.criado_por ?? 'serviço de treino'}
+          Limite de anomalia {decimal2(metadados.limiar_anomalia)} (percentil{' '}
+          {metadados.metricas.if_percentil} do escore nas janelas normais) ·{' '}
+          {metadados.caracteristicas.length} características · referência v
+          {metadados.referencia_numero ?? '—'} · criada por{' '}
+          {modelo.criado_por ?? 'serviço de treino'}
         </p>
         <Validacao titulo="Validação por ensaio" explica v={metadados.metricas.por_ensaio} />
         <Validacao titulo="Validação por dia" v={metadados.metricas.por_dia} />
@@ -279,7 +326,9 @@ function DetalheDaVersao({
         {metadados.classes_fora.length > 0 ? (
           <p className="text-13 text-apoio">
             Fora do classificador (poucos ensaios):{' '}
-            {metadados.classes_fora.map((c) => `${nomeDaClasse(c.classe)} (${c.ensaios})`).join(', ')}
+            {metadados.classes_fora
+              .map((c) => `${nomeDaClasse(c.classe)} (${c.ensaios})`)
+              .join(', ')}
           </p>
         ) : null}
       </div>
@@ -287,7 +336,15 @@ function DetalheDaVersao({
   )
 }
 
-function Validacao({ titulo, v, explica = false }: { titulo: string; v: ValidacaoModelo; explica?: boolean }) {
+function Validacao({
+  titulo,
+  v,
+  explica = false,
+}: {
+  titulo: string
+  v: ValidacaoModelo
+  explica?: boolean
+}) {
   return (
     <section aria-label={titulo} className="flex flex-col gap-2">
       <h3 className="rotulo flex items-center gap-1">
@@ -301,31 +358,40 @@ function Validacao({ titulo, v, explica = false }: { titulo: string; v: Validaca
           {v.classificador ? (
             <>
               <p className="text-13">
-                F1 macro <span className="valor font-semibold">{decimal2(v.classificador.f1_macro)}</span>
+                F1 macro{' '}
+                <span className="valor font-semibold">{decimal2(v.classificador.f1_macro)}</span>
                 <span className="text-apoio">
                   {' '}
                   · {v.classificador.janelas} janelas testadas{v.k ? ` · ${v.k} partes` : ''}
                   {v.dias ? ` · ${v.dias} dias` : ''}
                 </span>
               </p>
-              <MatrizConfusao classes={v.classificador.classes} matriz={v.classificador.matriz_confusao} />
+              <MatrizConfusao
+                classes={v.classificador.classes}
+                matriz={v.classificador.matriz_confusao}
+              />
               <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-13">
                 <span className="flex items-center gap-1 text-apoio">
                   Recall <Explica chave="recall" />
                 </span>
                 {v.classificador.classes.map((c) => (
                   <span key={c}>
-                    {nomeDaClasse(c)} <span className="valor">{porcento(v.classificador?.recall[c])}</span>
+                    {nomeDaClasse(c)}{' '}
+                    <span className="valor">{porcento(v.classificador?.recall[c])}</span>
                   </span>
                 ))}
               </p>
             </>
           ) : (
-            <p className="text-13 text-apoio">Sem classificador (menos de 2 classes com ensaios suficientes).</p>
+            <p className="text-13 text-apoio">
+              Sem classificador (menos de 2 classes com ensaios suficientes).
+            </p>
           )}
           {v.comparacao ? (
             <table className="w-full max-w-md text-13">
-              <caption className="text-left text-apoio">Regra × modelo nas mesmas janelas de validação</caption>
+              <caption className="text-left text-apoio">
+                Regra × modelo nas mesmas janelas de validação
+              </caption>
               <thead>
                 <tr className="text-left text-apoio">
                   <th className="font-normal" />
@@ -341,7 +407,9 @@ function Validacao({ titulo, v, explica = false }: { titulo: string; v: Validaca
                 </tr>
                 <tr>
                   <th className="text-left font-normal">Isolation Forest</th>
-                  <td className="valor">{porcento(v.comparacao.isolation_forest.falso_positivo, 1)}</td>
+                  <td className="valor">
+                    {porcento(v.comparacao.isolation_forest.falso_positivo, 1)}
+                  </td>
                   <td className="valor">{porcento(v.comparacao.isolation_forest.deteccao, 1)}</td>
                 </tr>
               </tbody>
@@ -357,43 +425,45 @@ function Validacao({ titulo, v, explica = false }: { titulo: string; v: Validaca
 function MatrizConfusao({ classes, matriz }: { classes: string[]; matriz: number[][] }) {
   const tons = intensidades(matriz)
   return (
-    <div className="overflow-x-auto">
-      <table className="text-12" aria-label="Matriz de confusão">
-        <caption className="flex items-center gap-1 text-left text-13 text-apoio">
-          Matriz de confusão (linha: real; coluna: respondido) <Explica chave="matriz_confusao" />
-        </caption>
-        <thead>
-          <tr>
-            <th className="font-normal" />
-            {classes.map((c) => (
-              <th key={c} scope="col" className="px-1 font-normal text-apoio">
-                {nomeDaClasse(c)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {matriz.map((linha, i) => (
-            <tr key={classes[i]}>
-              <th scope="row" className="pr-2 text-left font-normal text-apoio">
-                {nomeDaClasse(classes[i])}
-              </th>
-              {linha.map((n, j) => (
-                <td
-                  key={classes[j]}
-                  className="valor min-w-12 border border-linha px-1 text-center"
-                  style={{
-                    background: `color-mix(in oklab, var(--color-texto) ${Math.round((tons[i]?.[j] ?? 0) * 45)}%, transparent)`,
-                    color: (tons[i]?.[j] ?? 0) > 0.6 ? 'var(--color-modulo)' : undefined,
-                  }}
-                >
-                  {n}
-                </td>
+    <div className="flex flex-col gap-1">
+      <p className="flex items-center gap-1 text-13 text-apoio">
+        Matriz de confusão (linha: real; coluna: respondido) <Explica chave="matriz_confusao" />
+      </p>
+      <div className="overflow-x-auto">
+        <table className="text-12" aria-label="Matriz de confusão">
+          <thead>
+            <tr>
+              <th className="font-normal" />
+              {classes.map((c) => (
+                <th key={c} scope="col" className="px-1 font-normal text-apoio">
+                  {nomeDaClasse(c)}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {matriz.map((linha, i) => (
+              <tr key={classes[i]}>
+                <th scope="row" className="pr-2 text-left font-normal text-apoio">
+                  {nomeDaClasse(classes[i])}
+                </th>
+                {linha.map((n, j) => (
+                  <td
+                    key={classes[j]}
+                    className="valor min-w-12 border border-linha px-1 text-center"
+                    // texto sempre na cor normal e fundo no máximo 25% do tom do texto: contraste AA nos dois temas
+                    style={{
+                      background: `color-mix(in oklab, var(--color-texto) ${Math.round((tons[i]?.[j] ?? 0) * 25)}%, transparent)`,
+                    }}
+                  >
+                    {n}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -410,9 +480,14 @@ function Importancia({ itens }: { itens: MetadadosModelo['importancia'] }) {
               {nomeDaCaracteristica(i.nome)}
             </span>
             <span className="h-2 bg-linha">
-              <span className="block h-2 bg-texto" style={{ width: `${(i.valor / maior) * 100}%` }} />
+              <span
+                className="block h-2 bg-texto"
+                style={{ width: `${(i.valor / maior) * 100}%` }}
+              />
             </span>
-            <span className="valor text-right text-apoio">{i.valor.toFixed(3).replace('.', ',')}</span>
+            <span className="valor text-right text-apoio">
+              {i.valor.toFixed(3).replace('.', ',')}
+            </span>
           </li>
         ))}
       </ul>
@@ -444,9 +519,15 @@ function Comparacao({
   const a = linha(ativa)
   const c = linha(candidata)
   return (
-    <div role="group" aria-label="Comparação com a versão ativa" className="flex flex-col gap-2 border border-linha-forte p-2">
+    <div
+      role="group"
+      aria-label="Comparação com a versão ativa"
+      className="flex flex-col gap-2 border border-linha-forte p-2"
+    >
       <p className="text-13 font-medium">
-        {versaoAtiva ? `Comparação com a versão ativa (v${versaoAtiva})` : 'Nenhuma versão ativa ainda'}
+        {versaoAtiva
+          ? `Comparação com a versão ativa (v${versaoAtiva})`
+          : 'Nenhuma versão ativa ainda'}
       </p>
       <table className="w-full max-w-md text-13">
         <thead>

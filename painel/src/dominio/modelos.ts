@@ -51,7 +51,8 @@ export function resumoDaOpiniao(o: {
   anomalia: boolean
 }): string {
   if (!o.classe) return o.anomalia ? 'o modelo vê anomalia' : 'o modelo não vê anomalia'
-  if (o.incerta) return `classe incerta (mais parecida: ${nomeDaClasse(o.classe)}, ${porcento(o.confianca)})`
+  if (o.incerta)
+    return `classe incerta (mais parecida: ${nomeDaClasse(o.classe)}, ${porcento(o.confianca)})`
   return `${nomeDaClasse(o.classe)}, ${porcento(o.confianca)}`
 }
 
@@ -98,4 +99,16 @@ export function nomeDaCaracteristica(nome: string): string {
   }
   if (fixos[nome]) return fixos[nome]
   return nome.replace(/^canal_/, 'canal ').replaceAll('_', ' ')
+}
+
+/** Nome curto da medida dominante de um alerta (a API manda o código: rms_g, o1x...). */
+export const ROTULO_MEDIDA: Record<string, string> = {
+  rms_g: 'RMS',
+  pico_g: 'pico',
+  curtose: 'curtose',
+  o1x: '1X',
+  o2x: '2X',
+  o3x: '3X',
+  vel_rms_mm_s: 'velocidade',
+  instrumento: 'sensor',
 }

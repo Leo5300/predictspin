@@ -3,13 +3,21 @@ import { Link } from '@tanstack/react-router'
 import { useEffect } from 'react'
 
 import { consultaAlarme } from '@/api/adaptadores/alarmes'
+import { IconeDoAlarme } from '@/componentes/alarmes/LinhasDeAlarme'
 import { BlocoSegundaOpiniao } from '@/componentes/alarmes/SegundaOpiniao'
 import { EstadoCarregando, EstadoErro } from '@/componentes/instrumento/Estados'
 import { Modulo, Painel } from '@/componentes/instrumento/Modulo'
 import { SeloSim } from '@/componentes/instrumento/SeloSim'
 import { Explica } from '@/componentes/ui/explica'
 import { formatarDataHora, formatarNumero } from '@/dominio/formato'
+import { ROTULO_MEDIDA } from '@/dominio/modelos'
 import { useAlarmesAoVivo } from '@/hooks/useAlarmesAoVivo'
+
+const ROTULO_NIVEL: Record<string, string> = {
+  normal: 'normal',
+  atencao: 'atenção',
+  alarme: 'alarme',
+}
 
 const ROTULO_ESTADO: Record<string, string> = {
   ativo_nao_reconhecido: 'ativo, não reconhecido',
@@ -37,7 +45,8 @@ export function TelaDetalheAlerta({ id }: { id: number }) {
   const a = consulta.data.alerta
   const de = new Date(new Date(a.criado_em).getTime() - 5 * 60_000).toISOString()
   const ate = new Date(
-    new Date(a.encerrado_em ?? a.normalizado_em ?? a.atualizado_em ?? a.criado_em).getTime() + 5 * 60_000,
+    new Date(a.encerrado_em ?? a.normalizado_em ?? a.atualizado_em ?? a.criado_em).getTime() +
+      5 * 60_000,
   ).toISOString()
 
   return (
@@ -57,14 +66,31 @@ export function TelaDetalheAlerta({ id }: { id: number }) {
             <dt className="text-apoio">Estado</dt>
             <dd>{ROTULO_ESTADO[a.estado] ?? a.estado}</dd>
             <dt className="text-apoio">Nível agora / pior</dt>
-            <dd>
-              {a.nivel} / {a.pior_nivel} · prioridade {a.prioridade}
+            <dd className="flex items-center gap-2">
+              <IconeDoAlarme alarme={a} />
+              <span
+                className={
+                  a.estado === 'encerrado' ||
+                  a.estado === 'normalizado_nao_reconhecido' ||
+                  a.estado === 'suprimido'
+                    ? 'text-apoio'
+                    : a.nivel === 'alarme' && a.tipo === 'maquina'
+                      ? 'font-semibold text-alarme-texto'
+                      : 'font-semibold text-atencao-texto'
+                }
+              >
+                {(ROTULO_NIVEL[a.nivel] ?? a.nivel).toUpperCase()}
+              </span>
+              <span>
+                / pior {ROTULO_NIVEL[a.pior_nivel] ?? a.pior_nivel} · prioridade {a.prioridade}
+              </span>
             </dd>
             <dt className="text-apoio">Tipo</dt>
             <dd>{a.tipo === 'instrumento' ? 'instrumento (sensor)' : 'máquina'}</dd>
             <dt className="text-apoio">Medida e z</dt>
             <dd className="valor">
-              {a.metrica} · z {formatarNumero(a.z, 1)} (pior {formatarNumero(a.pior_z, 1)})
+              {ROTULO_MEDIDA[a.metrica] ?? a.metrica} · z {formatarNumero(a.z, 1)} (pior{' '}
+              {formatarNumero(a.pior_z, 1)})
             </dd>
             <dt className="text-apoio">Aberto em</dt>
             <dd className="valor">{formatarDataHora(a.criado_em)}</dd>
@@ -72,11 +98,15 @@ export function TelaDetalheAlerta({ id }: { id: number }) {
             <dd>{a.componente ?? '—'}</dd>
             <dt className="text-apoio">Versões</dt>
             <dd className="[overflow-wrap:anywhere]">
-              referência v{a.referencia_versao ?? '—'} · firmware {a.firmware_versao ?? '—'} · calibração{' '}
-              {a.calibracao ?? '—'}
+              referência v{a.referencia_versao ?? '—'} · firmware {a.firmware_versao ?? '—'} ·
+              calibração {a.calibracao ?? '—'}
             </dd>
             <dt className="text-apoio">Ensaio</dt>
-            <dd>{a.ensaio_id ? `${a.ensaio_id} (${a.condicao_ensaio ?? 'normal'})` : 'uso, fora de ensaio'}</dd>
+            <dd>
+              {a.ensaio_id
+                ? `${a.ensaio_id} (${a.condicao_ensaio ?? 'normal'})`
+                : 'uso, fora de ensaio'}
+            </dd>
           </dl>
           <p className="mt-3 border-t border-linha-forte pt-2 text-15 font-semibold">
             <span className="rotulo mb-0.5 flex items-center gap-1">
@@ -112,21 +142,27 @@ export function TelaDetalheAlerta({ id }: { id: number }) {
             <BlocoSegundaOpiniao titulo="Na abertura" opiniao={a.opiniao_abertura} />
             <BlocoSegundaOpiniao titulo="Mais recente" opiniao={a.opiniao_recente} />
             <p className="text-12 text-apoio">
-              Estimativa do modelo. Não muda estado, prioridade nem abertura do alerta: isso é da regra.
+              Estimativa do modelo. Não muda estado, prioridade nem abertura do alerta: isso é da
+              regra.
             </p>
           </div>
         </Modulo>
         <Modulo rotulo="Histórico" semRecuo className="lg:col-span-2">
           <ol aria-label="Histórico do alerta">
             {consulta.data.historico.map((h, i) => (
-              <li key={i} className="flex flex-wrap gap-x-3 border-b border-linha px-3 py-1.5 text-13 last:border-b-0">
+              <li
+                key={i}
+                className="flex flex-wrap gap-x-3 border-b border-linha px-3 py-1.5 text-13 last:border-b-0"
+              >
                 <span className="valor text-apoio">{formatarDataHora(h.ocorrido_em)}</span>
                 <span className="font-medium">{h.acao}</span>
                 <span className="text-apoio">
-                  {ROTULO_ESTADO[h.estado] ?? h.estado} · {h.nivel}
+                  {ROTULO_ESTADO[h.estado] ?? h.estado} · {ROTULO_NIVEL[h.nivel] ?? h.nivel}
                 </span>
                 {h.usuario ? <span className="text-apoio">por {h.usuario}</span> : null}
-                {h.detalhe ? <span className="text-apoio [overflow-wrap:anywhere]">{h.detalhe}</span> : null}
+                {h.detalhe ? (
+                  <span className="text-apoio [overflow-wrap:anywhere]">{h.detalhe}</span>
+                ) : null}
               </li>
             ))}
           </ol>

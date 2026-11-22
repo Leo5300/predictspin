@@ -148,7 +148,8 @@ function LinkDeNavegacao({
   return (
     <Link
       to={para}
-      activeOptions={{ exact: para === '/' }}
+      // "Coleta" não fica marcada na tela Modelos (que mora em /coleta/modelos)
+      activeOptions={{ exact: para === '/' || para === '/coleta' }}
       className={cn(
         'flex min-h-8 shrink-0 items-center border-b-2 border-transparent px-2 text-13 font-medium whitespace-nowrap text-apoio',
         'pointer-coarse:min-h-11 max-md:min-h-11',

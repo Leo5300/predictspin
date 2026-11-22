@@ -4,7 +4,8 @@ import path from 'node:path'
 import { test, type Page } from '@playwright/test'
 
 import { abrirEnsaioPelaApi, encerrarPelaApi, itemDoCatalogo, liberarMaquina } from './apoio/api'
-import { definirPlano, entrarPelaTela, usarFonte } from './apoio/sessao'
+import { URL_API } from './apoio/ambiente'
+import { definirPlano, entrarPelaTela, tokenDoAdmin, usarFonte } from './apoio/sessao'
 import { ligarSimulador, type Simulador } from './apoio/simulador'
 
 /**
@@ -380,6 +381,54 @@ export const TELAS: Tela[] = [
     },
   },
 ]
+
+/** Id do alerta de máquina mais recente com segunda opinião, ou da OS mais recente (dado simulado gravado). */
+async function idMaisRecente(page: Page, tipo: 'alerta' | 'os'): Promise<number> {
+  const token = await tokenDoAdmin(page.request)
+  const caminho = tipo === 'alerta' ? '/api/v1/alertas?simulado=true&size=50' : '/api/v1/ordens-servico?simulado=true&size=5'
+  const r = await page.request.get(`${URL_API}${caminho}`, { headers: { Authorization: `Bearer ${token}` } })
+  const lista = ((await r.json()) as { conteudo: { id: number; tipo?: string; opiniao_abertura?: unknown }[] }).conteudo
+  const item = tipo === 'alerta' ? lista.find((a) => a.tipo === 'maquina' && a.opiniao_abertura) : lista[0]
+  if (!item) throw new Error(`sem ${tipo} simulado gravado: rode o roteiro de docs/ia.md antes`)
+  return item.id
+}
+
+// IA parte B: telas novas (dado simulado do roteiro de docs/ia.md)
+TELAS.push(
+  {
+    nome: 'ia-modelos',
+    fonte: 'simulado',
+    abrir: async (page) => {
+      await page.goto('/coleta/modelos')
+      await page.getByRole('table', { name: 'Matriz de confusão' }).first().waitFor()
+    },
+  },
+  {
+    nome: 'ia-alerta',
+    fonte: 'simulado',
+    abrir: async (page) => {
+      await page.goto(`/alarmes/${String(await idMaisRecente(page, 'alerta'))}`)
+      await page.getByRole('region', { name: 'Segunda opinião' }).waitFor()
+    },
+  },
+  {
+    nome: 'ia-os',
+    fonte: 'simulado',
+    abrir: async (page) => {
+      await page.goto(`/ordens/${String(await idMaisRecente(page, 'os'))}`)
+      await page.getByRole('region', { name: 'Segunda opinião' }).waitFor()
+    },
+  },
+  {
+    nome: 'ia-diagnostico',
+    fonte: 'simulado',
+    abrir: async (page) => {
+      await page.goto('/diagnostico')
+      await page.getByRole('region', { name: 'Segunda opinião (IA)' }).waitFor()
+      await page.waitForTimeout(800)
+    },
+  },
+)
 
 for (const tela of TELAS) {
   if (FILTRO.length > 0 && !FILTRO.some((f) => tela.nome.startsWith(f))) continue
