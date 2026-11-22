@@ -267,6 +267,17 @@ medidos** (média de `pg_column_size` em 112 linhas). Somando o ponteiro da linh
   assinaturas das classes no simulador foram escritas à mão (servem para testar o encadeamento).
 - As janelas normais usadas na referência também entram no treino do IF; com a referência calculada sobre elas, o z
   dessas janelas é "dentro da amostra" e o limiar tende a ficar otimista.
+- **A validação por ensaio e por dia ainda vaza pela referência.** A divisão em partes é por ensaio e por dia, e o
+  IF e o RF de cada parte são treinados só com a parte de treino, mas os z de todas as janelas são calculados contra
+  a mesma referência ativa, que foi aprendida com os ensaios normais, inclusive os da parte de teste. As janelas
+  normais da validação ficam parecidas demais com a referência: recall, falso positivo e F1 saem otimistas. Na
+  comparação regra × modelo, a regra mede dentro da amostra e o IF mede fora da parte de treino, então a
+  comparação não é justa. O cálculo não foi mudado; o caminho é recalcular a referência dentro de cada parte. A
+  tela Modelos mostra este aviso junto das métricas.
+- **Memória e tempo de resposta em produção não foram medidos no Render.** Os números da seção "ONNX × Java" são do
+  compose local (pico de RSS 431,3 MiB, cgroup 448,9 MiB de 512, p95 da ingestão 1,50 s). Publique com o modelo não
+  ativado, meça memória e p95 no Render e só então ative. Se não passar, trocar o motor ONNX pelas árvores em Java
+  (já testadas, sem retreinar) é o plano B.
 - A comparação regra × modelo usa o nível bruto da regra, sem atraso nem histerese.
 - Classes que no torno não mexem no giro em vazio (avanço, rotação, desgaste) terão janelas T1 rotuladas com a
   condição mas parecidas com o normal: grave as condições no T3.

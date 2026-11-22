@@ -327,6 +327,12 @@ function DetalheDaVersao({
             ? ` · ativada por ${modelo.ativado_por}${modelo.ativado_em ? ` em ${formatarDataHora(modelo.ativado_em)}` : ''}`
             : ''}
         </p>
+        <p className="text-13 text-apoio">
+          <span className="font-semibold text-texto">Limitação:</span> a referência foi calculada
+          com os mesmos ensaios que a validação testa, então recall e falso positivo estão
+          otimistas e a comparação regra × modelo não é justa. Ative só depois de medir a memória
+          no Render.
+        </p>
         <Validacao titulo="Validação por ensaio" explica v={metadados.metricas.por_ensaio} />
         <Validacao titulo="Validação por dia" v={metadados.metricas.por_dia} />
         <Importancia itens={metadados.importancia} />
