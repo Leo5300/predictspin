@@ -189,6 +189,52 @@ class ModeloIntegracaoTest extends AlarmeIntegracaoBase {
     }
 
     @Test
+    void opiniaoMaisRecenteSoMudaComJanelaMaisNovaEJanelaRecuperadaNaoVoltaNoTempo() throws Exception {
+        String admin = tokenAdmin();
+        prepararReferencia(admin);
+        long id = candidato(admin, m -> m.put("referencia_versao_id", referenciaEmUso())).get("id").asLong();
+        mvc.perform(comToken(post("/api/v1/modelos/" + id + "/ativar"), admin)).andExpect(status().isOk());
+        enviarSequencia(Instant.now().truncatedTo(ChronoUnit.SECONDS), 5, 1120, SEVERO);
+
+        String[] tabelas = {"alerta", "ordem_servico"};
+        for (String tabela : tabelas) {
+            JsonNode atual = json.readTree(jdbc.queryForObject("SELECT opiniao_recente::text FROM " + tabela
+                    + " WHERE opiniao_recente IS NOT NULL LIMIT 1", String.class));
+            Instant instanteAtual = Instant.parse(atual.get("medido_em").asText());
+            long janelaAtual = atual.get("janela_id").asLong();
+
+            // janela recuperada: mais velha que a gravada, chega depois (ordem de chegada não conta)
+            ObjectNode velha = atual.deepCopy();
+            velha.put("janela_id", 1L).put("medido_em", instanteAtual.minus(1, ChronoUnit.HOURS).toString());
+            repositorio.atualizarOpinioes(maquinaId, true, json.writeValueAsString(velha), instanteAtual.minus(1,
+                    ChronoUnit.HOURS));
+            assertThat(opiniaoRecenteDe(tabela).get("janela_id").asLong()).as(tabela + " ignora janela velha")
+                    .isEqualTo(janelaAtual);
+
+            // a mesma janela de novo também não reescreve
+            repositorio.atualizarOpinioes(maquinaId, true, json.writeValueAsString(velha.put("janela_id", 2L)),
+                    instanteAtual);
+            assertThat(opiniaoRecenteDe(tabela).get("janela_id").asLong()).as(tabela + " ignora a mesma janela")
+                    .isEqualTo(janelaAtual);
+
+            // janela mais nova substitui
+            ObjectNode nova = atual.deepCopy();
+            nova.put("janela_id", 999999L).put("medido_em", instanteAtual.plusSeconds(5).toString());
+            repositorio.atualizarOpinioes(maquinaId, true, json.writeValueAsString(nova), instanteAtual.plusSeconds(5));
+            assertThat(opiniaoRecenteDe(tabela).get("janela_id").asLong()).as(tabela + " aceita janela nova")
+                    .isEqualTo(999999L);
+        }
+    }
+
+    private JsonNode opiniaoRecenteDe(String tabela) throws Exception {
+        return json.readTree(jdbc.queryForObject("SELECT opiniao_recente::text FROM " + tabela
+                + " WHERE opiniao_recente IS NOT NULL LIMIT 1", String.class));
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private ModeloRepository repositorio;
+
+    @Test
     void referenciaRecalculadaDepoisDoTreinoAvisaECanalExigidoDesabilitadoNaoRoda() throws Exception {
         String admin = tokenAdmin();
         prepararReferencia(admin);

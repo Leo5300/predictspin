@@ -187,17 +187,23 @@ public class ModeloRepository {
                 : (float) confianca.doubleValue());
     }
 
-    /** Segunda opinião mais recente nos alertas de máquina ativos e nas OS abertas; a da abertura, se ainda vazia. */
-    public void atualizarOpinioes(long maquinaId, boolean simulado, String json) {
+    /**
+     * Segunda opinião mais recente nos alertas de máquina ativos e nas OS abertas; a da abertura, se ainda vazia.
+     * Só vale se a janela for mais nova ({@code medido_em}) que a que gravou a opinião atual: janela recuperada, que
+     * chega depois de uma queda de rede, não traz a opinião de volta no tempo.
+     */
+    public void atualizarOpinioes(long maquinaId, boolean simulado, String json, Instant medidoEm) {
         jdbc.update("""
                 UPDATE alerta SET opiniao_recente = ?::jsonb, opiniao_abertura = coalesce(opiniao_abertura, ?::jsonb)
                 WHERE maquina_id = ? AND simulado = ? AND tipo = 'maquina'
                   AND estado IN ('ativo_nao_reconhecido', 'ativo_reconhecido', 'suprimido')
-                """, json, json, maquinaId, simulado);
+                  AND (opiniao_recente IS NULL OR (opiniao_recente->>'medido_em')::timestamptz < ?)
+                """, json, json, maquinaId, simulado, utc(medidoEm));
         jdbc.update("""
                 UPDATE ordem_servico SET opiniao_recente = ?::jsonb, opiniao_abertura = coalesce(opiniao_abertura, ?::jsonb)
                 WHERE maquina_id = ? AND simulado = ? AND status IN ('aberta', 'em_andamento')
-                """, json, json, maquinaId, simulado);
+                  AND (opiniao_recente IS NULL OR (opiniao_recente->>'medido_em')::timestamptz < ?)
+                """, json, json, maquinaId, simulado, utc(medidoEm));
     }
 
     /** Inferências das janelas da máquina desde {@code desde}: total, anomalias e contagem por classe. */

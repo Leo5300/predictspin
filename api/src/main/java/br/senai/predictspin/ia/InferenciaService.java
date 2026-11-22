@@ -109,7 +109,7 @@ public class InferenciaService {
             transacao.executeWithoutResult(s -> {
                 repositorio.inserirInferencia(j.janelaId(), o.modeloId(), o.escore(), o.anomalia(),
                         o.classe() == null ? null : indiceDaClasse(j, o.classe()), o.confianca());
-                repositorio.atualizarOpinioes(j.maquinaId(), j.simulado(), texto);
+                repositorio.atualizarOpinioes(j.maquinaId(), j.simulado(), texto, o.medidoEm());
             });
             inferencias.incrementAndGet();
         } catch (Exception e) {
