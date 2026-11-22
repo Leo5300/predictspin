@@ -50,10 +50,14 @@ class EventosServiceTest {
     private JanelaService janelas;
     private final List<EmissorDeTeste> emissores = new CopyOnWriteArrayList<>();
     private EventosService servico;
+    /** O próximo emissor criado já nasce falhando no envio (cliente que caiu antes do primeiro evento). */
+    private volatile boolean proximoFalha;
 
     /** Emissor que guarda o que foi enviado e pode travar o envio, como um cliente que não lê. */
     private static final class EmissorDeTeste extends SseEmitter {
         private final List<String> enviados = new CopyOnWriteArrayList<>();
+        /** Thread de cada envio, na ordem de {@code enviados}. */
+        private final List<String> threads = new CopyOnWriteArrayList<>();
         private final CountDownLatch trava = new CountDownLatch(1);
         private volatile boolean travado;
         private volatile boolean falha;
@@ -79,6 +83,7 @@ class EventosServiceTest {
             }
             StringBuilder texto = new StringBuilder();
             evento.build().forEach(parte -> texto.append(parte.getData()));
+            threads.add(Thread.currentThread().getName());
             enviados.add(texto.toString());
         }
 
@@ -108,6 +113,7 @@ class EventosServiceTest {
     private void iniciar(PropriedadesEventos propriedades, ObjectMapper json) {
         servico = new EventosService(propriedades, janelas, json, tempoLimite -> {
             EmissorDeTeste emissor = new EmissorDeTeste(tempoLimite);
+            emissor.falha = proximoFalha;
             emissores.add(emissor);
             return emissor;
         });
@@ -163,6 +169,35 @@ class EventosServiceTest {
         assertThat(servico.conexoes()).isEqualTo(1);
         assertThat(servico.temAssinantes(MAQUINA)).isTrue();
         assertThat(servico.temAssinantes(2L)).isFalse();
+    }
+
+    /**
+     * O estado inicial sai na thread de quem assina (a do pedido), antes de existir a thread de envio. É
+     * essa escrita que grava os cabeçalhos da resposta; vinda de outra thread, coincidia com os filtros
+     * ainda gravando cabeçalhos e o Tomcat lançava NullPointerException em MimeHeaders.setValue.
+     */
+    @Test
+    void primeiroEventoSaiNaThreadDoPedidoAntesDaThreadDeEnvio() {
+        EmissorDeTeste emissor = assinar(10, false, null);
+
+        // sem esperar: ao voltar de assinar, o estado inicial já foi entregue ao emissor por esta thread
+        assertThat(emissor.enviados).isNotEmpty();
+        assertThat(emissor.enviados.get(0)).contains("event:modo_rapido");
+        assertThat(emissor.threads.get(0)).isEqualTo(Thread.currentThread().getName());
+        esperar(() -> recebeu(emissor, ":batimento"));
+        assertThat(emissor.threads.get(emissor.enviados.size() - 1)).startsWith("eventos-envio-");
+    }
+
+    @Test
+    void falhaNoPrimeiroEnvioLiberaAVagaNaHora() {
+        proximoFalha = true;
+        EmissorDeTeste emissor = assinar(10, false, null);
+        proximoFalha = false;
+
+        assertThat(emissor.completo).isTrue();
+        assertThat(servico.conexoes()).isZero();
+        assertThat(servico.temAssinantes(MAQUINA)).isFalse();
+        assertThat(emissor.enviados).isEmpty();
     }
 
     @Test

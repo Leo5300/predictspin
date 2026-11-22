@@ -13,6 +13,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.LongFunction;
 import java.util.function.Predicate;
 
@@ -143,7 +144,15 @@ public class EventosService implements SmartLifecycle {
         novo.emissor.onCompletion(() -> encerrar(novo));
         novo.emissor.onTimeout(() -> encerrar(novo));
         novo.emissor.onError(erro -> encerrar(novo));
-        novo.fila.offer(inicial);
+        // O primeiro evento sai aqui, na thread do pedido e antes de existir a thread de envio. O Spring
+        // o guarda e o escreve ao iniciar a resposta, ainda nesta thread, e é essa escrita que grava os
+        // cabeçalhos (commit). Saindo da thread de envio, o commit podia coincidir com o fim da cadeia de
+        // filtros, em que o HeaderWriterFilter do Spring Security ainda grava cabeçalhos na mesma resposta:
+        // duas threads no mesmo MimeHeaders do Tomcat, com NullPointerException em MimeHeaders.setValue.
+        // Depois do commit, a thread de envio só escreve corpo.
+        if (!enviarUm(novo, SseEmitter.event().name(inicial.nome()).data(inicial.dados()))) {
+            return novo.emissor;
+        }
         novo.thread = new Thread(() -> enviar(novo), "eventos-envio-" + usuarioId);
         novo.thread.setDaemon(true);
         novo.thread.start();
@@ -294,23 +303,42 @@ public class EventosService implements SmartLifecycle {
     private void enviar(Assinante assinante) {
         long espera = propriedades.batimento().toMillis();
         try {
-            while (assinante.ativo.get()) {
+            boolean enviou = true;
+            while (enviou && assinante.ativo.get()) {
                 Mensagem mensagem = assinante.fila.poll(espera, TimeUnit.MILLISECONDS);
                 if (!assinante.ativo.get()) {
                     break;
                 }
-                if (mensagem == null) {
-                    assinante.emissor.send(SseEmitter.event().comment("batimento"));
-                } else {
-                    assinante.emissor.send(SseEmitter.event().name(mensagem.nome()).data(mensagem.dados()));
-                }
+                enviou = enviarUm(assinante, mensagem == null ? SseEmitter.event().comment("batimento")
+                        : SseEmitter.event().name(mensagem.nome()).data(mensagem.dados()));
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-        } catch (IOException | RuntimeException e) {
-            log.debug("Cliente de eventos desconectado (usuário {}): {}", assinante.usuarioId, e.toString());
         } finally {
             encerrar(assinante);
+        }
+    }
+
+    /**
+     * Um envio no fluxo do assinante, um de cada vez (trava do assinante). Se a escrita falha (cliente
+     * caído, resposta já encerrada), o assinante sai e a vaga é liberada.
+     *
+     * @return se enviou
+     */
+    private boolean enviarUm(Assinante assinante, SseEmitter.SseEventBuilder evento) {
+        assinante.envio.lock();
+        try {
+            if (!assinante.ativo.get()) {
+                return false;
+            }
+            assinante.emissor.send(evento);
+            return true;
+        } catch (IOException | RuntimeException e) {
+            log.debug("Cliente de eventos desconectado (usuário {}): {}", assinante.usuarioId, e.toString());
+            encerrar(assinante);
+            return false;
+        } finally {
+            assinante.envio.unlock();
         }
     }
 
@@ -392,6 +420,11 @@ public class EventosService implements SmartLifecycle {
         private final SseEmitter emissor;
         private final BlockingQueue<Mensagem> fila;
         private final AtomicBoolean ativo = new AtomicBoolean(true);
+        /**
+         * Um envio por vez neste fluxo. O fechamento (complete) não usa esta trava: quem descarta um
+         * cliente lento não pode esperar uma escrita parada nele.
+         */
+        private final ReentrantLock envio = new ReentrantLock();
         private volatile Thread thread;
 
         private Assinante(Long maquinaId, long usuarioId, boolean veEnsaios, Boolean simulado, SseEmitter emissor,
