@@ -81,6 +81,24 @@ def test_metricas_por_ensaio_por_dia_e_comparacao_com_a_regra(treinado):
     assert set(resultado.pesos) == set(resultado.nomes)
 
 
+@pytest.mark.parametrize("alvo", ["z_C_o2x", "z_A_vel_rms_mm_s", "log_rms_c_a"])
+def test_importancia_fica_no_nome_da_coluna_que_separa_as_classes(alvo):
+    """Sinal só numa coluna, ruído nas outras e uma coluna removida antes dela: a importância tem de sair com o
+    nome dessa coluna. Garante que nome e posição não se desencontram quando o treino tira colunas."""
+    rng = np.random.default_rng(0)
+    j = fixture.NOMES.index(alvo)
+    linhas = fixture.linhas_sinteticas(ensaios_por_classe=3, janelas=10)
+    for linha in linhas:
+        valores = [float(v) for v in rng.normal(size=len(fixture.NOMES))]
+        valores[j] = 4.0 * nucleo.CLASSES.index(linha["rotulo"]) + float(rng.normal(0, 0.1))
+        valores[fixture.NOMES.index("z_B_rms_g")] = None
+        linha["valores"] = valores
+    resultado = nucleo.treinar(fixture.NOMES, linhas, PARAM)
+    assert resultado.removidas == ["z_B_rms_g"]
+    assert resultado.importancia[0]["nome"] == alvo
+    assert resultado.importancia[0]["valor"] > 10 * resultado.importancia[1]["valor"]
+
+
 def test_validacao_por_ensaio_nunca_separa_um_ensaio():
     linhas = fixture.linhas_sinteticas(ensaios_por_classe=3, janelas=5)
     conj = nucleo.Conjunto.das_linhas(fixture.NOMES, linhas)
