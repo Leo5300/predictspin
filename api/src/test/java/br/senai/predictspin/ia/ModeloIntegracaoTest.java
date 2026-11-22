@@ -272,6 +272,16 @@ class ModeloIntegracaoTest extends AlarmeIntegracaoBase {
         ((ArrayNode) tresClasses.putArray("classes")).add("normal").add("avanco_excessivo").add("desbalanceamento");
         assertThat(corpo(enviarResultado(decimo, tresClasses, true).andExpect(status().isBadRequest()))
                 .get("mensagem").asText()).contains("probabilidades");
+        // ONNX que não carrega
+        long onze = treinar(admin, 202).get("id").asLong();
+        ObjectNode soAnomalia = metadados();
+        soAnomalia.putArray("classes");
+        assertThat(corpo(mvc.perform(multipart("/api/v1/treino/servico/trabalhos/" + onze + "/resultado")
+                .file(new MockMultipartFile("anomalia", "a.onnx", "application/octet-stream", new byte[] {1, 2, 3}))
+                .file(new MockMultipartFile("metadados", "m.json", "application/json",
+                        json.writeValueAsBytes(soAnomalia)))
+                .header("X-Treino-Chave", CHAVE)).andExpect(status().isBadRequest())).get("mensagem").asText())
+                .contains("modelo inválido");
         // falha relatada pelo serviço
         long quarto = treinar(admin, 202).get("id").asLong();
         JsonNode falhou = corpo(mvc.perform(post("/api/v1/treino/servico/trabalhos/" + quarto + "/falha")
@@ -291,6 +301,14 @@ class ModeloIntegracaoTest extends AlarmeIntegracaoBase {
         mvc.perform(comToken(get("/api/v1/maquinas/999999/ia/diagnostico"), admin)).andExpect(status().isNotFound());
         mvc.perform(comToken(get("/api/v1/maquinas/999999/treino/trabalhos"), admin)).andExpect(status().isNotFound());
         mvc.perform(comToken(get("/api/v1/maquinas/999999/modelos"), admin)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void metadadosCorrompidosNoBancoViramErroInterno() throws Exception {
+        String admin = tokenAdmin();
+        long id = candidato(admin, m -> { }).get("id").asLong();
+        jdbc.update("UPDATE modelo SET metricas = '[]'::jsonb WHERE id = ?", id);
+        mvc.perform(comToken(get("/api/v1/modelos/" + id), admin)).andExpect(status().isInternalServerError());
     }
 
     @Test

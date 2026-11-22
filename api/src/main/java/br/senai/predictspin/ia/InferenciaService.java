@@ -108,7 +108,7 @@ public class InferenciaService {
             String texto = json.writeValueAsString(o);
             transacao.executeWithoutResult(s -> {
                 repositorio.inserirInferencia(j.janelaId(), o.modeloId(), o.escore(), o.anomalia(),
-                        indiceDaClasse(j, o.classe()), o.confianca());
+                        o.classe() == null ? null : indiceDaClasse(j, o.classe()), o.confianca());
                 repositorio.atualizarOpinioes(j.maquinaId(), j.simulado(), texto);
             });
             inferencias.incrementAndGet();
@@ -121,9 +121,6 @@ public class InferenciaService {
     }
 
     private Integer indiceDaClasse(JanelaRecebida j, String classe) {
-        if (classe == null) {
-            return null;
-        }
         return carga(j.maquinaId(), j.simulado()).map(c -> c.meta().classes().indexOf(classe))
                 .filter(i -> i >= 0).orElse(null);
     }

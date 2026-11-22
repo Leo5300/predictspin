@@ -443,6 +443,7 @@ de 96 MB), pool de 5 conexões e o modelo de fixture ativo (ONNX Runtime):
 | Ingestão: p95, p99, máx. | 1,50 s, 5,38 s, 6,48 s |
 | Consultas: p95, p99, máx. | 1,47 s, 6,05 s, 6,80 s |
 | Memória do contêiner (RSS máx. / anônima máx. / cgroup máx.) | 431,3 / 389,1 / 448,9 MiB |
+| Janelas gravadas com segunda opinião (contado no banco) | 54 de 54 |
 
 A meta de 500 ms de p95 **não foi atendida** neste cenário, mesmo com carga leve; com a memória do contêiner perto
 do limite, a hipótese é a pressão de memória, não confirmada. Não foram feitas outras rodadas (decisão do

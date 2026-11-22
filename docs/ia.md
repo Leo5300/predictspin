@@ -184,7 +184,9 @@ estresse de 20 usuários passou de 450 MiB (RSS 454, cgroup 477); a folga é peq
 alarme. A imagem com o ONNX Runtime tem um jar de 122 MB (as bibliotecas nativas de todas as plataformas vêm junto).
 
 No mesmo cenário realista, com o modelo ativo: p95 da ingestão 1,50 s e das consultas 1,47 s (p99 5,38 s e 6,05 s),
-0 erros em 282 requisições, 8 pausas completas do GC desde que a API subiu. Com a memória perto do limite do contêiner
+0 erros em 282 requisições, 8 pausas completas do GC desde que a API subiu. O modelo rodou durante a carga: as 54
+janelas gravadas no período têm a linha de `inferencia` (contado no banco depois, porque o contador do Diagnóstico
+fica em memória e zerou quando a API foi recriada). Com a memória perto do limite do contêiner
 (cgroup em 449 de 512 MiB) a resposta ficou lenta mesmo com carga leve; isso não foi investigado além desta medição
 (decisão do projeto: sem mais rodadas de carga). Na execução de estresse com o cache de código de 48 MB, 17 pausas
 completas "CodeCache GC Threshold" de até 4,9 s explicaram as paradas; por isso o `render.yaml` passou a reservar

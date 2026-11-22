@@ -155,6 +155,15 @@ public class TreinoService implements DisposableBean {
 
     /** Acorda o serviço de treino (o plano gratuito dorme) e pede o treino. Roda fora da thread do pedido. */
     void acordarEPedir(long id) {
+        try {
+            tentarAcordarEPedir(id);
+        } catch (InterruptedException e) {
+            // desligamento da API: o trabalho fica como está e vence pelo prazo
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private void tentarAcordarEPedir(long id) throws InterruptedException {
         String base = treino.url().replaceAll("/+$", "");
         Instant limite = relogio.instant().plusSeconds(treino.esperaAcordarS());
         boolean acordado = false;
@@ -165,12 +174,9 @@ public class TreinoService implements DisposableBean {
                 acordado = r.statusCode() == 200;
             } catch (IOException e) {
                 log.debug("serviço de treino ainda não respondeu: {}", e.getMessage());
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
             }
             if (!acordado) {
-                dormir(intervaloSondagem);
+                Thread.sleep(intervaloSondagem.toMillis());
             }
         }
         if (!acordado) {
@@ -190,16 +196,6 @@ public class TreinoService implements DisposableBean {
             }
         } catch (IOException e) {
             falhar(id, "falha ao chamar o serviço de treino: " + e.getMessage());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
-
-    private static void dormir(Duration d) {
-        try {
-            Thread.sleep(d.toMillis());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
         }
     }
 
@@ -283,16 +279,12 @@ public class TreinoService implements DisposableBean {
         }
         int tamanho = a.anomalia().length + (a.classe() == null ? 0 : a.classe().length)
                 + (a.arvores() == null ? 0 : a.arvores().length);
-        long modeloId;
-        try {
-            modeloId = repositorio.inserir(new ModeloRepository.Novo(t.maquinaId(), t.simulado(), null, id,
-                    meta.versaoVetor(), meta.referenciaVersaoId(), meta.referenciaNumero(), meta.limiarAnomalia(),
-                    json.writeValueAsString(meta.caracteristicas()), json.writeValueAsString(meta.canais()),
-                    json.writeValueAsString(meta.classes()), new String(a.metadados(), java.nio.charset.StandardCharsets.UTF_8),
-                    json.writeValueAsString(meta.conjunto()), a.anomalia(), a.classe(), a.arvores(), tamanho));
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-            throw new IllegalStateException(e);
-        }
+        long modeloId = repositorio.inserir(new ModeloRepository.Novo(t.maquinaId(), t.simulado(), null, id,
+                meta.versaoVetor(), meta.referenciaVersaoId(), meta.referenciaNumero(), meta.limiarAnomalia(),
+                json.valueToTree(meta.caracteristicas()).toString(), json.valueToTree(meta.canais()).toString(),
+                json.valueToTree(meta.classes()).toString(),
+                new String(a.metadados(), java.nio.charset.StandardCharsets.UTF_8),
+                json.valueToTree(meta.conjunto()).toString(), a.anomalia(), a.classe(), a.arvores(), tamanho));
         repositorio.mudarTrabalho(id, CONCLUIDO, "versão nova criada como candidata; um ADMIN decide se ativa",
                 null, relogio.instant(), modeloId);
         anunciarTreino(trabalho(id));

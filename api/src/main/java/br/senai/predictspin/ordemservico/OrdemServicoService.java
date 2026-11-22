@@ -144,11 +144,6 @@ public class OrdemServicoService {
         return os;
     }
 
-    @Transactional
-    public OrdemServicoResposta concluir(long id, long usuarioId, RetornoTecnico retorno, String comentario) {
-        return concluir(id, usuarioId, retorno, comentario, null);
-    }
-
     /** Conclui com o retorno do técnico e, opcionalmente, a condição encontrada (rótulo do próximo treino). */
     @Transactional
     public OrdemServicoResposta concluir(long id, long usuarioId, RetornoTecnico retorno, String comentario,

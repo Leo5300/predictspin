@@ -120,14 +120,9 @@ public class AvaliacaoService {
                     janela.janelaId(), janela.maquinaId(), e);
             return;
         }
-        // depois do commit: a segunda opinião do modelo (quem escuta trata os próprios erros; mesmo assim, nada que
-        // aconteça lá volta para cá)
-        try {
-            anuncios.publishEvent(new JanelaAvaliadaGravada(resultado));
-        } catch (RuntimeException e) {
-            log.error("Falha depois da avaliação da janela {} (segunda opinião): a regra não foi afetada",
-                    janela.janelaId(), e);
-        }
+        // depois do commit: a segunda opinião do modelo. Quem escuta (InferenciaService) trata os próprios erros, e a
+        // regra já está gravada; um erro que escapasse seria contido e contado pela FilaDeAvaliacao.
+        anuncios.publishEvent(new JanelaAvaliadaGravada(resultado));
     }
 
     /** Janelas que ficaram sem avaliação por erro desde que a API subiu. */

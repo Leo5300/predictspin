@@ -137,6 +137,11 @@ class InferenciaServiceTest {
         assertThat(s.incompatibilidade(linha("v1", metaJson), JSON.treeToValue(estranha, MetadadosModelo.class)))
                 .contains("canal_inexistente");
         assertThat(s.incompatibilidade(linha("v1", metaJson), meta)).isNull();
+        // canal exigido e habilitado: passa pelo canal e confere as características
+        InferenciaService comSom = servico(0.6,
+                new PropriedadesFusao(Map.of("nivel_som_db", new PropriedadesFusao.Canal(true))));
+        assertThat(comSom.incompatibilidade(linha("v1", metaJson), JSON.treeToValue(comCanal, MetadadosModelo.class)))
+                .isNull();
     }
 
     @Test

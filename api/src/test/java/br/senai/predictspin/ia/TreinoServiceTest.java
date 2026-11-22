@@ -104,4 +104,41 @@ class TreinoServiceTest {
         }
         verify(repositorio, never()).mudarTrabalho(anyLong(), any(), any(), any(), any(), any());
     }
+
+    @Test
+    void treinarForaDeTransacaoAcordaOServicoNaHora() throws Exception {
+        MaquinaRepository maquinas = mock(MaquinaRepository.class);
+        when(maquinas.existsById(1L)).thenReturn(true);
+        when(repositorio.criarTrabalho(eq(1L), eq(true), isNull(), eq("acordando"), isNull(), any())).thenReturn(7L);
+        when(repositorio.travarTrabalho(anyLong())).thenReturn(Optional.of("acordando"));
+        when(repositorio.trabalho(anyLong())).thenReturn(Optional.of(new ModeloRepository.Trabalho(7, 1, true,
+                "acordando", "acordando o serviço de treino", Instant.now(), null, null, null, null, null)));
+        TreinoService s = new TreinoService(repositorio, maquinas, mock(ReferenciaService.class),
+                mock(InferenciaService.class),
+                new PropriedadesTreino("http://127.0.0.1:" + portaFechada(), "chave", 1, 30, true, 2, 5,
+                        "America/Sao_Paulo", 1000),
+                new PropriedadesModelo(99, 0.6, 5, 100, 60, 10, 42, 3),
+                new PropriedadesFusao(Map.of()), new PropriedadesTendencia(false, 7, 60, 600, 3, 60),
+                new ObjectMapper(), mock(ApplicationEventPublisher.class), Clock.systemUTC(),
+                mock(PlatformTransactionManager.class));
+        s.intervaloSondagem(Duration.ofMillis(50));
+        assertThat(s.treinar(1, true, null).estado()).isEqualTo("acordando");
+        // sem transação ativa, o pedido ao serviço sai na hora (na thread própria) e falha pelo prazo de 1 s
+        verify(repositorio, org.mockito.Mockito.timeout(5_000)).mudarTrabalho(eq(7L), eq("falhou"),
+                eq("o serviço de treino não respondeu em 1 s"), isNull(), any(), isNull());
+        s.destroy();
+    }
+
+    @Test
+    void interrompidoEnquantoEsperaOServicoAcordarParaSemMudarOTrabalho() throws Exception {
+        TreinoService s = servico("http://127.0.0.1:" + portaFechada());
+        s.intervaloSondagem(Duration.ofSeconds(30));
+        Thread t = new Thread(() -> s.acordarEPedir(7));
+        t.start();
+        Thread.sleep(300);
+        t.interrupt();
+        t.join(5_000);
+        assertThat(t.isAlive()).isFalse();
+        verify(repositorio, never()).mudarTrabalho(anyLong(), any(), any(), any(), any(), any());
+    }
 }
