@@ -37,7 +37,7 @@ class TreinoServiceTest {
     private TreinoService servico(String url) {
         when(repositorio.travarTrabalho(anyLong())).thenReturn(Optional.of("acordando"));
         when(repositorio.trabalho(anyLong())).thenReturn(Optional.of(new ModeloRepository.Trabalho(7, 1, true,
-                "falhou", "x", Instant.now(), null, null, null, null, null)));
+                "falhou", "x", Instant.now(), null, null, null, null, null, null)));
         TreinoService s = new TreinoService(repositorio, mock(MaquinaRepository.class), mock(ReferenciaService.class),
                 mock(InferenciaService.class),
                 new PropriedadesTreino(url, "chave", 1, 30, true, 2, 5, "America/Sao_Paulo", 1000),
@@ -112,7 +112,7 @@ class TreinoServiceTest {
         when(repositorio.criarTrabalho(eq(1L), eq(true), isNull(), eq("acordando"), isNull(), any())).thenReturn(7L);
         when(repositorio.travarTrabalho(anyLong())).thenReturn(Optional.of("acordando"));
         when(repositorio.trabalho(anyLong())).thenReturn(Optional.of(new ModeloRepository.Trabalho(7, 1, true,
-                "acordando", "acordando o serviço de treino", Instant.now(), null, null, null, null, null)));
+                "acordando", "acordando o serviço de treino", Instant.now(), null, null, null, null, null, null)));
         TreinoService s = new TreinoService(repositorio, maquinas, mock(ReferenciaService.class),
                 mock(InferenciaService.class),
                 new PropriedadesTreino("http://127.0.0.1:" + portaFechada(), "chave", 1, 30, true, 2, 5,

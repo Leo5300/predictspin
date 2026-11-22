@@ -218,6 +218,10 @@ function LinhaVersao({
           </span>
           <span className="text-apoio">{formatarDataHora(modelo.criado_em)}</span>
         </span>
+        <span className="text-12 text-apoio [overflow-wrap:anywhere]">
+          treino de {modelo.criado_por ?? 'serviço de treino'}
+          {modelo.ativado_por ? ` · ativada por ${modelo.ativado_por}` : ''}
+        </span>
         <span className="text-apoio [overflow-wrap:anywhere]">
           {modelo.conjunto.janelas} janelas: {porClasse}
         </span>
@@ -319,6 +323,9 @@ function DetalheDaVersao({
           {metadados.caracteristicas.length} características · referência v
           {metadados.referencia_numero ?? '—'} · criada por{' '}
           {modelo.criado_por ?? 'serviço de treino'}
+          {modelo.ativado_por
+            ? ` · ativada por ${modelo.ativado_por}${modelo.ativado_em ? ` em ${formatarDataHora(modelo.ativado_em)}` : ''}`
+            : ''}
         </p>
         <Validacao titulo="Validação por ensaio" explica v={metadados.metricas.por_ensaio} />
         <Validacao titulo="Validação por dia" v={metadados.metricas.por_dia} />

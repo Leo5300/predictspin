@@ -115,7 +115,7 @@ public class ModeloRepository {
 
     public record Trabalho(long id, long maquinaId, boolean simulado, String estado, String mensagem, Instant criadoEm,
                            String criadoPor, Instant iniciadoEm, Instant concluidoEm, Long modeloId,
-                           Integer modeloVersao) {
+                           Integer modeloVersao, Long criadoPorId) {
     }
 
     private static final String SELECT_TRABALHO = """
@@ -173,7 +173,7 @@ public class ModeloRepository {
         return new Trabalho(rs.getLong("id"), rs.getLong("maquina_id"), rs.getBoolean("simulado"), rs.getString("estado"),
                 rs.getString("mensagem"), instante(rs, "criado_em"), rs.getString("criado_por"),
                 instante(rs, "iniciado_em"), instante(rs, "concluido_em"), (Long) rs.getObject("modelo_id"),
-                (Integer) rs.getObject("modelo_versao"));
+                (Integer) rs.getObject("modelo_versao"), (Long) rs.getObject("criado_por_id"));
     }
 
     // ------------------------------------------------------------------ inferência

@@ -107,6 +107,8 @@ class ModeloIntegracaoTest extends AlarmeIntegracaoBase {
         JsonNode modelo = corpo(enviarResultado(trabalhoId, meta, true).andExpect(status().isCreated()));
         assertThat(modelo.get("versao").asInt()).isEqualTo(1);
         assertThat(modelo.get("estado").asText()).isEqualTo("candidato");
+        assertThat(modelo.get("criado_por").asText()).as("autor da versão: quem apertou Treinar")
+                .isEqualTo("Usuário TECNICO");
         assertThat(modelo.get("aviso_simulado").asText()).isEqualTo("dado simulado: não é resultado");
         assertThat(modelo.get("classes")).hasSize(5);
         assertThat(modelo.get("conjunto").get("janelas").asInt()).isEqualTo(450);
@@ -137,6 +139,8 @@ class ModeloIntegracaoTest extends AlarmeIntegracaoBase {
         JsonNode ativado = corpo(mvc.perform(comToken(post("/api/v1/modelos/" + id + "/ativar"), admin))
                 .andExpect(status().isOk()));
         assertThat(ativado.get("modelo").get("estado").asText()).isEqualTo("ativo");
+        assertThat(ativado.get("modelo").get("ativado_por").isNull()).isFalse();
+        assertThat(ativado.get("modelo").get("criado_por").asText()).isEqualTo("Usuário TECNICO");
         mvc.perform(comToken(post("/api/v1/modelos/" + id + "/ativar"), admin)).andExpect(status().isConflict());
 
         // severo nos três pontos: a REGRA abre o alerta (3ª janela) e a OS; o modelo só acrescenta a opinião

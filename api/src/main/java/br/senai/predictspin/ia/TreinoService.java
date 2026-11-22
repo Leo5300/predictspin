@@ -279,7 +279,7 @@ public class TreinoService implements DisposableBean {
         }
         int tamanho = a.anomalia().length + (a.classe() == null ? 0 : a.classe().length)
                 + (a.arvores() == null ? 0 : a.arvores().length);
-        long modeloId = repositorio.inserir(new ModeloRepository.Novo(t.maquinaId(), t.simulado(), null, id,
+        long modeloId = repositorio.inserir(new ModeloRepository.Novo(t.maquinaId(), t.simulado(), t.criadoPorId(), id,
                 meta.versaoVetor(), meta.referenciaVersaoId(), meta.referenciaNumero(), meta.limiarAnomalia(),
                 json.valueToTree(meta.caracteristicas()).toString(), json.valueToTree(meta.canais()).toString(),
                 json.valueToTree(meta.classes()).toString(),
