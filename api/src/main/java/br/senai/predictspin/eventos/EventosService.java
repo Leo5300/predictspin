@@ -328,9 +328,7 @@ public class EventosService implements SmartLifecycle {
     private boolean enviarUm(Assinante assinante, SseEmitter.SseEventBuilder evento) {
         assinante.envio.lock();
         try {
-            if (!assinante.ativo.get()) {
-                return false;
-            }
+            // fluxo já encerrado: o SseEmitter lança IllegalStateException, tratada abaixo
             assinante.emissor.send(evento);
             return true;
         } catch (IOException | RuntimeException e) {
