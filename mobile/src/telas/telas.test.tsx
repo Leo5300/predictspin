@@ -28,6 +28,15 @@ import { TelaPonto } from './TelaPonto'
 
 const guardado = (SecureStore as unknown as { __guardado: Map<string, string> }).__guardado
 
+// O React Native carrega os componentes (TextInput, Pressable...) só no primeiro uso. Com o cache do Jest
+// vazio (sempre, na CI), esse primeiro uso compila dezenas de módulos e, se cair dentro de um teste, estoura
+// os 5 s dele (medido: "401: e-mail ou senha errados" falhava com cache frio e passava com cache quente).
+// A primeira montagem fica aqui, com prazo próprio; o limite de cada teste continua o padrão.
+beforeAll(async () => {
+  const { unmount } = await montar(<TelaEntrar />)
+  await unmount()
+}, 120_000)
+
 beforeEach(() => {
   guardado.clear()
   reiniciarSessaoParaTeste()
