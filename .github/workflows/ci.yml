@@ -114,3 +114,48 @@ jobs:
 
       # Os testes de ponta a ponta (Playwright) precisam do compose com a API, o banco e o
       # simulador; não cabem com folga em 15 minutos aqui e rodam localmente (docs/painel.md).
+
+  app:
+    name: App (tipos, lint, testes, bundle)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Dependências
+        run: npm ci
+
+      - name: Contrato e tokens conferem com os do painel
+        run: |
+          npm run api:conferir
+          npm run tema:conferir
+
+      - name: Checagem de tipos
+        run: npm run typecheck
+
+      - name: Lint (sem avisos)
+        run: npm run lint
+
+      - name: Testes (Jest, com meta de cobertura em src/dominio e src/api)
+        run: npm run test:cobertura
+
+      - name: Compatibilidade com a SDK (expo-doctor)
+        run: npx expo-doctor
+
+      # Sem mobile/.env aqui: o app monta sem EXPO_PUBLIC_API_URL e a tela de entrada avisa.
+      # Sem bytecode, para a conferência seguinte ler o JavaScript do bundle.
+      - name: Bundle Android de produção
+        run: npx expo export --platform android --no-bytecode --output-dir dist
+
+      - name: Galeria e exemplos fora do bundle de produção
+        run: node scripts/conferir-bundle.mjs dist
