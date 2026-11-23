@@ -61,7 +61,8 @@ Detalhes de cada camada, fluxo de ingestão e decisões estruturais estão em
 - **Análise:** Python (NumPy, Matplotlib) para processamento offline do sinal bruto e simulador
 - **Infra:** Docker Compose (desenvolvimento), GitHub Actions (integração contínua), Render
   (publicação)
-- **Mobile (planejado):** React Native
+- **Aplicativo:** React Native com Expo SDK 58 (Expo Router, TanStack Query, Uniwind, Reanimated), cliente gerado
+  do mesmo OpenAPI do painel, Jest
 
 ## Status atual
 
@@ -76,8 +77,8 @@ Situação em 16/11/2026.
 | Firmware (`firmware/`) | Reescrito para 3 ADXL345 e o FC-51: aquisição no núcleo 1 (FIFO a 1600 Hz), características em fluxo, envio HTTPS à API com fila em RAM e LittleFS, modo rápido, tela, LEDs e sinal bruto binário pela serial. Segunda rodada (17/11): calibração de ganho e offset por sensor pela serial, velocidade RMS em mm/s (10 Hz a ~800 Hz, sem comparação com a ISO 20816), versão do firmware e calibração em cada janela, reenvio da fila em ritmo controlado e largura do pulso do FC-51 no diagnóstico. Compila e passa em 77 testes nativos; **nada foi testado em hardware**. Roteiro de bancada, com as medições que viram número para o artigo, em [`docs/teste-bancada-firmware.md`](docs/teste-bancada-firmware.md). |
 | Análise (`analise/`) | Captura da serial (`captura.py`, binário de 3 sensores e texto antigo de 1), espectro com janela de Hann e ordens (`espectro.py`), simulador de telemetria (`simulador.py`, que obedece ao modo rápido e manda velocidade estimada e rastreabilidade) e contas de bancada (`bancada.py`: piso de ruído, teste-reteste e banda acima de 800 Hz). |
 | Painel web (`painel/`) | **Partes A e B prontas:** leitura (visão geral, máquina com mapa de ordens comparado ao típico de cada linha, ponto com tendência e AO VIVO), coleta de ensaios pelo celular (receita com catálogos, checagem antes de gravar, REC, fita, eventos marcados, sessão T0 → T1 → T2 → T3, matriz de cobertura, exportação CSV), replay de ensaio gravado, diagnóstico (dispositivos, qualidade, catálogos, usuários), alarmes (ISA-18.2), ordens de serviço com retorno do técnico, referência aprendida e diagnóstico da regra de alarme, paleta de comandos (Ctrl+K) e explicações "?". Testado localmente com dados simulados, sem celular real; site estático descrito no `render.yaml`, **não publicado** ([`docs/painel.md`](docs/painel.md)). |
-| Aplicativo (`mobile/`) | **Não iniciado.** |
-| Integração contínua | Workflow em `.github/workflows/ci.yml` (API, `analise/` e painel: lint, tipos, testes e build); o resultado no GitHub não foi conferido nesta atualização. Os testes nativos do firmware e os de ponta a ponta do painel não estão no CI. |
+| Aplicativo (`mobile/`) | **Parte A pronta (22/11/2026):** entrada com sessão no SecureStore e biometria, máquina (placa de estado, rotação, pontos A, B e C com estado, régua de desvio e sparkline, detalhe do ponto), alarmes ISA-18.2 ao vivo (reconhecer segurando, suprimir só ADMIN, segunda opinião), conta (tema, fonte, biometria, sair). 92 testes no Jest; bundle Android monta. **Não testado em celular** ([`docs/app.md`](docs/app.md), roteiro em [`docs/app-teste-celular.md`](docs/app-teste-celular.md)). |
+| Integração contínua | Workflow em `.github/workflows/ci.yml` (API, `analise/`, painel e app: lint, tipos, testes e build); o resultado no GitHub não foi conferido nesta atualização. Os testes nativos do firmware e os de ponta a ponta do painel não estão no CI. |
 | Publicação no Render | `render.yaml` (API, banco e painel como site estático) e roteiro escritos; segundo o responsável, a API está publicada (não conferido nesta atualização). O painel ainda não foi publicado. |
 
 Todos os dados de vibração que passaram pela API local até agora são **simulados**. O envio do
@@ -93,7 +94,7 @@ predictspin
 ├── analise              scripts Python: captura, espectro, simulador e seus testes
 ├── carga                teste de carga com k6
 ├── docs                 arquitetura, modelo de dados, contrato, firmware, implantação, testes
-├── mobile               reservado para o aplicativo (vazio)
+├── mobile               aplicativo React Native (Expo), parte A
 ├── .github/workflows    integração contínua
 ├── docker-compose.yml   banco e API para desenvolvimento
 ├── render.yaml          Blueprint do Render
@@ -288,6 +289,17 @@ linhas medida pelo JaCoCo (`target/site/jacoco/jacoco.csv`): **98,3 %** nas clas
 cobertura das classes de regra ficar abaixo de 70 %. O relatório fica em
 `api/target/site/jacoco/index.html`.
 
+**Aplicativo.** Jest com a meta de 85 % de linhas em `src/dominio` e `src/api`; a fumaça precisa do compose e do
+simulador no ar.
+
+```powershell
+cd mobile
+npm run typecheck; npm run lint; npm run test:cobertura
+npm run fumaca
+```
+
+Resultado em 22/11/2026: **92 testes, nenhuma falha**; linhas cobertas: `src/dominio` 100 %, `src/api` 96,63 %.
+
 **Painel web.** Os testes de ponta a ponta usam o compose local e ligam o próprio simulador; leem as
 credenciais do `.env` e ignoram variáveis de ambiente do computador.
 
@@ -415,6 +427,8 @@ Etapas do protocolo de ensaios, como o simulador as representa:
 | [`docs/alarmes.md`](docs/alarmes.md) | filtro de qualidade, referência, regra de alarme, ISA-18.2, OS, indicadores e roteiro de demonstração |
 | [`docs/ia.md`](docs/ia.md) | IA parte B: vetor, rótulos, treino, validação, ONNX × Java (memória medida), ativação, segunda opinião, tendência e fusão, roteiro |
 | [`docs/painel.md`](docs/painel.md) | painel web: como rodar, decisões, direção visual, tokens, eventos e AO VIVO, revisão, Parte B |
+| [`docs/app.md`](docs/app.md) | aplicativo: o que faz por papel, normas seguidas, como rodar no Expo Go, medições, limitações |
+| [`docs/app-teste-celular.md`](docs/app-teste-celular.md) | roteiro de teste do app no celular (faça / esperado / se não acontecer) |
 | [`docs/der.md`](docs/der.md) | modelo de dados |
 | [`docs/payload.md`](docs/payload.md) | contrato de `POST /api/v1/telemetria` e modo rápido |
 | [`docs/firmware.md`](docs/firmware.md) | firmware: pinos, núcleos, filtragem, fila, protocolo serial, limites |

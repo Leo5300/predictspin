@@ -1,0 +1,148 @@
+# Aplicativo (React Native, `mobile/`): parte A
+
+O app é um cliente da API, como o painel: nenhum dado falso dentro dele e nenhuma regra de alarme
+recalculada nele. A API é a autoridade de tudo (estado, permissão, limites, textos de motivo). Esta parte
+A traz a fundação, a entrada com sessão e biometria, a tela da máquina, os alarmes e a conta. OS, Coleta,
+notificações e "Modelos da IA" ficam para a parte B.
+
+**Situação (22/11/2026):** compila, passa nos testes automáticos e monta o bundle Android de produção.
+**Nada foi testado num celular**: tudo que depende do aparelho (Expo Go, biometria, haptics, fontes, tema,
+teclado, gesto de segurar, eventos ao vivo pela rede) está no roteiro
+[`app-teste-celular.md`](app-teste-celular.md), com as colunas de resultado vazias.
+
+## O que o app faz, por papel
+
+| Tela | OPERADOR | TECNICO | ADMIN |
+|---|---|---|---|
+| Entrar (e-mail e senha; digital ou rosto, se ligada) | sim | sim | sim |
+| Máquina: placa de estado, rotação, uma linha por ponto, detalhe do ponto | sim | sim | sim |
+| Alarmes: lista ao vivo, detalhe, linha do tempo, segunda opinião | sim | sim | sim |
+| Reconhecer alarme (segurando 1,5 s) | sim | sim | sim |
+| Suprimir e cancelar supressão (motivo e prazo da API) | — | — | sim |
+| Conta: usuário, tema, fonte dos dados, biometria, versões, sair | sim | sim | sim |
+
+O mapa de quem pode o quê está em [`mobile/src/dominio/permissoes.ts`](../mobile/src/dominio/permissoes.ts),
+copiado da `SegurancaConfig` da API, com teste. O app só esconde o que o papel não pode; a API continua
+decidindo, e um 403 vira a mensagem "Seu papel não permite esta ação. A API recusou o pedido.", nunca uma tela
+quebrada.
+
+**Fonte dos dados.** Real (padrão a cada abertura) ou Simulado, em Conta. Real e simulado nunca se misturam:
+toda consulta e o fluxo de eventos levam `simulado`. Com Simulado, uma faixa hachurada fica no topo de todas as
+telas e cada ponto e alarme leva o selo SIM.
+
+## Como funciona
+
+| Parte | Onde | Como |
+|---|---|---|
+| Cliente da API | `src/api/cliente.ts`, `esquema.d.ts` | openapi-fetch tipado pelo esquema gerado de `painel/openapi.json` com o mesmo gerador do painel (`npm run api:tipos`; `npm run api:conferir` falha se o esquema não bate com o contrato). Token no cabeçalho, 401 encerra a sessão, 75 s de limite por chamada. |
+| Sessão | `src/api/sessao.ts`, `autenticacao.ts` | Token JWT e a hora em que vence no SecureStore. Ao abrir: sem token, entrada; vencido, entrada com "Sua sessão expirou"; biometria ligada, tela de destravar; senão confere em `/auth/eu`. A sessão encerra sozinha na hora do vencimento. |
+| Biometria | `src/api/biometria.ts` | `expo-local-authentication` só destrava o token guardado; senha nunca é guardada. No primeiro login com biometria cadastrada, pergunta uma vez "Usar digital/rosto para entrar?". Desliga em Conta. |
+| Eventos ao vivo | `src/api/eventos.ts`, `hooks/useEventosAoVivo.ts` | A rota SSE do painel, lida pelo `fetch` do Expo (no celular, `expo/fetch` é o fetch global e lê a resposta em pedaços), com o token no cabeçalho, nunca na URL. Uma conexão para o app inteiro. Reconecta com 1, 2, 4, 8, 15 e 30 s (como o painel) e, enquanto isso, consulta a cada 5 s. App em segundo plano: fecha a conexão e para as consultas; ao voltar, reconecta e recarrega tudo. |
+| Servidor que dorme | `src/api/saude.ts`, `dominio/conexao.ts` | Falha de rede com o celular conectado é "acordando o servidor, aguarde", com sondas em `/actuator/health` (2, 3, 5, 8, 10 e 15 s); a entrada tenta de novo sozinha. Depois de 150 s falhando, "sem conexão". Sem rede no aparelho (expo-network), "sem conexão" na hora. |
+| Estado da tela | `src/dominio/` | Regras puras de exibição: formatação pt-BR (feita à mão, sem `Intl`, para ser igual no iPhone e no Android), estado → texto + forma + cor, dado velho, régua em z, ordem dos alarmes, permissões, endereço da API. |
+| Tema | `src/tema/`, `scripts/gerar-tema.mjs` | Gerado do `painel/src/index.css` (mesmos nomes semânticos), OKLCH convertido para hex. `npm run tema:conferir` falha se o painel mudou e o app não foi regenerado. |
+| Estilo | Uniwind (Tailwind v4 para React Native) | `className` com os tokens; "light" = claro cinza ISA, "dark" = escuro grafite. |
+
+## Normas e boas práticas seguidas
+
+| Norma | Onde no app |
+|---|---|
+| **ISA-101** (HMI de alto desempenho) | Cinza é o normal; âmbar e vermelho só para atenção e alarme. Todo estado em texto + forma + cor (`dominio/estado.ts`, `dominio/alarme.ts`): círculo normal, triângulo atenção, losango alarme, quadrado instrumento, anel sem dados; tracejado quando não é avaliação (sem referência, dado velho). Pontos A, B e C em três cinzas e três estilos de linha (contínua, tracejada, pontilhada) com a letra. |
+| **ISA-18.2** (gestão de alarmes) | Estados ativo não reconhecido, ativo reconhecido, normalizado não reconhecido, suprimido e encerrado, com prioridade, vindos da API. Reconhecer é ato deliberado: segurar 1,5 s. Suprimir exige motivo e prazo, só ADMIN. O app nunca cria, apaga ou muda prioridade. Ordem da lista: em aberto, prioridade alta, não reconhecido, mais novo. |
+| **OWASP MASVS** (no que cabe) | Token só no Keychain/Keystore (SecureStore), nunca em AsyncStorage nem em log. Senha nunca guardada. Fora do desenvolvimento só https (`dominio/endereco.ts` recusa http fora de `__DEV__` e fora da rede local). Nenhum segredo no bundle: só o endereço da API, que é público. Sair apaga o token, a preferência de biometria e o cache das consultas. |
+| **WCAG 2.2 AA** adaptado | Contraste 4,5:1 ou mais de todo texto sobre todas as superfícies, nos dois temas, conferido por teste (`tema/tema.test.ts`). Rótulo de acessibilidade em todo controle; estados ditos em texto. "Reduzir movimento": o ícone que pisca vira anel parado; as animações de toque ficam instantâneas. Fonte do sistema respeitada até 130% (`maxFontSizeMultiplier`). |
+| **Ergonomia de chão de fábrica** | Alvo de toque de 56 dp ou mais (botões, filtros, voltar, prazos). Nada depende de gesto fino. Ação perigosa nunca num toque só (reconhecer e suprimir são segurar). |
+| **LGPD** | O aparelho guarda só o token com a hora de vencimento, o e-mail para preencher a entrada, o tema e se a biometria está ligada. A fonte dos dados fica só em memória. |
+
+Sem conexão, as ações que escrevem na API ficam desligadas e nada é guardado para enviar depois: em alarme,
+ação atrasada engana.
+
+## Design
+
+Mesma linguagem do painel ([`painel.md`, Direção visual](painel.md#direção-visual)), com as diferenças pedidas
+para o celular: o tema claro "cinza ISA" é o padrão (luz forte da oficina), o escuro "grafite" segue o sistema
+ou a escolha em Conta. Módulos separados por linhas de 1 px, sem cartão com sombra. Rótulos curtos em
+caixa-alta; valores em IBM Plex Mono com algarismos tabulares e unidade menor em cinza. Matriz de pontos (Doto)
+só na placa de estado da máquina e na rotação viva; com dado velho, a rotação sai em Plex Mono cinza claro.
+
+Movimento: valores medidos trocam seco. Toque em botão: escala 0,97 em 100 ms, volta em 150 ms. Segurar para
+confirmar: anel de 24 tiques enche em 1,5 s linear, com haptics de seleção a cada 250 ms e de sucesso no fim;
+soltar antes volta em 200 ms. O fim é contado por um temporizador comum, não pelo fim da animação, e nada muda
+o estado do React durante o gesto. Alarme novo pelo SSE: aviso curto no topo (entra em 220 ms, sai em 150 ms) e
+haptics de aviso, sem som. Troca de aba sem animação (abas nativas).
+
+**Galeria de estados** (só em desenvolvimento: Conta → "Galeria de estados"): cada componente em cada estado
+(normal, atenção, alarme, sem referência, calibração diferente, não avaliável, velho, sem dados, simulado,
+instrumento, texto longo, valor máximo de ±16 g), com botão para trocar de tema. A CI confere que a galeria e os
+exemplos de teste ficam fora do bundle de produção (`scripts/conferir-bundle.mjs`).
+
+## Como rodar
+
+Pré-requisitos: Node 24 no notebook; no celular, o **Expo Go** da App Store ou da Play Store, que abre a
+**SDK 58** (a do projeto). Notebook e celular na mesma rede Wi-Fi.
+
+```powershell
+cd mobile
+npm ci
+copy .env.example .env      # e preencha EXPO_PUBLIC_API_URL (veja abaixo)
+npx expo start              # mostra o QR code
+```
+
+No iPhone, leia o QR code com a câmera; no Android, com o próprio Expo Go.
+
+**Qual API usar (`EXPO_PUBLIC_API_URL`):**
+
+- **API local do docker compose:** `http://<IP do notebook na rede>:8080` (veja o IP com `ipconfig`, em
+  "Endereço IPv4" do Wi-Fi). O compose publica a porta 8080 em todas as interfaces; o Firewall do Windows pode
+  pedir para liberar. Em desenvolvimento o app aceita http só para IP de rede local. Para ver dado, rode o
+  simulador (`python analise/simulador.py continuo --modo severo`) e escolha Simulado em Conta.
+- **Se o celular recusar http** (o Android bloqueia texto claro em app compilado; o Expo Go permite, mas isso
+  **não foi conferido**): use a API do Render, com https. Ela dorme no plano gratuito: a primeira chamada pode
+  levar cerca de 1 minuto, e o app mostra "acordando o servidor, aguarde" e tenta de novo sozinho.
+
+Depois de mudar o `.env`, pare e rode `npx expo start` de novo (as variáveis `EXPO_PUBLIC_` entram na montagem).
+
+**Comandos:**
+
+```powershell
+npm run typecheck        # TypeScript estrito
+npm run lint             # ESLint sem avisos
+npm test                 # Jest
+npm run test:cobertura   # Jest com a meta de 85% de linhas em src/dominio e src/api
+npm run api:tipos        # regenera src/api/esquema.d.ts de painel/openapi.json
+npm run api:conferir     # falha se o esquema não bate com o contrato
+npm run tema             # regenera src/tema a partir de painel/src/index.css
+npm run fumaca           # com o compose e o simulador no ar: entra, lê máquina e alarmes, reconhece um simulado
+```
+
+## Medições desta parte (22/11/2026, no notebook, Windows 11, Node 24.14)
+
+- Jest: **92 testes, nenhuma falha** (`npm run test:cobertura`). Cobertura de linhas: `src/dominio` **100 %**,
+  `src/api` **96,63 %** (meta 85 %).
+- Contraste calculado (fórmula WCAG sobre os hex gerados): todo texto (`texto`, `apoio`, `fraco`, textos de
+  atenção, alarme e informação) passa de 4,5:1 sobre fundo, módulo e rebaixo nos dois temas.
+- `npx expo-doctor`: 20/20 verificações.
+- `npx expo export --platform android`: bundle montado sem `EXPO_PUBLIC_API_URL` (4,9 MB em bytecode Hermes;
+  3,3 MB em JavaScript com `--no-bytecode`), sem a galeria.
+- Fumaça (`node scripts/fumaca.mjs`) contra a API local do compose com o simulador em modo severo: entrou,
+  leu a máquina, a última janela simulada (3 s de idade) e 9 alarmes simulados, e reconheceu um (ativo não
+  reconhecido → ativo reconhecido). Dado simulado: prova o encadeamento, não a detecção real.
+
+## O que fica fora do app e por quê
+
+Usuários, catálogos de material e ferramenta, exportar CSV, mapa de ordens, replay de ensaio, referência e
+diagnóstico da regra: trabalho de mesa, com tela grande, no painel. O app é para quem está ao lado do torno:
+ver o estado agora e responder a um alarme.
+
+## Limitações conhecidas
+
+- **Nada testado em celular** (ver o roteiro). Compilar o bundle não é testar no aparelho.
+- **Face ID no Expo Go do iPhone não funciona** (o Expo Go não declara a permissão); o sistema cai na senha do
+  aparelho. A digital no Android funciona no Expo Go. O Face ID de verdade só num build próprio (parte B).
+- No iOS 26, as abas nativas usam o vidro do sistema ("Liquid Glass"); o app não tem como desligar isso no
+  Expo Go.
+- O mock oficial do Reanimated 4.7.1 não carrega no jest-expo; os testes usam uma simulação mínima
+  (`src/testes/reanimadoSimulado.tsx`). A lógica de segurar para confirmar é testada (temporizador), a animação
+  não.
+- A API não publica a própria versão; Conta mostra só se o `/actuator/health` responde UP.
+- O detalhe da OS ligada a um alarme mostra só o número (a tela de OS é da parte B).
