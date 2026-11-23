@@ -38,6 +38,16 @@ export function proximaTentativa(
   return { estado, esperaMs: dentro ? esperaDaTentativaS(estado.n) * 1000 : null }
 }
 
+/**
+ * Só em desenvolvimento: quando o erro não é nem resposta da API nem falha de rede (a mensagem seria o
+ * "Algo saiu errado" genérico), mostra o erro técnico para achar a causa. Em produção não muda nada.
+ */
+function comDetalheDeDesenvolvimento(mensagem: string, erro: unknown): string {
+  if (!__DEV__ || erro instanceof ErroApi || erro instanceof ErroRede) return mensagem
+  const tecnico = erro instanceof Error ? `${erro.name}: ${erro.message}` : String(erro)
+  return `${mensagem}\n[dev] ${tecnico.slice(0, 240)}`
+}
+
 function Moldura({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets()
   return (
@@ -88,7 +98,7 @@ function Verificando() {
           setMensagem(mensagemDoErro(erro))
           temporizador = setTimeout(() => void tentar(), esperaDaTentativaS(tentativa) * 1000)
         } else {
-          setMensagem(mensagemDoErro(erro))
+          setMensagem(comDetalheDeDesenvolvimento(mensagemDoErro(erro), erro))
           setDesistiu(true)
         }
       }
@@ -221,7 +231,7 @@ function Formulario({ aviso }: { aviso: string | null }) {
       tentativas.current = null
       if (resultado.perguntarBiometria) perguntarBiometria(await nomeDaBiometria())
     } catch (erro) {
-      setMensagem(mensagemDoLogin(erro))
+      setMensagem(comDetalheDeDesenvolvimento(mensagemDoLogin(erro), erro))
       // servidor dormindo: nova tentativa sozinha, com espera crescente, por até ~2,5 min
       if (erro instanceof ErroRede && erro.acordando) {
         const proxima = proximaTentativa(tentativas.current)

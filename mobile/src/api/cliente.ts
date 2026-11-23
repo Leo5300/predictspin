@@ -82,11 +82,13 @@ api.use({
     }
     return request
   },
+  // Só observa: não devolve a resposta. O openapi-fetch exige `instanceof Response` de quem devolve
+  // algo, e no celular o fetch do Expo entrega um objeto de resposta próprio, que não passa nessa
+  // conferência ("onResponse: must return new Response()"). Sem devolver, a resposta original segue.
   onResponse({ request, response }) {
     if (response.status === 401 && !request.url.endsWith(ROTA_LOGIN)) {
       void encerrarSessao(AVISO_SESSAO_EXPIRADA)
     }
-    return response
   },
 })
 

@@ -140,6 +140,34 @@ describe('cliente da API', () => {
     expect(mensagemDoErro(erro)).toContain('Acordando o servidor')
   })
 
+  it('aceita a resposta do fetch do Expo, que não é instanceof Response (como no celular)', async () => {
+    // no celular o fetch global é o expo/fetch, cuja resposta é de outra classe: o login quebrava com
+    // "onResponse: must return new Response()". Aqui a resposta é embrulhada numa classe à parte.
+    class RespostaDoExpo {
+      constructor(private readonly r: Response) {}
+      get status() { return this.r.status }
+      get ok() { return this.r.ok }
+      get headers() { return this.r.headers }
+      text() { return this.r.text() }
+      json() { return this.r.json() }
+    }
+    const json = { 'Content-Type': 'application/json' }
+    global.fetch = jest.fn(async (url: string) => {
+      const resposta = url.endsWith('/api/v1/auth/login')
+        ? new Response(JSON.stringify(respostaLogin()), { status: 200, headers: json })
+        : new Response(JSON.stringify({ mensagem: 'Token inválido.' }), { status: 401, headers: json })
+      const embrulhada = new RespostaDoExpo(resposta)
+      expect(embrulhada).not.toBeInstanceOf(Response)
+      return embrulhada
+    }) as unknown as typeof fetch
+    await entrar('a@b.test', 'x')
+    expect(obterSessao().fase).toBe('autenticada')
+    // e o 401 fora do login continua encerrando a sessão
+    await expect(exigir(api.GET('/api/v1/maquinas'))).rejects.toBeInstanceOf(ErroApi)
+    await new Promise((r) => setTimeout(r, 0))
+    expect(obterSessao()).toEqual({ fase: 'anonima', aviso: AVISO_SESSAO_EXPIRADA })
+  })
+
   it('erros: mensagens padrão e leitura do Retry-After', () => {
     expect(new ErroApi(404, null).message).toBe('Não encontrado.')
     expect(new ErroApi(409, null).message).toContain('mudou')
