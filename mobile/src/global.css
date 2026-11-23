@@ -1,0 +1,19 @@
+/*
+ * Estilo do app: Uniwind (Tailwind v4 para React Native). As cores e a escala de texto vêm de
+ * tema/tema.css, gerado a partir dos tokens do painel (npm run tema). Aqui ficam só as famílias de
+ * fonte, que no React Native têm um nome por peso.
+ */
+@import 'tailwindcss';
+@import 'uniwind';
+@import './tema/tema.css';
+
+@theme {
+  --font-*: initial;
+  --font-sans: IBMPlexSans_400Regular;
+  --font-sans-medio: IBMPlexSans_500Medium;
+  --font-sans-forte: IBMPlexSans_600SemiBold;
+  --font-mono: IBMPlexMono_400Regular;
+  --font-mono-medio: IBMPlexMono_500Medium;
+  --font-mono-forte: IBMPlexMono_600SemiBold;
+  --font-matriz: Doto_900Black;
+}
