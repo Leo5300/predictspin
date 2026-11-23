@@ -382,6 +382,66 @@
           }
         }
       },
+      "AparelhoRequisicao": {
+        "properties": {
+          "plataforma": {
+            "enum": [
+              "android",
+              "ios"
+            ],
+            "pattern": "^(android|ios)$",
+            "type": "string"
+          },
+          "token": {
+            "description": "Token de push do Expo",
+            "example": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]",
+            "pattern": "^Expo(nent)?PushToken\\[[^\\]\\s]{1,180}\\]$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plataforma",
+          "token"
+        ]
+      },
+      "AparelhoResposta": {
+        "properties": {
+          "ativo": {
+            "type": "boolean"
+          },
+          "criado_em": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "envio_habilitado": {
+            "description": "false: a API guarda o aparelho, mas o envio de push está desligado (ps.push.habilitado)",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "plataforma": {
+            "enum": [
+              "android",
+              "ios"
+            ],
+            "type": "string"
+          },
+          "ultimo_uso_em": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ativo",
+          "criado_em",
+          "envio_habilitado",
+          "id",
+          "plataforma",
+          "ultimo_uso_em"
+        ]
+      },
       "AvaliacaoResposta": {
         "properties": {
           "estado": {
@@ -3998,6 +4058,71 @@
           "usar_retorno_os"
         ]
       },
+      "PushDiagnosticoResposta": {
+        "properties": {
+          "aparelhos_ativos": {
+            "description": "Aparelhos ativos agora",
+            "format": "int64",
+            "type": "integer"
+          },
+          "descartados_fila_cheia": {
+            "description": "Envios descartados porque a fila do push estava cheia",
+            "format": "int64",
+            "type": "integer"
+          },
+          "desde": {
+            "description": "Início da contagem (subida da API)",
+            "format": "date-time",
+            "type": "string"
+          },
+          "enviados": {
+            "description": "Mensagens aceitas pelo serviço do Expo",
+            "format": "int64",
+            "type": "integer"
+          },
+          "falhos": {
+            "description": "Mensagens recusadas ou que não chegaram ao Expo (falha de rede ou de serviço)",
+            "format": "int64",
+            "type": "integer"
+          },
+          "habilitado": {
+            "description": "ps.push.habilitado",
+            "type": "boolean"
+          },
+          "intervalo_min": {
+            "description": "ps.push.intervalo-min",
+            "format": "int32",
+            "type": "integer"
+          },
+          "segurados_pelo_intervalo": {
+            "description": "Pushes não enviados porque o mesmo ponto e tipo teve push há menos de intervalo_min",
+            "format": "int64",
+            "type": "integer"
+          },
+          "sem_destinatario": {
+            "description": "Ocorrências sem nenhum aparelho para receber",
+            "format": "int64",
+            "type": "integer"
+          },
+          "tokens_desativados": {
+            "description": "Tokens desativados porque o Expo respondeu DeviceNotRegistered",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "aparelhos_ativos",
+          "descartados_fila_cheia",
+          "desde",
+          "enviados",
+          "falhos",
+          "habilitado",
+          "intervalo_min",
+          "segurados_pelo_intervalo",
+          "sem_destinatario",
+          "tokens_desativados"
+        ]
+      },
       "ReceitaRequisicao": {
         "description": "Campos da receita do corte e a observação. Só os presentes no corpo mudam; null apaga.",
         "properties": {
@@ -4136,6 +4261,19 @@
           "piso_ruido_medido",
           "simulado",
           "versao"
+        ]
+      },
+      "RemoverAparelhoRequisicao": {
+        "properties": {
+          "token": {
+            "description": "Token de push do Expo",
+            "maxLength": 200,
+            "minLength": 0,
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
         ]
       },
       "ResumoConjunto": {
@@ -10501,6 +10639,164 @@
         ]
       }
     },
+    "/api/v1/push/aparelhos": {
+      "put": {
+        "description": "O mesmo token com outro usuário passa a ser deste (outra pessoa entrou no mesmo celular).",
+        "operationId": "registrarAparelho",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AparelhoRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AparelhoResposta"
+                }
+              }
+            },
+            "description": "Aparelho registrado"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Token ou plataforma inválidos"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          }
+        },
+        "summary": "Registra ou atualiza o aparelho do próprio usuário (token de push do Expo)",
+        "tags": [
+          "Push"
+        ]
+      }
+    },
+    "/api/v1/push/aparelhos/remover": {
+      "post": {
+        "description": "Responde 204 mesmo se o token não existe ou é de outro usuário (nada é revelado).",
+        "operationId": "removerAparelho",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoverAparelhoRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Removido (ou já não existia)"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          }
+        },
+        "summary": "Remove o aparelho do próprio usuário (ao sair do app)",
+        "tags": [
+          "Push"
+        ]
+      }
+    },
+    "/api/v1/push/diagnostico": {
+      "get": {
+        "operationId": "diagnosticoPush",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushDiagnosticoResposta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          }
+        },
+        "summary": "Contadores do push desde que a API iniciou (só ADMIN)",
+        "tags": [
+          "Push"
+        ]
+      }
+    },
     "/api/v1/telemetria": {
       "post": {
         "description": "Autenticação por X-Dispositivo-Id e X-Dispositivo-Chave. Idempotente por (dispositivo, medido_em): o reenvio responde 200 e não grava nada. Contrato em docs/payload.md.",
@@ -11405,12 +11701,24 @@
   ],
   "tags": [
     {
-      "description": "Alertas no padrão ISA-18.2 e diagnóstico da regra de alarme",
-      "name": "Alertas"
-    },
-    {
       "description": "Segunda opinião: treinar, versões, métricas e ativação (o alarme continua sendo a regra)",
       "name": "Modelos"
+    },
+    {
+      "description": "Ingestão pelo dispositivo e consultas pelos usuários",
+      "name": "Telemetria"
+    },
+    {
+      "description": "Comparação de cada janela com a referência: z, estado e explicação",
+      "name": "Avaliação"
+    },
+    {
+      "description": "Aparelhos que recebem notificação de alarme e contadores do envio",
+      "name": "Push"
+    },
+    {
+      "description": "Alertas no padrão ISA-18.2 e diagnóstico da regra de alarme",
+      "name": "Alertas"
     },
     {
       "description": "Máquinas, pontos de medição e dispositivos. Qualquer usuário autenticado.",
@@ -11423,14 +11731,6 @@
     {
       "description": "Fluxo SSE com o que acontece na máquina. Qualquer usuário autenticado.",
       "name": "Eventos ao vivo"
-    },
-    {
-      "description": "Ingestão pelo dispositivo e consultas pelos usuários",
-      "name": "Telemetria"
-    },
-    {
-      "description": "Comparação de cada janela com a referência: z, estado e explicação",
-      "name": "Avaliação"
     },
     {
       "description": "O normal aprendido de cada ponto, por marcha, etapa e receita",

@@ -133,6 +133,19 @@ ps:
     alarme-continuo-s: 120
     # ou severidade acumulada do ponto acima de 600 z·s desde a última OS (≈ 5 min com z = 5)
     severidade-limite: 600
+  push:
+    # notificação de alarme pelo serviço de push do Expo (docs/app-push.md); desligada por padrão
+    habilitado: ${PUSH_HABILITADO:false}
+    url: https://exp.host/--/api/v2/push/send
+    # opcional ("segurança de push" ligada no painel do Expo); segredo: nunca no repositório
+    token-acesso: ${EXPO_ACCESS_TOKEN:}
+    # cada chamada ao Expo espera no máximo 5 s, com no máximo uma nova tentativa
+    timeout-ms: 5000
+    # no máximo um push por ponto e tipo (alarme, os, instrumento) a cada 15 min
+    intervalo-min: ${PUSH_INTERVALO_MIN:15}
+    fila-max: 200
+    lote: 100
+    max-aparelhos: 10
 
   # ---------------------------------------------------------------- IA parte B (docs/ia.md)
   # Todos os números são PROPOSTA a confirmar com os ensaios rotulados no torno.

@@ -47,6 +47,11 @@ services:
       - key: ADMIN_NOME
         value: Administrador
 
+      # Push de alarme para o app (docs/app-push.md): desligado até o APK com push estar instalado;
+      # para ligar, troque para "true" aqui ou no painel do Render
+      - key: PUSH_HABILITADO
+        value: "false"
+
       # --- Segredos e dados de instalação: sem valor aqui, informados no painel do Render ---
       - key: JWT_SECRET
         sync: false
@@ -61,6 +66,9 @@ services:
       - key: DISPOSITIVO_SIM_CHAVE
         sync: false
       - key: CORS_ORIGENS
+        sync: false
+      # opcional: só se a "segurança de push" estiver ligada no painel do Expo
+      - key: EXPO_ACCESS_TOKEN
         sync: false
 
   # --- Painel web: site estático (build do Vite), servido pela CDN do Render ---

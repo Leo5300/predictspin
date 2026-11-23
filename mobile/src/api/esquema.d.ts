@@ -971,6 +971,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/push/aparelhos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Registra ou atualiza o aparelho do próprio usuário (token de push do Expo)
+         * @description O mesmo token com outro usuário passa a ser deste (outra pessoa entrou no mesmo celular).
+         */
+        put: operations["registrarAparelho"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/push/aparelhos/remover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remove o aparelho do próprio usuário (ao sair do app)
+         * @description Responde 204 mesmo se o token não existe ou é de outro usuário (nada é revelado).
+         */
+        post: operations["removerAparelho"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/push/diagnostico": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Contadores do push desde que a API iniciou (só ADMIN) */
+        get: operations["diagnosticoPush"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/telemetria": {
         parameters: {
             query?: never;
@@ -1282,6 +1339,28 @@ export interface components {
             descricao?: string;
             /** @example Aço SAE 1045 */
             nome?: string;
+        };
+        AparelhoRequisicao: {
+            /** @enum {string} */
+            plataforma: "android" | "ios";
+            /**
+             * @description Token de push do Expo
+             * @example ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]
+             */
+            token: string;
+        };
+        AparelhoResposta: {
+            ativo: boolean;
+            /** Format: date-time */
+            criado_em: string;
+            /** @description false: a API guarda o aparelho, mas o envio de push está desligado (ps.push.habilitado) */
+            envio_habilitado: boolean;
+            /** Format: int64 */
+            id: number;
+            /** @enum {string} */
+            plataforma: "android" | "ios";
+            /** Format: date-time */
+            ultimo_uso_em: string;
         };
         AvaliacaoResposta: {
             /**
@@ -2543,6 +2622,55 @@ export interface components {
             servico_configurado: boolean;
             usar_retorno_os: boolean;
         };
+        PushDiagnosticoResposta: {
+            /**
+             * Format: int64
+             * @description Aparelhos ativos agora
+             */
+            aparelhos_ativos: number;
+            /**
+             * Format: int64
+             * @description Envios descartados porque a fila do push estava cheia
+             */
+            descartados_fila_cheia: number;
+            /**
+             * Format: date-time
+             * @description Início da contagem (subida da API)
+             */
+            desde: string;
+            /**
+             * Format: int64
+             * @description Mensagens aceitas pelo serviço do Expo
+             */
+            enviados: number;
+            /**
+             * Format: int64
+             * @description Mensagens recusadas ou que não chegaram ao Expo (falha de rede ou de serviço)
+             */
+            falhos: number;
+            /** @description ps.push.habilitado */
+            habilitado: boolean;
+            /**
+             * Format: int32
+             * @description ps.push.intervalo-min
+             */
+            intervalo_min: number;
+            /**
+             * Format: int64
+             * @description Pushes não enviados porque o mesmo ponto e tipo teve push há menos de intervalo_min
+             */
+            segurados_pelo_intervalo: number;
+            /**
+             * Format: int64
+             * @description Ocorrências sem nenhum aparelho para receber
+             */
+            sem_destinatario: number;
+            /**
+             * Format: int64
+             * @description Tokens desativados porque o Expo respondeu DeviceNotRegistered
+             */
+            tokens_desativados: number;
+        };
         /** @description Campos da receita do corte e a observação. Só os presentes no corpo mudam; null apaga. */
         ReceitaRequisicao: {
             /**
@@ -2611,6 +2739,10 @@ export interface components {
             piso_ruido_medido: boolean;
             simulado: boolean;
             versao: components["schemas"]["VersaoReferenciaResposta"] | null;
+        };
+        RemoverAparelhoRequisicao: {
+            /** @description Token de push do Expo */
+            token: string;
         };
         ResumoConjunto: {
             /** @description Canais da fusão habilitados (fazem parte do vetor) */
@@ -6693,6 +6825,144 @@ export interface operations {
             };
             /** @description Recurso não encontrado */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    registrarAparelho: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AparelhoRequisicao"];
+            };
+        };
+        responses: {
+            /** @description Aparelho registrado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AparelhoResposta"];
+                };
+            };
+            /** @description Token ou plataforma inválidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    removerAparelho: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemoverAparelhoRequisicao"];
+            };
+        };
+        responses: {
+            /** @description Removido (ou já não existia) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    diagnosticoPush: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushDiagnosticoResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

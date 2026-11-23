@@ -143,6 +143,15 @@ antes da V9, 2 065 bytes por janela (janela + 3 telemetrias + 5 leituras + 3 ava
 a uma janela a cada 5 s, 24 h. A V9 acrescenta a linha de `inferencia` nas janelas com modelo ativo: 52 bytes de linha medidos, cerca de 96 com
 ponteiro e índices (estimados); detalhes em [`ia.md`](ia.md#banco).
 
+## O que mudou com a migração V10 (23/11/2026, app parte B: push)
+
+Só acrescenta duas tabelas (nenhuma coluna ou restrição existente mudou):
+
+| Objeto | Conteúdo |
+|---|---|
+| `push_aparelho` | aparelho que aceitou notificação: usuário, token de push do Expo (único), plataforma (`android`, `ios`), criado em, último uso, ativo. O mesmo token com outro usuário passa para ele; `DeviceNotRegistered` do Expo desativa; no máximo `ps.push.max-aparelhos` ativos por usuário |
+| `push_envio` | decisão de envio de cada ocorrência: tipo (`alarme`, `os`, `instrumento`), alerta ou OS de origem, ponto, tipo de dado, resultado (`pendente`, `enviado`, `falhou`, `intervalo`, `sem_destinatario`), destinatários e quando. As restrições únicas por alerta e por OS garantem no máximo um push por ocorrência; o índice por ponto, tipo e data serve ao intervalo mínimo entre pushes do mesmo ponto e tipo |
+
 ## Diagrama
 
 ```mermaid
@@ -400,6 +409,9 @@ erDiagram
 | `alerta.retorno_tecnico`, `ordem_servico.retorno_tecnico` | `confirmada`, `rejeitada` ou nulo |
 | `ordem_servico.status` | `aberta`, `em_andamento`, `concluida`, `cancelada` |
 | `usuario.papel` | `ADMIN`, `TECNICO`, `OPERADOR` |
+| `push_aparelho.plataforma` | `android`, `ios` |
+| `push_envio.tipo` | `alarme`, `os`, `instrumento` (exatamente um entre `alerta_id` e `ordem_servico_id`: o da OS quando o tipo é `os`) |
+| `push_envio.resultado` | `pendente`, `enviado`, `falhou`, `intervalo`, `sem_destinatario` |
 
 Outras restrições: `alerta` aponta exatamente um entre `ponto_medicao_id` e `canal_id`; medidas de
 vibração e rotação não negativas; `usuario.email` sempre em minúsculas; períodos (`encerrado_em`,
@@ -463,6 +475,8 @@ enlace; baseline versionado; severidade acumulada como tabela, não campo calcul
 | `inferencia (janela_id)` — chave primária; `inferencia (modelo_id)` | opinião da janela; resumo da última hora por modelo |
 | `modelo (maquina_id, simulado) WHERE estado = 'ativo'` — único | uma versão ativa por máquina e tipo de dado |
 | `trabalho_treino (maquina_id, simulado, id DESC)` e o único parcial dos em andamento | lista de trabalhos; um treino por vez |
+| `push_aparelho (token)` — único; `push_aparelho (usuario_id) WHERE ativo` | um registro por aparelho; destinatários do push |
+| `push_envio (tipo, alerta_id)` e `push_envio (ordem_servico_id)` — únicos; `push_envio (ponto_medicao_id, tipo, simulado, criado_em DESC)` | um push por ocorrência; intervalo mínimo por ponto e tipo |
 
 ## Dados iniciais
 

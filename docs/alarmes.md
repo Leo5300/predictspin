@@ -281,6 +281,50 @@ e evento SSE `os`.
 Com z muito alto (como no simulador severo), a severidade passa de 600 z·s poucas janelas depois do alarme e a OS
 abre por severidade antes dos 120 s de ALARME contínuo, sempre depois do alerta.
 
+## Notificação no celular (push)
+
+O app recebe notificação pelo serviço de push do Expo (passo a passo em [`app-push.md`](app-push.md)). Desligado
+por padrão (`ps.push.habilitado`, variável `PUSH_HABILITADO`). Segue a ISA-18.2: só o que exige ação, nunca por
+janela.
+
+| Acontecimento | Quem recebe | Título (com `SIMULADO · ` antes, se o dado é simulado) |
+|---|---|---|
+| Alerta de máquina **entra em ALARME** (abre já em alarme ou piora de atenção para alarme) | todos os usuários ativos com aparelho | `ALARME · TORNO-01 · ponto B` |
+| OS aberta | ADMIN e TECNICO | `OS ABERTA · TORNO-01 · ponto B` |
+| Alerta de instrumento | ADMIN e TECNICO; o texto diz "problema no sensor, não na máquina" | `SENSOR · TORNO-01 · ponto B` |
+
+Não geram push: ATENÇÃO, normalização, reconhecimento, supressão, alerta suprimido que volta a piorar e
+tudo o que nasce durante ensaio de condição (quem está no torno provocou de propósito).
+
+- **Um alarme, um push.** O mesmo alerta não avisa de novo, mesmo que fique em alarme por muitas janelas ou desça
+  para atenção e volte (restrição única em `push_envio`).
+- **Segundo push de propósito.** A OS aberta depois de um alarme gera outro push, para ADMIN e TECNICO: é o
+  escalonamento para quem conserta, e não repetição.
+- **Intervalo por ponto e tipo.** No máximo um push por ponto e tipo (alarme, OS, instrumento) a cada
+  `ps.push.intervalo-min` (15 min; variável `PUSH_INTERVALO_MIN`). Protege contra um alarme que normaliza e reabre
+  em ciclo. O alerta continua abrindo normalmente; só o push é segurado (contado no diagnóstico). Medição de
+  23/11/2026, API local e simulador (`atencao` e `severo`, 288 janelas, cerca de 23 min): nenhum ponto reabriu
+  em ciclo. Dado simulado: prova o encadeamento, não o comportamento no torno.
+- **Conteúdo:** título curto, corpo com o componente provável e a primeira parte da explicação ("Ferramenta e
+  porta-ferramenta: B·RMS 6,1σ acima do típico da marcha 1120. Toque para ver."), e dados para abrir o alarme ou
+  a OS no app (`tipo`, `alerta_id` ou `os_id`, `maquina_id`, `simulado`). Canal Android `alarmes`, prioridade alta.
+  Sem nome de pessoa nem e-mail.
+- **Nunca atrasa a avaliação:** o envio acontece depois do commit, numa thread própria com fila de 200 (cheia,
+  descarta e conta), tempo limite de 5 s por chamada e no máximo uma nova tentativa (rede, 429 ou 5xx). Falha vira
+  log e contador. `DeviceNotRegistered` na resposta desativa o token. O cabeçalho de autorização só vai quando
+  `EXPO_ACCESS_TOKEN` está configurado.
+- **Rotas:** `PUT /api/v1/push/aparelhos` (registra o aparelho do próprio usuário; o mesmo token com outro
+  usuário passa para ele), `POST /api/v1/push/aparelhos/remover` (ao sair; 204 sempre) e
+  `GET /api/v1/push/diagnostico` (só ADMIN: enviados, falhos, tokens desativados, segurados pelo intervalo, sem
+  destinatário, descartados, aparelhos ativos, desde a subida da API).
+- **Limitação:** a API lê só a resposta imediata do Expo (o "ticket"). O `DeviceNotRegistered` que chega depois,
+  no recibo, não é consultado: esse token só é desativado no envio seguinte, se o Expo responder o erro na hora.
+
+Testes com um servidor falso no lugar do Expo (`PushIntegracaoTest`): alarme novo envia uma vez; a mesma
+ocorrência não reenvia; ATENÇÃO, normalização e reconhecimento não enviam; reabertura dentro do intervalo é
+segurada e volta a avisar depois dele; OS e instrumento vão só para ADMIN e TECNICO; `DeviceNotRegistered`
+desativa; serviço fora do ar não muda a avaliação. Nenhum teste chama o serviço real.
+
 ## Perfil de tempos curtos (só para teste)
 
 `application-tempos-curtos.yml` encurta atraso, saída, instrumento e OS para o Playwright do fluxo de

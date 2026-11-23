@@ -75,6 +75,8 @@ public abstract class IntegracaoBase {
         jdbc.update("DELETE FROM modelo");
         jdbc.update("DELETE FROM trabalho_treino");
         inferenciaService.esquecer();
+        jdbc.update("DELETE FROM push_envio");
+        jdbc.update("DELETE FROM push_aparelho");
         jdbc.update("DELETE FROM alerta_historico");
         jdbc.update("DELETE FROM ordem_servico");
         jdbc.update("DELETE FROM alerta");

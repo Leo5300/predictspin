@@ -114,6 +114,8 @@ site). Detalhes em [`painel.md`](painel.md#publicação).
 | `DB_POOL_MAX` | `render.yaml` | `5` |
 | `JAVA_OPTS` | `render.yaml` | limites de memória da JVM (ver abaixo) |
 | `ADMIN_NOME` | `render.yaml` | `Administrador` |
+| `PUSH_HABILITADO` | `render.yaml` | `false`; troque para `true` quando o APK com push estiver instalado ([`app-push.md`](app-push.md)) |
+| `EXPO_ACCESS_TOKEN` | você, opcional | só se a "segurança de push" estiver ligada no painel do Expo; segredo |
 | `JWT_SECRET` | você | segredo do token, no mínimo 32 caracteres |
 | `ADMIN_EMAIL` | você | e-mail do primeiro administrador |
 | `ADMIN_SENHA` | você | senha do primeiro administrador, no mínimo 8 caracteres |
