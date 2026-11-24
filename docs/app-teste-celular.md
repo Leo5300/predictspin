@@ -1,4 +1,4 @@
-# Roteiro de teste do app no celular (parte A)
+# Roteiro de teste do app no celular (partes A e B)
 
 Para conferir no aparelho o que os testes automáticos não alcançam. Faça uma vez no iPhone e uma vez no
 Android. Anote o resultado (ok / falhou + o que viu) nas colunas da direita. Como rodar está em
@@ -41,3 +41,25 @@ Aparelhos usados: iPhone ______ (iOS ____) · Android ______ (versão ____) · D
 | 26 | Leitor de tela (VoiceOver/TalkBack) na Máquina e num alarme | Cada controle tem nome; estado do ponto e do alarme ditos em texto; segurar funciona com "tocar duas vezes e segurar" | Anote o controle sem nome | | |
 | 27 | Conta → Galeria de estados (só em desenvolvimento) | Todos os estados nos dois temas (botão de tema no topo); conferir em 2 minutos | — | | |
 | 28 | Conta → Sair; abra o app | Volta à entrada com o e-mail preenchido e sem sessão | — | | |
+
+## Push de alarme (parte B)
+
+No Expo Go só dá para conferir a primeira linha. O resto pede o APK do perfil `preview` instalado no Android
+(no iPhone não há push: ver [`app.md`](app.md#o-que-o-expo-go-não-tem)) e
+`PUSH_HABILITADO=true` na API do Render, seguindo [`app-push.md`](app-push.md). O simulador fica apontado para
+a API do Render, em modo severo.
+
+| # | Faça | Esperado | Se não acontecer | iPhone | Android |
+|---|---|---|---|---|---|
+| P1 | No Expo Go dos dois celulares, entre e abra Conta | Nenhum pedido de notificação; em Conta, "Notificações indisponíveis neste modo." com o porquê | Anote o texto | | |
+| P2 | No APK, entre pela primeira vez | Quadro no topo "Avisar neste celular quando houver alarme?" com o que chega; nenhuma janela do sistema ainda | Anote se a janela do sistema veio antes do quadro | — | |
+| P3 | Toque em "Permitir" e aceite na janela do sistema | O quadro some; Conta mostra "Ligadas." (ou o aviso de envio desligado na API) | Anote o texto da Conta | — | |
+| P4 | Com o app em segundo plano, deixe um ponto entrar em alarme | Chega "SIMULADO · ALARME · TORNO-01 · ponto …", com som e vibração do canal "Alarmes" | Anote quanto tempo levou | — | |
+| P5 | Toque na notificação | Abre o detalhe daquele alarme, com a fonte em Simulado | Anote a tela que abriu | — | |
+| P6 | Deixe o mesmo alarme continuar por vários minutos | Nenhum push novo para o mesmo alarme | Anote quantos chegaram | — | |
+| P7 | Com o app aberto em Máquina e a fonte em Simulado, provoque um alarme novo | Faixa da notificação no topo, sem som; o aviso do app também aparece | — | — | |
+| P8 | Ligue a biometria, feche o app, provoque um alarme e toque na notificação | Pede a digital; depois de destravar, abre o alarme | Anote se abriu a Máquina em vez do alarme | — | |
+| P9 | Como TECNICO, deixe abrir uma OS | Chega "SIMULADO · OS ABERTA · …"; o toque abre a lista de alarmes (a aba OS ainda não existe) | — | — | |
+| P10 | Conta → Sair; provoque outro alarme | Nada chega neste celular | Anote se chegou | — | |
+| P11 | Desinstale, instale de novo, entre e toque em "Agora não" | O quadro some e não volta ao abrir de novo; Conta oferece "Ligar notificações" | — | — | |
+| P12 | Configurações do Android → PredictSpin → desligue as notificações; volte ao app | Conta: "Desligadas nas configurações do celular." e "Abrir configurações" leva até lá | — | — | |

@@ -2,8 +2,9 @@
 
 O app é um cliente da API, como o painel: nenhum dado falso dentro dele e nenhuma regra de alarme
 recalculada nele. A API é a autoridade de tudo (estado, permissão, limites, textos de motivo). Esta parte
-A traz a fundação, a entrada com sessão e biometria, a tela da máquina, os alarmes e a conta. OS, Coleta,
-notificações e "Modelos da IA" ficam para a parte B.
+A traz a fundação, a entrada com sessão e biometria, a tela da máquina, os alarmes e a conta. A parte B
+começa pelo push de alarme no celular ([`app-push.md`](app-push.md)); OS, Coleta e "Modelos da IA" vêm em
+seguida.
 
 **Situação (22/11/2026):** compila, passa nos testes automáticos e monta o bundle Android de produção.
 **Nada foi testado num celular**: tudo que depende do aparelho (Expo Go, biometria, haptics, fontes, tema,
@@ -19,7 +20,9 @@ teclado, gesto de segurar, eventos ao vivo pela rede) está no roteiro
 | Alarmes: lista ao vivo, detalhe, linha do tempo, segunda opinião | sim | sim | sim |
 | Reconhecer alarme (segurando 1,5 s) | sim | sim | sim |
 | Suprimir e cancelar supressão (motivo e prazo da API) | — | — | sim |
-| Conta: usuário, tema, fonte dos dados, biometria, versões, sair | sim | sim | sim |
+| Conta: usuário, tema, fonte dos dados, biometria, notificações, versões, sair | sim | sim | sim |
+| Notificação (push) de alarme novo | sim | sim | sim |
+| Notificação (push) de OS aberta e de problema de sensor | — | sim | sim |
 
 O mapa de quem pode o quê está em [`mobile/src/dominio/permissoes.ts`](../mobile/src/dominio/permissoes.ts),
 copiado da `SegurancaConfig` da API, com teste. O app só esconde o que o papel não pode; a API continua
@@ -36,6 +39,7 @@ telas e cada ponto e alarme leva o selo SIM.
 |---|---|---|
 | Cliente da API | `src/api/cliente.ts`, `esquema.d.ts` | openapi-fetch tipado pelo esquema gerado de `painel/openapi.json` com o mesmo gerador do painel (`npm run api:tipos`; `npm run api:conferir` falha se o esquema não bate com o contrato). Token no cabeçalho, 401 encerra a sessão, 75 s de limite por chamada. |
 | Sessão | `src/api/sessao.ts`, `autenticacao.ts` | Token JWT e a hora em que vence no SecureStore. Ao abrir: sem token, entrada; vencido, entrada com "Sua sessão expirou"; biometria ligada, tela de destravar; senão confere em `/auth/eu`. A sessão encerra sozinha na hora do vencimento. |
+| Push | `src/api/push.ts`, `dominio/notificacao.ts`, `hooks/useNotificacoes.ts` | `expo-notifications`, carregado só fora do Expo Go. Pedido depois do login com uma frase do porquê; canal Android `alarmes` antes da permissão; token do Expo registrado na API a cada sessão e removido ao sair, antes de apagar a sessão; toque abre o alarme (mesmo com a sessão travada, depois de destravar). Detalhes e passos manuais em [`app-push.md`](app-push.md). |
 | Biometria | `src/api/biometria.ts` | `expo-local-authentication` só destrava o token guardado; senha nunca é guardada. No primeiro login com biometria cadastrada, pergunta uma vez "Usar digital/rosto para entrar?". Desliga em Conta. |
 | Eventos ao vivo | `src/api/eventos.ts`, `hooks/useEventosAoVivo.ts` | A rota SSE do painel, lida pelo `fetch` do Expo (no celular, `expo/fetch` é o fetch global e lê a resposta em pedaços), com o token no cabeçalho, nunca na URL. Uma conexão para o app inteiro. Reconecta com 1, 2, 4, 8, 15 e 30 s (como o painel) e, enquanto isso, consulta a cada 5 s. App em segundo plano: fecha a conexão e para as consultas; ao voltar, reconecta e recarrega tudo. |
 | Servidor que dorme | `src/api/saude.ts`, `dominio/conexao.ts` | Falha de rede com o celular conectado é "acordando o servidor, aguarde", com sondas em `/actuator/health` (2, 3, 5, 8, 10 e 15 s); a entrada tenta de novo sozinha. Depois de 150 s falhando, "sem conexão". Sem rede no aparelho (expo-network), "sem conexão" na hora. |
@@ -127,6 +131,18 @@ npm run fumaca           # com o compose e o simulador no ar: entra, lê máquin
 - Fumaça (`node scripts/fumaca.mjs`) contra a API local do compose com o simulador em modo severo: entrou,
   leu a máquina, a última janela simulada (3 s de idade) e 9 alarmes simulados, e reconheceu um (ativo não
   reconhecido → ativo reconhecido). Dado simulado: prova o encadeamento, não a detecção real.
+
+## O que o Expo Go não tem
+
+Conferido na documentação do Expo para a SDK 58 (23/11/2026):
+
+- **Push remoto: em nenhum sistema.** "In SDK 53 and later, Expo Go does not support push notifications
+  functionality" (FAQ de notificações do Expo). No Expo Go, a Conta mostra "Notificações indisponíveis neste
+  modo." e o resto do app funciona igual. Notificação local funcionaria, mas o app não usa.
+- **Android:** push só no APK do perfil `preview` (EAS Build com Firebase e credencial FCM V1), seguindo
+  [`app-push.md`](app-push.md).
+- **iPhone:** push só num build próprio, que exige a conta paga do Apple Developer Program; fora deste projeto.
+  No Expo Go do iPhone também não há Face ID (ver "Limitações").
 
 ## O que fica fora do app e por quê
 

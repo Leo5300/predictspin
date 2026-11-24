@@ -4,12 +4,14 @@ import { Platform, View } from 'react-native'
 
 import { useSessao } from '@/api/sessao'
 import { AvisoNoTopo, BarraSuperior } from '@/componentes/Casca'
+import { PedidoDeNotificacao } from '@/componentes/PedidoDeNotificacao'
 import { podeVerAba, type Aba } from '@/dominio/permissoes'
 import { useFonte } from '@/estado/preferencias'
 import { useCores } from '@/hooks/basicos'
 import { useUltimaJanela } from '@/hooks/useDadosDaMaquina'
 import { useEventosAoVivo } from '@/hooks/useEventosAoVivo'
 import { useMaquinaAtual } from '@/hooks/useMaquinaAtual'
+import { useNotificacoes } from '@/hooks/useNotificacoes'
 
 type NomeDoIcone = keyof typeof MaterialCommunityIcons.glyphMap
 
@@ -31,12 +33,13 @@ function Icone({ aba }: { aba: keyof typeof ICONES }) {
 
 /**
  * Abas nativas (só as que o papel enxerga): Máquina, Alarmes e Conta; OS e Coleta entram na parte B.
- * Em cima, fixa, a barra de conexão e da última janela. Uma conexão de eventos ao vivo serve o app
- * inteiro. A troca de aba não anima.
+ * Em cima, fixa, a barra de conexão e da última janela, e o pedido de notificação enquanto não for
+ * respondido. Uma conexão de eventos ao vivo serve o app inteiro. A troca de aba não anima.
  */
 export default function LayoutAbas() {
   const sessao = useSessao()
   const papel = sessao.fase === 'autenticada' ? sessao.usuario.papel : null
+  useNotificacoes(sessao.fase === 'autenticada' ? sessao.usuario.id : undefined)
   const simulado = useFonte() === 'simulado'
   const maquina = useMaquinaAtual()
   const cores = useCores()
@@ -47,6 +50,7 @@ export default function LayoutAbas() {
   return (
     <View className="flex-1 bg-fundo">
       <BarraSuperior idadeDaUltimaJanelaS={idadeS} />
+      {papel ? <PedidoDeNotificacao papel={papel} /> : null}
       <View className="flex-1">
         <NativeTabs
           backgroundColor={cores.modulo}

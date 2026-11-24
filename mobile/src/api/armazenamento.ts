@@ -1,6 +1,7 @@
 /**
  * Tudo que o app guarda no aparelho, e só isto (LGPD: o necessário): o token da sessão com a hora em
- * que vence, o e-mail para preencher a entrada, a preferência de tema e se a biometria está ligada.
+ * que vence, o e-mail para preencher a entrada, a preferência de tema, se a biometria está ligada e se a
+ * pessoa adiou o pedido de notificação. O token de push não fica guardado: o Expo o entrega a cada sessão.
  * Fica no SecureStore (Keychain no iPhone, Keystore no Android), nunca em AsyncStorage. Senha nunca.
  */
 import * as SecureStore from 'expo-secure-store'
@@ -10,6 +11,7 @@ export const CHAVES = {
   email: 'ps.email',
   tema: 'ps.tema',
   biometria: 'ps.biometria',
+  notificacoes: 'ps.notificacoes',
 } as const
 
 export type Chave = (typeof CHAVES)[keyof typeof CHAVES]

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import Constants from 'expo-constants'
 import { router } from 'expo-router'
 import { useEffect, useState, type ReactNode } from 'react'
-import { Pressable, ScrollView, View } from 'react-native'
+import { Linking, Pressable, ScrollView, View } from 'react-native'
 
 import { sair } from '@/api/autenticacao'
 import {
@@ -12,11 +12,13 @@ import {
   nomeDaBiometria,
 } from '@/api/biometria'
 import { ENDERECO_DA_API, URL_API } from '@/api/configuracao'
+import { atualizarRegistro, pedirPermissao, useEstadoDoPush } from '@/api/push'
 import { useSessao } from '@/api/sessao'
 import { ALVO_DE_TOQUE, Botao, Modulo } from '@/componentes/Basicos'
 import { Cabecalho } from '@/componentes/Casca'
 import { Texto } from '@/componentes/Texto'
-import { ROTULO_PAPEL } from '@/dominio/permissoes'
+import { resumoDoPush } from '@/dominio/notificacao'
+import { ROTULO_PAPEL, type Papel } from '@/dominio/permissoes'
 import {
   definirFonte,
   definirTema,
@@ -71,6 +73,57 @@ function Par({ rotulo, children }: { rotulo: string; children: ReactNode }) {
   )
 }
 
+/** Notificações deste celular: o estado e, quando cabe, o botão que resolve. */
+function ModuloNotificacoes({ papel }: { papel: Papel }) {
+  const estado = useEstadoDoPush()
+  const [ocupado, setOcupado] = useState(false)
+  const resumo = resumoDoPush(estado, papel)
+  const agir = (acao: () => Promise<void>) => {
+    setOcupado(true)
+    void acao().finally(() => setOcupado(false))
+  }
+  return (
+    <Modulo rotulo="Notificações" testID="modulo-notificacoes">
+      <Texto peso="medio" testID="estado-notificacoes">
+        {resumo.texto}
+      </Texto>
+      {resumo.detalhe ? (
+        <Texto tamanho="13" tom="apoio" className="mt-1">
+          {resumo.detalhe}
+        </Texto>
+      ) : null}
+      {resumo.acao === 'ligar' ? (
+        <View className="mt-3">
+          <Botao
+            titulo="Ligar notificações"
+            carregando={ocupado}
+            dica="Abre o pedido de permissão do sistema"
+            onPress={() => agir(pedirPermissao)}
+            testID="ligar-notificacoes"
+          />
+        </View>
+      ) : resumo.acao === 'configuracoes' ? (
+        <View className="mt-3">
+          <Botao
+            titulo="Abrir configurações"
+            onPress={() => void Linking.openSettings()}
+            testID="abrir-configuracoes"
+          />
+        </View>
+      ) : resumo.acao === 'tentar' ? (
+        <View className="mt-3">
+          <Botao
+            titulo="Tentar de novo"
+            carregando={ocupado}
+            onPress={() => agir(atualizarRegistro)}
+            testID="tentar-notificacoes"
+          />
+        </View>
+      ) : null}
+    </Modulo>
+  )
+}
+
 /** Saúde da API (/actuator/health). A API não publica a versão dela; só o estado. */
 function useSaudeDaApi() {
   return useQuery({
@@ -89,7 +142,7 @@ function useSaudeDaApi() {
   })
 }
 
-/** Conta: usuário e papel, tema, fonte dos dados, biometria, versões e sair. */
+/** Conta: usuário e papel, tema, fonte dos dados, biometria, notificações, versões e sair. */
 export function TelaConta() {
   const sessao = useSessao()
   const tema = usePreferenciaTema()
@@ -176,6 +229,7 @@ export function TelaConta() {
             <Texto tom="apoio">Este aparelho não tem digital ou rosto cadastrados.</Texto>
           )}
         </Modulo>
+        <ModuloNotificacoes papel={usuario.papel} />
         <Modulo rotulo="Versões">
           <Par rotulo="App">{Constants.expoConfig?.version ?? '—'}</Par>
           <Par rotulo="API">

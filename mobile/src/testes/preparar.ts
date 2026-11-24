@@ -1,6 +1,6 @@
 /**
  * Preparação dos testes (jest-expo). Os módulos nativos viram simulações em memória: SecureStore,
- * biometria, haptics, rede e o Uniwind. Nada daqui vai para o app.
+ * biometria, haptics, notificações, rede e o Uniwind. Nada daqui vai para o app.
  */
 
 // endereço de desenvolvimento na rede local, como no celular com a API do docker compose
@@ -38,6 +38,20 @@ jest.mock('expo-haptics', () => ({
   notificationAsync: jest.fn(async () => undefined),
   impactAsync: jest.fn(async () => undefined),
   NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}))
+
+// push: permissão ainda não perguntada; o token e as respostas de toque são trocados em cada teste
+jest.mock('expo-notifications', () => ({
+  DEFAULT_ACTION_IDENTIFIER: 'expo.modules.notifications.actions.DEFAULT',
+  AndroidImportance: { DEFAULT: 5, HIGH: 6 },
+  setNotificationHandler: jest.fn(),
+  setNotificationChannelAsync: jest.fn(async () => null),
+  getPermissionsAsync: jest.fn(async () => ({ granted: false, status: 'undetermined', canAskAgain: true, expires: 'never' })),
+  requestPermissionsAsync: jest.fn(async () => ({ granted: true, status: 'granted', canAskAgain: true, expires: 'never' })),
+  getExpoPushTokenAsync: jest.fn(async () => ({ type: 'expo', data: 'ExponentPushToken[teste]' })),
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  getLastNotificationResponseAsync: jest.fn(async () => null),
+  clearLastNotificationResponseAsync: jest.fn(async () => undefined),
 }))
 
 jest.mock('expo-network', () => ({

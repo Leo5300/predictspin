@@ -10,6 +10,7 @@ import {
 } from './biometria'
 import { api, exigir } from './cliente'
 import { ErroApi } from './erros'
+import { removerAparelho } from './push'
 import {
   AVISO_SESSAO_EXPIRADA,
   confirmarSessao,
@@ -91,11 +92,14 @@ export async function destravar(agoraMs = Date.now()): Promise<boolean> {
 }
 
 /**
- * Sair: apaga o token e a preferência de biometria do aparelho e limpa o cache das consultas
+ * Sair: primeiro tira este celular do push da conta (com o token da sessão ainda valendo); depois apaga
+ * o token, a preferência de biometria e o "agora não" das notificações, e limpa o cache das consultas
  * (aoEncerrarSessao). Ficam só o e-mail lembrado e o tema escolhido.
  */
 export async function sair(): Promise<void> {
+  await removerAparelho()
   await esquecerPreferenciaBiometria()
+  await apagar(CHAVES.notificacoes)
   await encerrarSessao(null)
 }
 

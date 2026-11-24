@@ -41,3 +41,8 @@ example
 # generated native folders
 /ios
 /android
+
+# Firebase: o google-services.json vai para o EAS como variável de arquivo; a chave da conta de serviço
+# (FCM V1) vai só para as credenciais do EAS. Nenhum dos dois entra no Git.
+google-services.json
+*firebase-adminsdk*.json

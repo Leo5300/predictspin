@@ -37,6 +37,14 @@
       ],
       "expo-secure-store",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notificacao.png",
+          "color": "#2e2e2e",
+          "defaultChannel": "alarmes"
+        }
+      ],
+      [
         "expo-local-authentication",
         {
           "faceIDPermission": "O PredictSpin usa o Face ID para destravar a sessão guardada neste aparelho."
