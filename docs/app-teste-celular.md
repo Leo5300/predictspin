@@ -39,8 +39,65 @@ Aparelhos usados: iPhone ______ (iOS ____) · Android ______ (versão ____) · D
 | 24 | Conta → Tema "Escuro", depois "Claro", depois "Sistema" | Troca na hora; grafite sem preto puro; claro cinza sem branco puro; barra de status legível | — | | |
 | 25 | Fonte do sistema no maior tamanho (até 130% vale; acima o app limita) | Nada sobrepõe nem corta valor; textos quebram linha | Print da tela que quebrou | | |
 | 26 | Leitor de tela (VoiceOver/TalkBack) na Máquina e num alarme | Cada controle tem nome; estado do ponto e do alarme ditos em texto; segurar funciona com "tocar duas vezes e segurar" | Anote o controle sem nome | | |
-| 27 | Conta → Galeria de estados (só em desenvolvimento) | Todos os estados nos dois temas (botão de tema no topo); conferir em 2 minutos | — | | |
+| 27 | Conta → Galeria de estados (só em desenvolvimento) | Todos os estados nos dois temas (botão de tema no topo), inclusive os da parte B: OS em cada estado, coleta pronta/com avisos/bloqueada/gravando com saturadas, tendência com buraco, modelo sem métricas, notificações em cada estado; conferir em 3 minutos | Print do estado que quebrou | | |
 | 28 | Conta → Sair; abra o app | Volta à entrada com o e-mail preenchido e sem sessão | — | | |
+
+## Tendência do ponto (parte B)
+
+Simulador em modo severo, fonte Simulado. Funciona no Expo Go.
+
+| # | Faça | Esperado | Se não acontecer | iPhone | Android |
+|---|---|---|---|---|---|
+| G1 | Máquina → toque num ponto; role até "Tendência do RMS" | Linha contínua cinza; faixa normal sombreada; linhas finas de atenção e alarme; legenda com a marcha e a etapa da referência | Anote se a faixa não apareceu e o texto no lugar dela | | |
+| G2 | Troque 15 min, 1 h, 8 h e 24 h | Cada período carrega; 8 h e 24 h mais suaves (média do intervalo) | Anote o período que demorou ou falhou | | |
+| G3 | Arraste o dedo na horizontal sobre o gráfico | Cursor com valor em g e hora; arrastar na vertical rola a tela | Anote se a tela rolou junto | | |
+| G4 | Pare o simulador por 1 min e ligue de novo; volte ao período de 15 min | Buraco na linha no tempo parado, sem traço ligando as pontas | Print | | |
+| G5 | Deixe o ponto entrar em atenção e em alarme | Marcas ▲ âmbar e ◆ vermelhas só nos instantes em desvio; o resto da linha fica cinza | — | | |
+| G6 | Leitor de tela no gráfico; deslize para cima e para baixo | Diz o resumo (faixa, último valor, instantes em desvio) e anda pelas amostras | Anote o que disse | | |
+
+## Ordens de serviço (parte B)
+
+Precisa de OS simulada aberta: simulador em modo severo por uns 3 min (a OS abre com 120 s seguidos em ALARME).
+
+| # | Faça | Esperado | Se não acontecer | iPhone | Android |
+|---|---|---|---|---|---|
+| O1 | Aba OS | Abertas sem dono no topo (borda grossa à esquerda e "ninguém assumiu" em destaque, sem cor), depois as com dono, em andamento e concluídas; cada linha com máquina, ponto, componente, há quanto tempo, quem assumiu e SIM | Anote a ordem que viu | | |
+| O2 | Troque o filtro de status | A lista muda (a API filtra); lista vazia diz quando a API abre uma OS | — | | |
+| O3 | Abra uma OS | Alarme de origem com valores; tendência do ponto 15 min antes e depois da abertura; componente provável; segunda opinião (abertura e mais recente) com "Segunda opinião, não muda a OS." quando houver modelo ativo | — | | |
+| O4 | Como OPERADOR, abra a mesma OS | Sem "Assumir" nem "Concluir…", com o porquê | — | | |
+| O5 | Como TECNICO, "Assumir" | Pede confirmação; confirmando, vira "em andamento" com você como responsável | Anote a mensagem | | |
+| O6 | "Concluir…": sem escolher o retorno, tente segurar | O botão de segurar fica desligado e diz o que falta | — | | |
+| O7 | Escolha o retorno, a condição e escreva uma observação; segure 1,5 s | Antes de segurar, a linha "Sua resposta ensina o modelo…"; depois, "concluída" com o retorno | Anote o estado | | |
+| O8 | No detalhe do alarme de origem, toque na OS | Abre o detalhe da OS | — | | |
+
+## Coleta (parte B)
+
+ADMIN ou TECNICO. Simulador em modo normal (`--modo normal`), fonte Simulado. O ensaio gravado no simulado
+fica marcado como simulado na API.
+
+| # | Faça | Esperado | Se não acontecer | iPhone | Android |
+|---|---|---|---|---|---|
+| C1 | Com o simulador parado, abra a aba Coleta | Pré-voo com A, B, C, FC-51 e rotação em "✕ sem dado vivo"; o REC tracejado diz por que não grava | — | | |
+| C2 | Ligue o simulador | As linhas reaparecem em sequência com ✓; o REC fica vermelho | Anote a linha que não ficou ✓ | | |
+| C3 | Confira as escolhas | Começa pela próxima gravação sugerida; condição só no T3; T0 a 0 rpm; materiais e ferramentas do catálogo | — | | |
+| C4 | Toque em REC | Vibração média; vira "GRAVANDO" com cronômetro em matriz de pontos, janelas contando e a fita ganhando um traço por janela | — | | |
+| C5 | Abra o painel e tente abrir outro ensaio na mesma máquina | O painel mostra a recusa da API (um ensaio aberto por máquina) | — | | |
+| C6 | "Marcar evento" → um motivo | Aviso "Evento marcado: …" | — | | |
+| C7 | Bloqueie a tela do celular por 1 min e volte | A gravação seguiu: cronômetro e janelas pelo estado real da API | Anote se voltou zerado | | |
+| C8 | "Segure para encerrar" até o fim | Vibração leve; volta a preparar; a célula da cobertura carimba "+1" | — | | |
+| C9 | Grave outro e use "Segure para descartar" | Volta a preparar, sem carimbo | — | | |
+| C10 | Com o modo severo (saturação depende da intensidade do simulador), olhe a fita | Janela saturada é um traço alto e hachurado; o contador mostra "· N saturadas" | Anote se nenhuma saturou (o simulador pode não saturar) | | |
+
+## Modelos da IA (parte B)
+
+Só ADMIN. Precisa de versão treinada no painel (Treinar fica só no painel).
+
+| # | Faça | Esperado | Se não acontecer | iPhone | Android |
+|---|---|---|---|---|---|
+| M1 | Como TECNICO, abra Conta | Sem o atalho "Modelos da IA" | — | | |
+| M2 | Como ADMIN, Conta → Modelos da IA | Ativa primeiro, depois candidatas e arquivadas; quem treinou e quem ativou | — | | |
+| M3 | Abra uma versão | O aviso da validação (vaza pela referência; ativar só depois de medir memória no Render) acima das métricas; F1, recall por classe, matriz e regra × Isolation Forest; validação sem métricas diz o motivo | — | | |
+| M4 | "Ativar…" numa candidata | Frase de consequência (a ativa vira arquivada; o modelo não muda estado nem prioridade de alarme); segurando 1,5 s, a versão vira ativa | Anote a mensagem da API | | |
 
 ## Push de alarme (parte B)
 

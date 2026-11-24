@@ -1,15 +1,16 @@
-# Aplicativo (React Native, `mobile/`): parte A
+# Aplicativo (React Native, `mobile/`): partes A e B
 
 O app é um cliente da API, como o painel: nenhum dado falso dentro dele e nenhuma regra de alarme
-recalculada nele. A API é a autoridade de tudo (estado, permissão, limites, textos de motivo). Esta parte
-A traz a fundação, a entrada com sessão e biometria, a tela da máquina, os alarmes e a conta. A parte B
-começa pelo push de alarme no celular ([`app-push.md`](app-push.md)); OS, Coleta e "Modelos da IA" vêm em
-seguida.
+recalculada nele. A API é a autoridade de tudo (estado, permissão, limites, textos de motivo). A parte A
+trouxe a fundação, a entrada com sessão e biometria, a tela da máquina, os alarmes e a conta. A parte B
+trouxe o push de alarme no celular ([`app-push.md`](app-push.md)), a tendência do ponto, as ordens de
+serviço, a coleta ao lado do torno e os modelos da IA (só ADMIN).
 
-**Situação (22/11/2026):** compila, passa nos testes automáticos e monta o bundle Android de produção.
-**Nada foi testado num celular**: tudo que depende do aparelho (Expo Go, biometria, haptics, fontes, tema,
-teclado, gesto de segurar, eventos ao vivo pela rede) está no roteiro
-[`app-teste-celular.md`](app-teste-celular.md), com as colunas de resultado vazias.
+**Situação (24/11/2026):** compila, passa nos testes automáticos, roda a fumaça contra a API local e monta o
+bundle Android de produção. **Nada foi testado num celular, e o push nunca foi enviado de verdade**: tudo que
+depende do aparelho (Expo Go, APK, biometria, haptics, fontes, tema, teclado, gesto de segurar, arrasto no
+gráfico, eventos ao vivo pela rede, notificação) está no roteiro [`app-teste-celular.md`](app-teste-celular.md),
+com as colunas de resultado vazias.
 
 ## O que o app faz, por papel
 
@@ -85,7 +86,11 @@ haptics de aviso, sem som. Troca de aba sem animação (abas nativas).
 
 **Galeria de estados** (só em desenvolvimento: Conta → "Galeria de estados"): cada componente em cada estado
 (normal, atenção, alarme, sem referência, calibração diferente, não avaliável, velho, sem dados, simulado,
-instrumento, texto longo, valor máximo de ±16 g), com botão para trocar de tema. A CI confere que a galeria e os
+instrumento, texto longo, valor máximo de ±16 g), as linhas de alarme e, da parte B, a OS em cada estado
+(aberta sem dono, com dono, em andamento, concluída, cancelada), a coleta (pré-voo pronto, com avisos e
+bloqueado; REC abrindo; gravando com janelas saturadas; célula carimbada), a tendência com buraco de dado, a
+validação de modelo sem métricas e o módulo Notificações em cada estado, com botão para trocar de tema. Um teste
+(`src/galeria/galeria.test.tsx`) monta a galeria inteira. A CI confere que a galeria e os
 exemplos de teste ficam fora do bundle de produção (`scripts/conferir-bundle.mjs`).
 
 ## Como rodar
@@ -124,10 +129,27 @@ npm run test:cobertura   # Jest com a meta de 85% de linhas em src/dominio e src
 npm run api:tipos        # regenera src/api/esquema.d.ts e src/api/enumeracoes.ts de painel/openapi.json
 npm run api:conferir     # falha se o esquema ou as enumerações não batem com o contrato
 npm run tema             # regenera src/tema a partir de painel/src/index.css
-npm run fumaca           # com o compose e o simulador no ar: entra, lê máquina e alarmes, reconhece um simulado
+npm run fumaca           # com o compose e o simulador no ar: entra, lê máquina e alarmes, reconhece um simulado,
+                         # abre e encerra um ensaio simulado, assume e conclui uma OS simulada
 ```
 
-## Medições desta parte (22/11/2026, no notebook, Windows 11, Node 24.14)
+## Medições da parte B (24/11/2026, no notebook, Windows 11, Node 24.14)
+
+- Jest: **199 testes em 19 suítes, nenhuma falha** (`npm run test:cobertura`, cache limpo). Cobertura de linhas:
+  `src/api` **99,40 %**, `src/dominio` **99,77 %** (meta 85 %). Em 5 rodadas com o cache limpo, uma teve a suíte
+  de notificações caindo inteira; a causa não foi capturada e não se repetiu (ver "Limitações").
+- `npm run typecheck`, `npm run lint`, `npm run api:conferir` e `npm run tema:conferir`: sem erro.
+- `npx expo-doctor`: 20/20 verificações.
+- `npx expo export --platform android`: bundle Hermes de 5.160.873 bytes, sem a galeria e sem os exemplos de
+  teste (`scripts/conferir-bundle.mjs`).
+- Fumaça contra a API local do compose com o simulador em modo severo, uma execução: 13 de 13 passos. Além do
+  que a parte A fazia, abriu um ensaio simulado (T1 normal a 1120 rpm), confirmou que o segundo ensaio na mesma
+  máquina é recusado (409), marcou um evento, encerrou (2 janelas, 12 s) e assumiu e concluiu uma OS simulada
+  (aberta → em andamento → concluída). Dado simulado: prova o encadeamento, não a detecção real.
+- API (push e σ efetivo): `./mvnw verify` com 397 testes e nenhuma falha; JaCoCo 96,85 % das linhas. Os testes
+  de push usam um servidor falso no lugar do serviço do Expo; **nenhum push real foi enviado**.
+
+## Medições da parte A (22/11/2026, no notebook, Windows 11, Node 24.14)
 
 - Jest: **92 testes, nenhuma falha** (`npm run test:cobertura`). Cobertura de linhas: `src/dominio` **100 %**,
   `src/api` **96,63 %** (meta 85 %).
@@ -162,11 +184,23 @@ ver o estado agora e responder a um alarme.
 
 - **Nada testado em celular** (ver o roteiro). Compilar o bundle não é testar no aparelho.
 - **Face ID no Expo Go do iPhone não funciona** (o Expo Go não declara a permissão); o sistema cai na senha do
-  aparelho. A digital no Android funciona no Expo Go. O Face ID de verdade só num build próprio (parte B).
+  aparelho. A digital no Android funciona no Expo Go. O Face ID de verdade só num build próprio do iPhone, que pede a conta paga do Apple Developer Program (fora
+  deste projeto).
 - No iOS 26, as abas nativas usam o vidro do sistema ("Liquid Glass"); o app não tem como desligar isso no
   Expo Go.
 - O mock oficial do Reanimated 4.7.1 não carrega no jest-expo; os testes usam uma simulação mínima
   (`src/testes/reanimadoSimulado.tsx`). A lógica de segurar para confirmar é testada (temporizador), a animação
   não.
 - A API não publica a própria versão; Conta mostra só se o `/actuator/health` responde UP.
-- O detalhe da OS ligada a um alarme mostra só o número (a tela de OS é da parte B).
+- Pré-voo da Coleta: o FC-51 é julgado pela rotação da janela (a API não manda um campo próprio do sensor);
+  rotação zero em T1 a T3 vira aviso "nenhuma volta contada", não bloqueio. Só falta de dado vivo bloqueia,
+  como no painel.
+- A fita da Coleta mostra as últimas 48 janelas do ensaio (lidas da última página da API), não o ensaio todo.
+- Push: a API lê só o ticket do serviço do Expo, não o recibo; um token que o Expo recuse depois do ticket não
+  é desativado na hora. Sessão que vence sozinha não remove o aparelho (sem token válido para a chamada); a
+  remoção acontece ao sair.
+- Testes: numa de 5 rodadas do Jest com o cache limpo, a suíte `notificacoes.test.tsx` caiu inteira (os outros
+  188 testes passaram). Não se repetiu em 4 rodadas seguidas, nem com a suíte sozinha com o cache frio; a
+  mensagem não foi guardada. Se a CI falhar nela, a saída completa do Jest é o ponto de partida.
+- O gráfico de tendência desenha a faixa da referência em uso agora no período todo; se a referência mudou no
+  meio do período, a faixa antiga não aparece.
