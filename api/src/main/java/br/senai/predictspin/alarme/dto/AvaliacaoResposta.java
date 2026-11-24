@@ -43,6 +43,9 @@ public record AvaliacaoResposta(
             double valor,
             @Schema(description = "Mediana da referência") @Nullable Double tipico,
             @Nullable Double z,
-            @Schema(description = "Diferença em % em relação ao típico") @Nullable Double diferencaPct) {
+            @Schema(description = "Diferença em % em relação ao típico") @Nullable Double diferencaPct,
+            @Schema(description = "σ efetivo da célula da referência usada (nulo sem referência). Com o típico e os "
+                    + "limites em z dá a faixa na unidade da medida: típico + z × σ efetivo")
+            @Nullable Double sigmaEfetivo) {
     }
 }

@@ -2118,6 +2118,14 @@
             ],
             "type": "string"
           },
+          "sigma_efetivo": {
+            "description": "σ efetivo da célula da referência usada (nulo sem referência). Com o típico e os limites em z dá a faixa na unidade da medida: típico + z × σ efetivo",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
           "tipico": {
             "description": "Mediana da referência",
             "format": "double",
@@ -2141,6 +2149,7 @@
         "required": [
           "diferenca_pct",
           "medida",
+          "sigma_efetivo",
           "tipico",
           "valor",
           "z"

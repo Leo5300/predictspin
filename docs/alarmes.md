@@ -157,8 +157,9 @@ janelas sem janela zera os temporizadores. Estado da máquina = pior estado entr
 
 **Explicação:** as 3 medidas/pontos de maior z, em texto pronto ("B·RMS 4,2σ acima do típico da marcha
 1120"). Quando só um ponto saiu do normal, acrescenta "Se só este ponto mudou, confira também a fixação
-do sensor." `GET /api/v1/maquinas/{id}/avaliacao` dá o detalhe da última janela (z, típico e % de cada
-medida); cada ponto das janelas (listas, última janela e evento `janela`) traz a avaliação compacta, e a
+do sensor." `GET /api/v1/maquinas/{id}/avaliacao` dá o detalhe da última janela (z, típico, % e σ efetivo da célula
+usada, em cada medida; com o σ efetivo e os limites em z, o app desenha a faixa normal na unidade da medida:
+típico ± z-atenção × σ, alarme em típico + z-alarme × σ); cada ponto das janelas (listas, última janela e evento `janela`) traz a avaliação compacta, e a
 série agregada traz o maior z de cada intervalo (`z_max`), usado pelo mapa de ordens.
 
 **Severidade acumulada:** S += max(0, zMax − z-atenção) × duração da janela (z·s), por ponto e dia em

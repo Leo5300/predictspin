@@ -387,11 +387,13 @@ public class AvaliacaoService {
                     continue;
                 }
                 Double z = p.z().get(m);
-                Double tipico = z == null ? null : celulasDoPonto.apply(m).map(CelulaGravada::mediana).orElse(null);
+                Optional<CelulaGravada> celula = z == null ? Optional.empty() : celulasDoPonto.apply(m);
+                Double tipico = celula.map(CelulaGravada::mediana).orElse(null);
+                Double sigmaEfetivo = celula.map(CelulaGravada::sigmaEfetivo).orElse(null);
                 Explicacao.Item item = tipico == null ? null : new Explicacao.Item(p.ponto(), m, z, valor, tipico,
                         marcha);
                 medidas.add(new AvaliacaoResposta.MedidaAvaliada(m, valor, tipico, z,
-                        item == null ? null : item.diferencaPct()));
+                        item == null ? null : item.diferencaPct(), sigmaEfetivo));
                 if (item != null) {
                     todos.add(item);
                 }

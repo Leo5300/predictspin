@@ -1,6 +1,7 @@
 package br.senai.predictspin.alarme;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -47,6 +48,13 @@ class AvaliacaoIntegracaoTest extends AlarmeIntegracaoBase {
         assertThat(pontoB.get("ponto").asText()).isEqualTo("B");
         assertThat(pontoB.get("etapa_ref").asText()).isEqualTo("T3");
         assertThat(pontoB.get("medidas").get(0).get("tipico").asDouble()).isBetween(0.19, 0.21);
+        // σ efetivo da célula usada: com o típico, refaz o z da API (é o que o app usa para a faixa normal)
+        JsonNode rms = pontoB.get("medidas").get(0);
+        assertThat(rms.get("medida").asText()).isEqualTo("rms_g");
+        double sigma = rms.get("sigma_efetivo").asDouble();
+        assertThat(sigma).isPositive();
+        assertThat((rms.get("valor").asDouble() - rms.get("tipico").asDouble()) / sigma)
+                .isCloseTo(rms.get("z").asDouble(), within(1e-9));
 
         // severo: as duas primeiras janelas ainda não acendem nada (atraso de 15 s)
         t = enviarSequencia(t, 2, 1120, SEVERO);

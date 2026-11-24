@@ -1940,6 +1940,11 @@ export interface components {
             medida: "rms_g" | "pico_g" | "curtose" | "o1x" | "o2x" | "o3x" | "vel_rms_mm_s";
             /**
              * Format: double
+             * @description σ efetivo da célula da referência usada (nulo sem referência). Com o típico e os limites em z dá a faixa na unidade da medida: típico + z × σ efetivo
+             */
+            sigma_efetivo: number | null;
+            /**
+             * Format: double
              * @description Mediana da referência
              */
             tipico: number | null;
