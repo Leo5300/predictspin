@@ -115,7 +115,7 @@ export function TelaModelos() {
 }
 
 /** Uma validação (por ensaio ou por dia): F1, recall por classe, matriz e a comparação com a regra. */
-function Validacao({ titulo, v }: { titulo: string; v: ValidacaoModelo }) {
+export function Validacao({ titulo, v }: { titulo: string; v: ValidacaoModelo }) {
   const c = v.classificador
   return (
     <Modulo rotulo={titulo} testID={`validacao-${titulo}`}>

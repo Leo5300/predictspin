@@ -92,7 +92,7 @@ function Lista<T extends string | number>({
 }
 
 /** Pré-voo: uma linha por item, que aparece em sequência a cada janela nova. */
-function PreVoo({ itens, janelaId }: { itens: ItemDoPreVoo[]; janelaId: number | null }) {
+export function PreVoo({ itens, janelaId }: { itens: ItemDoPreVoo[]; janelaId: number | null }) {
   return (
     <View testID="pre-voo">
       {itens.map((item, i) => (
@@ -131,7 +131,7 @@ function PreVoo({ itens, janelaId }: { itens: ItemDoPreVoo[]; janelaId: number |
 }
 
 /** O botão REC: o único círculo grande da tela; desligado, diz por quê logo abaixo. */
-function BotaoRec({
+export function BotaoRec({
   aoGravar,
   motivo,
   ocupado,
@@ -182,7 +182,7 @@ function BotaoRec({
 }
 
 /** Grade de cobertura: válidos / meta por célula; a célula do ensaio que acabou de encerrar carimba. */
-function Cobertura({ grade, carimbo }: { grade: Celula[]; carimbo: string | null }) {
+export function Cobertura({ grade, carimbo }: { grade: Celula[]; carimbo: string | null }) {
   const porLinha = new Map<string, Celula[]>()
   for (const c of grade) {
     const chave = `${c.etapa} · ${nomeDe(ROTULO_CONDICAO, c.condicao)}`
@@ -445,6 +445,79 @@ function Preparar({ maquinaId, carimbo }: { maquinaId: number; carimbo: string |
   )
 }
 
+/** Cabeçalho da gravação: código, etapa, cronômetro em matriz de pontos e janelas contadas pela API. */
+export function QuadroDaGravacao({
+  ensaio,
+  segundos,
+  resumo,
+}: {
+  ensaio: Ensaio
+  segundos: number
+  resumo: { janelas: number; janelas_saturadas: number } | null
+}) {
+  const cores = useCores()
+  return (
+    <Modulo>
+      <View className="flex-row flex-wrap items-center gap-2">
+        <View className="h-3 w-3 rounded-full" style={{ backgroundColor: cores.rec }} />
+        <Texto peso="forte" style={{ letterSpacing: 0.8 }}>
+          GRAVANDO
+        </Texto>
+        <Texto familia="mono" tom="apoio">
+          {ensaio.codigo}
+        </Texto>
+        {ensaio.simulado ? <SeloSim /> : null}
+      </View>
+      <Texto tamanho="13" tom="apoio" className="mt-1">
+        {ensaio.etapa} · {nomeDe(ROTULO_CONDICAO, ensaio.condicao)}
+        {ensaio.rotacao_alvo_rpm > 0 ? ` · ${ensaio.rotacao_alvo_rpm} rpm` : ''} · repetição {ensaio.repeticao}
+      </Texto>
+      <Texto
+        familia="matriz"
+        tamanho="72"
+        className="mt-2"
+        accessibilityLabel={`Gravando há ${formatarCronometro(segundos)}`}
+        testID="cronometro"
+      >
+        {formatarCronometro(segundos)}
+      </Texto>
+      <Texto familia="mono" tamanho="15" testID="contador-janelas">
+        {resumo ? `${resumo.janelas} janelas` : 'contando janelas…'}
+        {resumo && resumo.janelas_saturadas > 0 ? ` · ${resumo.janelas_saturadas} saturadas` : ''}
+      </Texto>
+    </Modulo>
+  )
+}
+
+/** A fita: uma marca por janela; saturada é mais alta e hachurada. */
+export function Fita({ tracos }: { tracos: { id: number; saturou: boolean }[] }) {
+  const cores = useCores()
+  return (
+    <Modulo rotulo="Fita (uma marca por janela)">
+      <View
+        className="h-12 flex-row items-end gap-0.5"
+        accessible
+        accessibilityLabel={`${tracos.length} janelas na fita, ${tracos.filter((t) => t.saturou).length} saturadas`}
+        testID="fita"
+      >
+        {tracos.map((t) => (
+          <View
+            key={t.id}
+            className="relative overflow-hidden"
+            style={{ width: 5, height: t.saturou ? 44 : 24, backgroundColor: t.saturou ? undefined : cores.texto }}
+            testID={t.saturou ? 'traco-saturado' : 'traco'}
+          >
+            {t.saturou ? <Hachura /> : null}
+          </View>
+        ))}
+      </View>
+      <Texto tamanho="12" tom="fraco" className="mt-1">
+        Marca alta e hachurada: janela saturada (fica fora do aprendizado).
+      </Texto>
+    </Modulo>
+  )
+}
+
 /**
  * Gravando: cronômetro em matriz de pontos, janelas contadas pela API, fita com uma marca por janela
  * (saturada mais alta e hachurada), marcar evento, encerrar e descartar segurando. Tudo vem da API: se o
@@ -453,7 +526,6 @@ function Preparar({ maquinaId, carimbo }: { maquinaId: number; carimbo: string |
 function Gravando({ ensaio, aoEncerrar }: { ensaio: Ensaio; aoEncerrar: (celula: string) => void }) {
   const cliente = useQueryClient()
   const conexao = useConexao()
-  const cores = useCores()
   const agora = useAgoraParede(1000)
   const resumo = useQuery(consultaResumoEnsaio(ensaio.id))
   const janelas = useQuery(consultaJanelasEnsaio(ensaio.id))
@@ -497,57 +569,8 @@ function Gravando({ ensaio, aoEncerrar }: { ensaio: Ensaio; aoEncerrar: (celula:
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 40 }} testID="coleta-gravando">
-      <Modulo>
-        <View className="flex-row flex-wrap items-center gap-2">
-          <View className="h-3 w-3 rounded-full" style={{ backgroundColor: cores.rec }} />
-          <Texto peso="forte" style={{ letterSpacing: 0.8 }}>
-            GRAVANDO
-          </Texto>
-          <Texto familia="mono" tom="apoio">
-            {ensaio.codigo}
-          </Texto>
-          {ensaio.simulado ? <SeloSim /> : null}
-        </View>
-        <Texto tamanho="13" tom="apoio" className="mt-1">
-          {ensaio.etapa} · {nomeDe(ROTULO_CONDICAO, ensaio.condicao)}
-          {ensaio.rotacao_alvo_rpm > 0 ? ` · ${ensaio.rotacao_alvo_rpm} rpm` : ''} · repetição {ensaio.repeticao}
-        </Texto>
-        <Texto
-          familia="matriz"
-          tamanho="72"
-          className="mt-2"
-          accessibilityLabel={`Gravando há ${formatarCronometro(segundos)}`}
-          testID="cronometro"
-        >
-          {formatarCronometro(segundos)}
-        </Texto>
-        <Texto familia="mono" tamanho="15" testID="contador-janelas">
-          {resumo.data ? `${resumo.data.janelas} janelas` : 'contando janelas…'}
-          {resumo.data && resumo.data.janelas_saturadas > 0 ? ` · ${resumo.data.janelas_saturadas} saturadas` : ''}
-        </Texto>
-      </Modulo>
-      <Modulo rotulo="Fita (uma marca por janela)">
-        <View
-          className="h-12 flex-row items-end gap-0.5"
-          accessible
-          accessibilityLabel={`${tracos.length} janelas na fita, ${tracos.filter((t) => t.saturou).length} saturadas`}
-          testID="fita"
-        >
-          {tracos.map((t) => (
-            <View
-              key={t.id}
-              className="relative overflow-hidden"
-              style={{ width: 5, height: t.saturou ? 44 : 24, backgroundColor: t.saturou ? undefined : cores.texto }}
-              testID={t.saturou ? 'traco-saturado' : 'traco'}
-            >
-              {t.saturou ? <Hachura /> : null}
-            </View>
-          ))}
-        </View>
-        <Texto tamanho="12" tom="fraco" className="mt-1">
-          Marca alta e hachurada: janela saturada (fica fora do aprendizado).
-        </Texto>
-      </Modulo>
+      <QuadroDaGravacao ensaio={ensaio} segundos={segundos} resumo={resumo.data ?? null} />
+      <Fita tracos={tracos} />
       <Modulo rotulo="Evento fora do plano">
         {marcando ? (
           <View className="gap-2">

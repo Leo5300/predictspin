@@ -7,43 +7,12 @@ import { iniciarSessao, reiniciarSessaoParaTeste } from '@/api/sessao'
 import type { OrdemServico } from '@/api/tipos'
 import { reiniciarPreferenciasParaTeste } from '@/estado/preferencias'
 import { montar, simularApi } from '@/testes/ajudantes'
-import { alarme, detalhe, LIMITES, respostaLogin } from '@/testes/exemplos'
+import { alarme, detalhe, LIMITES, ordem, respostaLogin } from '@/testes/exemplos'
 
 import { TelaDetalheOrdem } from './TelaDetalheOrdem'
 import { TelaOrdens } from './TelaOrdens'
 
 const guardado = (SecureStore as unknown as { __guardado: Map<string, string> }).__guardado
-
-function ordem(extra: Partial<OrdemServico> = {}): OrdemServico {
-  return {
-    id: 7,
-    numero: 'OS-2026-0007',
-    maquina: 'TORNO-01',
-    maquina_id: 1,
-    ponto: 'B',
-    status: 'aberta',
-    aberta_em: '2026-11-24T10:00:00Z',
-    assumida_em: null,
-    concluida_em: null,
-    responsavel: null,
-    componente: 'Ferramenta e porta-ferramenta',
-    acao_recomendada: 'Confira o desgaste da pastilha.',
-    explicacao: 'B·RMS 6,1σ acima do típico da marcha 1120',
-    alerta_id: 41,
-    motivo_abertura: 'alarme_continuo',
-    severidade_acumulada: 120,
-    simulado: true,
-    calibracao: null,
-    firmware_versao: null,
-    referencia_versao: 1,
-    opiniao_abertura: null,
-    opiniao_recente: null,
-    retorno_tecnico: null,
-    condicao_encontrada: null,
-    comentario_tecnico: null,
-    ...extra,
-  }
-}
 
 const pagina = (conteudo: OrdemServico[]) => ({
   conteudo,

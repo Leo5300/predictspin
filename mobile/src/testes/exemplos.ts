@@ -2,7 +2,17 @@
  * Exemplos com a forma do contrato, para testes e para a galeria de estados (só em desenvolvimento).
  * Os números são inventados para exercitar a tela; não são medição.
  */
-import type { Alarme, AlarmeDetalhe, Janela, JanelaPonto, Maquina, Ponto, RespostaLogin, Usuario } from '@/api/tipos'
+import type {
+  Alarme,
+  AlarmeDetalhe,
+  Janela,
+  JanelaPonto,
+  Maquina,
+  OrdemServico,
+  Ponto,
+  RespostaLogin,
+  Usuario,
+} from '@/api/tipos'
 
 export function usuario(papel: Usuario['papel'] = 'OPERADOR'): Usuario {
   return {
@@ -164,4 +174,36 @@ export const LIMITES = {
     supressao_max_min: 10080,
     supressao_opcoes_min: [15, 60, 240, 1440],
   },
+}
+
+/** OS simulada aberta no ponto B, sem dono; o resto vem de cada uso. */
+export function ordem(extra: Partial<OrdemServico> = {}): OrdemServico {
+  return {
+    id: 7,
+    numero: 'OS-2026-0007',
+    maquina: 'TORNO-01',
+    maquina_id: 1,
+    ponto: 'B',
+    status: 'aberta',
+    aberta_em: '2026-11-24T10:00:00Z',
+    assumida_em: null,
+    concluida_em: null,
+    responsavel: null,
+    componente: 'Ferramenta e porta-ferramenta',
+    acao_recomendada: 'Confira o desgaste da pastilha.',
+    explicacao: 'B·RMS 6,1σ acima do típico da marcha 1120',
+    alerta_id: 41,
+    motivo_abertura: 'alarme_continuo',
+    severidade_acumulada: 120,
+    simulado: true,
+    calibracao: null,
+    firmware_versao: null,
+    referencia_versao: 1,
+    opiniao_abertura: null,
+    opiniao_recente: null,
+    retorno_tecnico: null,
+    condicao_encontrada: null,
+    comentario_tecnico: null,
+    ...extra,
+  }
 }

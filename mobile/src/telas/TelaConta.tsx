@@ -17,7 +17,7 @@ import { useSessao } from '@/api/sessao'
 import { Botao, Escolha, Modulo } from '@/componentes/Basicos'
 import { Cabecalho } from '@/componentes/Casca'
 import { Texto } from '@/componentes/Texto'
-import { resumoDoPush } from '@/dominio/notificacao'
+import { resumoDoPush, type ResumoDoPush } from '@/dominio/notificacao'
 import { pode, ROTULO_PAPEL, type Papel } from '@/dominio/permissoes'
 import {
   definirFonte,
@@ -41,11 +41,32 @@ function Par({ rotulo, children }: { rotulo: string; children: ReactNode }) {
 function ModuloNotificacoes({ papel }: { papel: Papel }) {
   const estado = useEstadoDoPush()
   const [ocupado, setOcupado] = useState(false)
-  const resumo = resumoDoPush(estado, papel)
   const agir = (acao: () => Promise<void>) => {
     setOcupado(true)
     void acao().finally(() => setOcupado(false))
   }
+  return (
+    <QuadroDeNotificacoes
+      resumo={resumoDoPush(estado, papel)}
+      ocupado={ocupado}
+      aoLigar={() => agir(pedirPermissao)}
+      aoTentar={() => agir(atualizarRegistro)}
+    />
+  )
+}
+
+/** O módulo Notificações da Conta, sem estado: o texto, o porquê e o botão que cabe. */
+export function QuadroDeNotificacoes({
+  resumo,
+  ocupado,
+  aoLigar,
+  aoTentar,
+}: {
+  resumo: ResumoDoPush
+  ocupado: boolean
+  aoLigar: () => void
+  aoTentar: () => void
+}) {
   return (
     <Modulo rotulo="Notificações" testID="modulo-notificacoes">
       <Texto peso="medio" testID="estado-notificacoes">
@@ -62,7 +83,7 @@ function ModuloNotificacoes({ papel }: { papel: Papel }) {
             titulo="Ligar notificações"
             carregando={ocupado}
             dica="Abre o pedido de permissão do sistema"
-            onPress={() => agir(pedirPermissao)}
+            onPress={aoLigar}
             testID="ligar-notificacoes"
           />
         </View>
@@ -79,7 +100,7 @@ function ModuloNotificacoes({ papel }: { papel: Papel }) {
           <Botao
             titulo="Tentar de novo"
             carregando={ocupado}
-            onPress={() => agir(atualizarRegistro)}
+            onPress={aoTentar}
             testID="tentar-notificacoes"
           />
         </View>
