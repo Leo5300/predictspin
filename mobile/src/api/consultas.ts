@@ -59,6 +59,8 @@ export const chaves = {
   catalogo: (tipo: 'materiais' | 'ferramentas') => ['catalogo', tipo] as const,
   resumoEnsaio: (id: number) => ['resumo-ensaio', id] as const,
   janelasEnsaio: (id: number) => ['janelas-ensaio', id] as const,
+  modelos: (maquinaId: number, simulado: boolean) => ['modelos', maquinaId, simulado] as const,
+  modelo: (id: number) => ['modelo', id] as const,
 }
 
 /** A API devolve no máximo 200 janelas por página; 1 h de janelas de 5 s são 720. */
@@ -426,4 +428,34 @@ export function marcarEvento(id: number, motivo: string, ocorridoEm: Date) {
       },
     }),
   )
+}
+
+// ------------------------------------------------------------------ modelos da IA
+
+/** Versões de modelo da máquina e do tipo de dado em uso, mais recente primeiro. */
+export function consultaModelos(maquinaId: number, simulado: boolean) {
+  return queryOptions({
+    queryKey: chaves.modelos(maquinaId, simulado),
+    queryFn: async ({ signal }) => {
+      const pagina = await exigir(
+        api.GET('/api/v1/maquinas/{id}/modelos', {
+          params: { path: { id: maquinaId }, query: { simulado, size: 50 } },
+          signal,
+        }),
+      )
+      return pagina.conteudo
+    },
+  })
+}
+
+/** Uma versão com as métricas da validação, os avisos e a comparação com a regra. */
+export function consultaModelo(id: number) {
+  return queryOptions({
+    queryKey: chaves.modelo(id),
+    queryFn: ({ signal }) => exigir(api.GET('/api/v1/modelos/{id}', { params: { path: { id } }, signal })),
+  })
+}
+
+export function ativarModelo(id: number) {
+  return exigir(api.POST('/api/v1/modelos/{id}/ativar', { params: { path: { id } } }))
 }

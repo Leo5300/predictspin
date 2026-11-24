@@ -5,7 +5,8 @@
  *  - qualquer usuário autenticado: ver máquina, pontos, janelas, alarmes e reconhecer alarme;
  *  - ADMIN: suprimir e cancelar supressão de alarme;
  *  - qualquer usuário autenticado também vê as OS (a API só restringe assumir e concluir);
- *  - ADMIN e TECNICO: assumir e concluir OS, coleta.
+ *  - ADMIN e TECNICO: assumir e concluir OS, coleta;
+ *  - só ADMIN: ver e ativar os modelos da IA (em Conta).
  */
 
 export type Papel = 'ADMIN' | 'TECNICO' | 'OPERADOR'
@@ -18,6 +19,8 @@ export type Acao =
   | 'cancelar_supressao'
   | 'assumir_os'
   | 'concluir_os'
+  | 'ver_modelos'
+  | 'ativar_modelo'
 
 const TODOS: readonly Papel[] = ['ADMIN', 'TECNICO', 'OPERADOR']
 
@@ -35,6 +38,8 @@ const PAPEIS_DA_ACAO: Record<Acao, readonly Papel[]> = {
   cancelar_supressao: ['ADMIN'],
   assumir_os: ['ADMIN', 'TECNICO'],
   concluir_os: ['ADMIN', 'TECNICO'],
+  ver_modelos: ['ADMIN'],
+  ativar_modelo: ['ADMIN'],
 }
 
 /** Abas que existem nesta versão do app. */

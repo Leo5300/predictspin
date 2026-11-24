@@ -18,7 +18,7 @@ import { Botao, Escolha, Modulo } from '@/componentes/Basicos'
 import { Cabecalho } from '@/componentes/Casca'
 import { Texto } from '@/componentes/Texto'
 import { resumoDoPush } from '@/dominio/notificacao'
-import { ROTULO_PAPEL, type Papel } from '@/dominio/permissoes'
+import { pode, ROTULO_PAPEL, type Papel } from '@/dominio/permissoes'
 import {
   definirFonte,
   definirTema,
@@ -106,7 +106,7 @@ function useSaudeDaApi() {
   })
 }
 
-/** Conta: usuário e papel, tema, fonte dos dados, biometria, notificações, versões e sair. */
+/** Conta: usuário e papel, tema, fonte dos dados, biometria, notificações, modelos (ADMIN), versões e sair. */
 export function TelaConta() {
   const sessao = useSessao()
   const tema = usePreferenciaTema()
@@ -194,6 +194,18 @@ export function TelaConta() {
           )}
         </Modulo>
         <ModuloNotificacoes papel={usuario.papel} />
+        {pode(usuario.papel, 'ver_modelos') ? (
+          <Modulo rotulo="Modelos da IA">
+            <Texto tamanho="13" tom="apoio" className="mb-3">
+              Versões treinadas, métricas da validação e qual dá a segunda opinião.
+            </Texto>
+            <Botao
+              titulo="Ver versões"
+              onPress={() => router.push('/conta/modelos')}
+              testID="abrir-modelos"
+            />
+          </Modulo>
+        ) : null}
         <Modulo rotulo="Versões">
           <Par rotulo="App">{Constants.expoConfig?.version ?? '—'}</Par>
           <Par rotulo="API">

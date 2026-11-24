@@ -32,6 +32,9 @@ export type NovoEnsaio = Esquemas['NovoEnsaioRequisicao']
 export type Cobertura = Esquemas['CoberturaResposta']
 export type ResumoEnsaio = Esquemas['ResumoEnsaioResposta']
 export type ItemCatalogo = Esquemas['ItemCatalogoResposta']
+export type ModeloResumo = Esquemas['ModeloResumo']
+export type ModeloDetalhe = Esquemas['ModeloDetalhe']
+export type ValidacaoModelo = Esquemas['ValidacaoModelo']
 export type Papel = Usuario['papel']
 
 /** A última janela e o item das listagens têm o mesmo conteúdo; só o nome do identificador muda. */
