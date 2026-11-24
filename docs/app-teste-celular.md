@@ -59,7 +59,7 @@ a API do Render, em modo severo.
 | P6 | Deixe o mesmo alarme continuar por vários minutos | Nenhum push novo para o mesmo alarme | Anote quantos chegaram | — | |
 | P7 | Com o app aberto em Máquina e a fonte em Simulado, provoque um alarme novo | Faixa da notificação no topo, sem som; o aviso do app também aparece | — | — | |
 | P8 | Ligue a biometria, feche o app, provoque um alarme e toque na notificação | Pede a digital; depois de destravar, abre o alarme | Anote se abriu a Máquina em vez do alarme | — | |
-| P9 | Como TECNICO, deixe abrir uma OS | Chega "SIMULADO · OS ABERTA · …"; o toque abre a lista de alarmes (a aba OS ainda não existe) | — | — | |
+| P9 | Como TECNICO, deixe abrir uma OS | Chega "SIMULADO · OS ABERTA · …"; o toque abre o detalhe da OS | — | — | |
 | P10 | Conta → Sair; provoque outro alarme | Nada chega neste celular | Anote se chegou | — | |
 | P11 | Desinstale, instale de novo, entre e toque em "Agora não" | O quadro some e não volta ao abrir de novo; Conta oferece "Ligar notificações" | — | — | |
 | P12 | Configurações do Android → PredictSpin → desligue as notificações; volte ao app | Conta: "Desligadas nas configurações do celular." e "Abrir configurações" leva até lá | — | — | |

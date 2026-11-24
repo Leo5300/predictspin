@@ -30,7 +30,7 @@ No Expo Go, todo o resto do app funciona igual; só não chega notificação.
   até 3 s de espera). O token não fica guardado no celular.
 - **Toque abre o alarme.** Tocar na notificação abre o detalhe do alarme e troca a fonte dos dados para a do
   alarme (Real ou Simulado). Se a sessão estiver travada pela biometria, o alarme abre depois de destravar. A
-  notificação de OS abre a lista de alarmes até a aba OS existir.
+  notificação de OS abre o detalhe da OS.
 - **Com o app aberto**, a notificação aparece em faixa, sem som. O app mostra ao vivo só a fonte escolhida, e
   um alarme real não pode passar despercebido enquanto se olha o simulado.
 - **Canal Android `alarmes`**, importância alta, criado antes de pedir a permissão (no Android 13 em diante, a

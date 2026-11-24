@@ -60,6 +60,8 @@ export function useEventosAoVivo(maquinaId: number | undefined, simulado: boolea
       },
       aoReceberOrdemServico: (evento) => {
         void cliente.invalidateQueries({ queryKey: chaves.alarmes(evento.ordem.simulado) })
+        void cliente.invalidateQueries({ queryKey: chaves.ordens(evento.ordem.simulado) })
+        void cliente.invalidateQueries({ queryKey: chaves.ordem(evento.ordem.id) })
       },
       aoReceberRecuperacao: () => {
         void cliente.invalidateQueries({ queryKey: chaves.serieRecente(maquinaId, simulado) })

@@ -153,9 +153,9 @@ describe('conexão', () => {
 })
 
 describe('permissões por papel (espelho da SegurancaConfig)', () => {
-  it('todos veem máquina, alarmes e conta e reconhecem', () => {
+  it('todos veem máquina, alarmes, OS e conta e reconhecem', () => {
     for (const papel of ['ADMIN', 'TECNICO', 'OPERADOR'] as const) {
-      expect(abasDoPapel(papel)).toEqual(['maquina', 'alarmes', 'conta'])
+      expect(abasDoPapel(papel)).toEqual(['maquina', 'alarmes', 'ordens', 'conta'])
       expect(pode(papel, 'reconhecer_alarme')).toBe(true)
     }
   })

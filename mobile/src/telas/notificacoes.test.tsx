@@ -208,9 +208,9 @@ describe('abrir o destino do toque', () => {
     expect(router.push).toHaveBeenCalledWith({ pathname: '/alarmes/[alertaId]', params: { alertaId: '12' } })
   })
 
-  it('OS real: fonte Real e, até a aba OS existir, a lista de alarmes', () => {
+  it('OS real: fonte Real e o detalhe da OS', () => {
     abrirDestino({ tela: 'os', osId: 3, simulado: false })
     expect(obterFonte()).toBe('real')
-    expect(router.push).toHaveBeenCalledWith('/alarmes')
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/ordens/[osId]', params: { osId: '3' } })
   })
 })

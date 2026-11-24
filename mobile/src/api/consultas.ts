@@ -5,6 +5,7 @@
 import { queryOptions } from '@tanstack/react-query'
 
 import type { Observacao } from '@/dominio/idade'
+import type { FiltroOrdens } from '@/dominio/ordens'
 import {
   periodo,
   tendenciaDeJanelas,
@@ -16,7 +17,7 @@ import {
 import { api, exigir } from './cliente'
 import { ErroApi } from './erros'
 import { agoraMonotonicoMs } from './relogio'
-import { janelaDaUltima, type Alarme, type Janela } from './tipos'
+import { janelaDaUltima, type Alarme, type ConclusaoOrdem, type Janela, type OrdemServico } from './tipos'
 
 /** A consulta periódica, enquanto os eventos ao vivo não estão disponíveis. */
 export const INTERVALO_DE_CONSULTA_MS = 5000
@@ -40,6 +41,11 @@ export const chaves = {
   alarme: (id: number) => ['alarme', id] as const,
   tendencia: (maquinaId: number, simulado: boolean, chave: ChavePeriodo) =>
     ['tendencia', maquinaId, simulado, chave] as const,
+  tendenciaEntre: (maquinaId: number, simulado: boolean, inicioS: number, fimS: number) =>
+    ['tendencia-entre', maquinaId, simulado, inicioS, fimS] as const,
+  ordens: (simulado: boolean, filtro?: FiltroOrdens) =>
+    (filtro === undefined ? ['ordens', simulado] : ['ordens', simulado, filtro]) as readonly unknown[],
+  ordem: (id: number) => ['ordem', id] as const,
 }
 
 /** A API devolve no máximo 200 janelas por página; 1 h de janelas de 5 s são 720. */
@@ -77,32 +83,92 @@ export function consultaTendencia(maquinaId: number, simulado: boolean, chave: C
         )
         return { ...limites, porPonto: (codigo) => tendenciaDeSerie(serie, codigo) }
       }
-      const janelas: Janela[] = []
-      for (let pagina = 0; pagina < PAGINAS_MAXIMAS; pagina++) {
-        const resposta = await exigir(
-          api.GET('/api/v1/maquinas/{id}/janelas', {
-            params: {
-              path: { id: maquinaId },
-              query: {
-                de: de.toISOString(),
-                ate: ate.toISOString(),
-                simulado,
-                modo: 'normal',
-                ordem: 'asc',
-                page: pagina,
-                size: JANELAS_POR_PAGINA,
-              },
-            },
-            signal,
-          }),
-        )
-        janelas.push(...resposta.conteudo)
-        if (pagina + 1 >= resposta.total_paginas) break
-      }
+      const janelas = await janelasNormais(maquinaId, simulado, de, ate, signal)
       return { ...limites, porPonto: (codigo) => tendenciaDeJanelas(janelas, codigo) }
     },
     refetchInterval: escolhido.fonte === 'brutos' ? 15_000 : 60_000,
   })
+}
+
+/** Janelas normais de um intervalo, em páginas de 200, da mais antiga para a mais nova. */
+async function janelasNormais(
+  maquinaId: number,
+  simulado: boolean,
+  de: Date,
+  ate: Date,
+  signal: AbortSignal,
+): Promise<Janela[]> {
+  const janelas: Janela[] = []
+  for (let pagina = 0; pagina < PAGINAS_MAXIMAS; pagina++) {
+    const resposta = await exigir(
+      api.GET('/api/v1/maquinas/{id}/janelas', {
+        params: {
+          path: { id: maquinaId },
+          query: {
+            de: de.toISOString(),
+            ate: ate.toISOString(),
+            simulado,
+            modo: 'normal',
+            ordem: 'asc',
+            page: pagina,
+            size: JANELAS_POR_PAGINA,
+          },
+        },
+        signal,
+      }),
+    )
+    janelas.push(...resposta.conteudo)
+    if (pagina + 1 >= resposta.total_paginas) break
+  }
+  return janelas
+}
+
+/** Tendência de um intervalo fixo, curto (até 1 h): a OS mostra o ponto em volta da abertura. */
+export function consultaTendenciaEntre(maquinaId: number, simulado: boolean, inicioS: number, fimS: number) {
+  return queryOptions({
+    queryKey: chaves.tendenciaEntre(maquinaId, simulado, inicioS, fimS),
+    queryFn: async ({ signal }): Promise<DadosDaTendencia> => {
+      const janelas = await janelasNormais(
+        maquinaId,
+        simulado,
+        new Date(inicioS * 1000),
+        new Date(fimS * 1000),
+        signal,
+      )
+      return { inicioS, fimS, porPonto: (codigo) => tendenciaDeJanelas(janelas, codigo) }
+    },
+  })
+}
+
+/** OS da fonte em uso; "todas" não filtra o status (a API já põe abertas e em andamento primeiro). */
+export function consultaOrdens(simulado: boolean, filtro: FiltroOrdens) {
+  return queryOptions({
+    queryKey: chaves.ordens(simulado, filtro),
+    queryFn: ({ signal }) =>
+      exigir(
+        api.GET('/api/v1/ordens-servico', {
+          params: { query: { simulado, size: 100, ...(filtro === 'todas' ? {} : { status: filtro }) } },
+          signal,
+        }),
+      ),
+    refetchInterval: 30_000,
+  })
+}
+
+export function consultaOrdem(id: number) {
+  return queryOptions({
+    queryKey: chaves.ordem(id),
+    queryFn: ({ signal }) =>
+      exigir(api.GET('/api/v1/ordens-servico/{id}', { params: { path: { id } }, signal })),
+  })
+}
+
+export function assumirOrdem(id: number): Promise<OrdemServico> {
+  return exigir(api.POST('/api/v1/ordens-servico/{id}/assumir', { params: { path: { id } } }))
+}
+
+export function concluirOrdem(id: number, corpo: ConclusaoOrdem): Promise<OrdemServico> {
+  return exigir(api.POST('/api/v1/ordens-servico/{id}/concluir', { params: { path: { id } }, body: corpo }))
 }
 
 export function consultaMaquinas() {

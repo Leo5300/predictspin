@@ -56,8 +56,8 @@
     "test:cobertura": "jest --coverage",
     "tema": "node scripts/gerar-tema.mjs",
     "tema:conferir": "node scripts/gerar-tema.mjs --conferir",
-    "api:tipos": "openapi-typescript ../painel/openapi.json -o src/api/esquema.d.ts",
-    "api:conferir": "node scripts/conferir-esquema.mjs",
+    "api:tipos": "openapi-typescript ../painel/openapi.json -o src/api/esquema.d.ts && node scripts/gerar-enumeracoes.mjs",
+    "api:conferir": "node scripts/conferir-esquema.mjs && node scripts/gerar-enumeracoes.mjs --conferir",
     "fumaca": "node scripts/fumaca.mjs"
   },
   "private": true,

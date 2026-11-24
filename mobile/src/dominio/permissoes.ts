@@ -4,7 +4,8 @@
  *
  *  - qualquer usuário autenticado: ver máquina, pontos, janelas, alarmes e reconhecer alarme;
  *  - ADMIN: suprimir e cancelar supressão de alarme;
- *  - ADMIN e TECNICO: assumir e concluir OS, coleta (abas da parte B).
+ *  - qualquer usuário autenticado também vê as OS (a API só restringe assumir e concluir);
+ *  - ADMIN e TECNICO: assumir e concluir OS, coleta.
  */
 
 export type Papel = 'ADMIN' | 'TECNICO' | 'OPERADOR'
@@ -24,7 +25,6 @@ const PAPEIS_DA_ABA: Record<Aba, readonly Papel[]> = {
   maquina: TODOS,
   alarmes: TODOS,
   conta: TODOS,
-  // parte B: as rotas existem na API, as telas ainda não
   ordens: TODOS,
   coleta: ['ADMIN', 'TECNICO'],
 }
@@ -38,7 +38,7 @@ const PAPEIS_DA_ACAO: Record<Acao, readonly Papel[]> = {
 }
 
 /** Abas que existem nesta versão do app. */
-export const ABAS_DO_APP: readonly Aba[] = ['maquina', 'alarmes', 'conta']
+export const ABAS_DO_APP: readonly Aba[] = ['maquina', 'alarmes', 'ordens', 'conta']
 
 export function ehPapel(valor: unknown): valor is Papel {
   return valor === 'ADMIN' || valor === 'TECNICO' || valor === 'OPERADOR'

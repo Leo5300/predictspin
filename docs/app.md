@@ -20,6 +20,8 @@ teclado, gesto de segurar, eventos ao vivo pela rede) está no roteiro
 | Alarmes: lista ao vivo, detalhe, linha do tempo, segunda opinião | sim | sim | sim |
 | Reconhecer alarme (segurando 1,5 s) | sim | sim | sim |
 | Suprimir e cancelar supressão (motivo e prazo da API) | — | — | sim |
+| OS: lista (abertas sem dono primeiro), detalhe com alarme de origem, tendência em volta da abertura e segunda opinião | sim | sim | sim |
+| OS: assumir (toque com confirmação) e concluir (retorno, condição e observação, segurando) | — | sim | sim |
 | Conta: usuário, tema, fonte dos dados, biometria, notificações, versões, sair | sim | sim | sim |
 | Notificação (push) de alarme novo | sim | sim | sim |
 | Notificação (push) de OS aberta e de problema de sensor | — | sim | sim |
@@ -40,6 +42,7 @@ telas e cada ponto e alarme leva o selo SIM.
 | Cliente da API | `src/api/cliente.ts`, `esquema.d.ts` | openapi-fetch tipado pelo esquema gerado de `painel/openapi.json` com o mesmo gerador do painel (`npm run api:tipos`; `npm run api:conferir` falha se o esquema não bate com o contrato). Token no cabeçalho, 401 encerra a sessão, 75 s de limite por chamada. |
 | Sessão | `src/api/sessao.ts`, `autenticacao.ts` | Token JWT e a hora em que vence no SecureStore. Ao abrir: sem token, entrada; vencido, entrada com "Sua sessão expirou"; biometria ligada, tela de destravar; senão confere em `/auth/eu`. A sessão encerra sozinha na hora do vencimento. |
 | Tendência do ponto | `dominio/tendencia.ts`, `componentes/GraficoTendencia.tsx`, `TendenciaDoPonto.tsx` | Regras do painel: 15 min e 1 h com as janelas normais (páginas de 200, o máximo da API), 8 h e 24 h com a série agregada (média do intervalo). Vão maior que 2,5 × o passo quebra a linha: buraco é buraco. Faixa normal sombreada e limites de atenção e alarme em linhas finas tracejadas, a partir do típico e do σ efetivo que a avaliação da API traz (`sigma_efetivo`) e dos limites em z; a legenda diz de que marcha e etapa é a referência. Cor só no desvio, pelo z da API (▲ atenção, ◆ alarme). Arrastar na horizontal mostra valor e hora; o arrasto vertical rola a tela; no leitor de tela, deslizar para cima e para baixo anda pelas amostras. Desenho em `react-native-svg` (já no Expo Go), sem biblioteca de gráfico nova. A linha é sempre contínua, como no painel depois da revisão de design: tracejado e pontilhado eram lidos como lacuna. O ponto aparece no título da tela. |
+| Ordens de serviço | `dominio/ordens.ts`, `telas/TelaOrdens.tsx`, `TelaDetalheOrdem.tsx` | Lista da fonte em uso com filtro por status (a API filtra); abertas sem dono em destaque por borda e texto, sem cor (cor é só de alarme). Concluir manda o retorno (obrigatório), a condição encontrada e a observação (opcionais); as opções da condição e do retorno vêm de `src/api/enumeracoes.ts`, gerado de `painel/openapi.json` junto com o esquema (`npm run api:tipos`) e conferido por `npm run api:conferir`: o app não tem lista escrita à mão. O evento ao vivo de OS recarrega a lista e o detalhe; o toque na notificação de OS abre o detalhe. |
 | Push | `src/api/push.ts`, `dominio/notificacao.ts`, `hooks/useNotificacoes.ts` | `expo-notifications`, carregado só fora do Expo Go. Pedido depois do login com uma frase do porquê; canal Android `alarmes` antes da permissão; token do Expo registrado na API a cada sessão e removido ao sair, antes de apagar a sessão; toque abre o alarme (mesmo com a sessão travada, depois de destravar). Detalhes e passos manuais em [`app-push.md`](app-push.md). |
 | Biometria | `src/api/biometria.ts` | `expo-local-authentication` só destrava o token guardado; senha nunca é guardada. No primeiro login com biometria cadastrada, pergunta uma vez "Usar digital/rosto para entrar?". Desliga em Conta. |
 | Eventos ao vivo | `src/api/eventos.ts`, `hooks/useEventosAoVivo.ts` | A rota SSE do painel, lida pelo `fetch` do Expo (no celular, `expo/fetch` é o fetch global e lê a resposta em pedaços), com o token no cabeçalho, nunca na URL. Uma conexão para o app inteiro. Reconecta com 1, 2, 4, 8, 15 e 30 s (como o painel) e, enquanto isso, consulta a cada 5 s. App em segundo plano: fecha a conexão e para as consultas; ao voltar, reconecta e recarrega tudo. |
@@ -114,8 +117,8 @@ npm run typecheck        # TypeScript estrito
 npm run lint             # ESLint sem avisos
 npm test                 # Jest
 npm run test:cobertura   # Jest com a meta de 85% de linhas em src/dominio e src/api
-npm run api:tipos        # regenera src/api/esquema.d.ts de painel/openapi.json
-npm run api:conferir     # falha se o esquema não bate com o contrato
+npm run api:tipos        # regenera src/api/esquema.d.ts e src/api/enumeracoes.ts de painel/openapi.json
+npm run api:conferir     # falha se o esquema ou as enumerações não batem com o contrato
 npm run tema             # regenera src/tema a partir de painel/src/index.css
 npm run fumaca           # com o compose e o simulador no ar: entra, lê máquina e alarmes, reconhece um simulado
 ```

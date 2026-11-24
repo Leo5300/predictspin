@@ -7,15 +7,15 @@ import type { DestinoDaNotificacao } from '@/dominio/notificacao'
 import { definirFonte } from '@/estado/preferencias'
 
 /**
- * Abre o que a notificação aponta. A fonte dos dados passa a ser a do alarme (real ou simulado), para a
- * tela mostrar o mesmo mundo do push. A OS abre a lista de alarmes até a aba OS existir.
+ * Abre o que a notificação aponta: o detalhe do alarme ou da OS. A fonte dos dados passa a ser a do
+ * push (real ou simulado), para a tela mostrar o mesmo mundo da notificação.
  */
 export function abrirDestino(destino: DestinoDaNotificacao) {
   definirFonte(destino.simulado ? 'simulado' : 'real')
   if (destino.tela === 'alarme') {
     router.push({ pathname: '/alarmes/[alertaId]', params: { alertaId: String(destino.alertaId) } })
   } else {
-    router.push('/alarmes')
+    router.push({ pathname: '/ordens/[osId]', params: { osId: String(destino.osId) } })
   }
 }
 

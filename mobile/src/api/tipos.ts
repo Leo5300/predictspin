@@ -25,6 +25,8 @@ export type ErroResposta = Esquemas['ErroResposta']
 export type AlertaSse = Esquemas['AlertaEvento']
 export type OrdemServicoSse = Esquemas['OrdemServicoEvento']
 export type ModoRapido = Esquemas['ModoRapidoResposta']
+export type OrdemServico = Esquemas['OrdemServicoResposta']
+export type ConclusaoOrdem = Esquemas['ConclusaoRequisicao']
 export type Papel = Usuario['papel']
 
 /** A última janela e o item das listagens têm o mesmo conteúdo; só o nome do identificador muda. */

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { router } from 'expo-router'
 import { useState } from 'react'
 import { Pressable, ScrollView, TextInput, View } from 'react-native'
 
@@ -284,7 +285,15 @@ export function TelaDetalheAlarme({ alertaId }: { alertaId: number }) {
             </Linha>
           ) : null}
           {alerta.ordem_servico_id !== null ? (
-            <Linha rotulo="OS ligada">nº {alerta.ordem_servico_id} (detalhe da OS no painel)</Linha>
+            <View className="pt-2">
+              <Botao
+                titulo="Abrir a OS ligada"
+                onPress={() =>
+                  router.push({ pathname: '/ordens/[osId]', params: { osId: String(alerta.ordem_servico_id) } })
+                }
+                testID="abrir-os-ligada"
+              />
+            </View>
           ) : null}
         </Modulo>
 
