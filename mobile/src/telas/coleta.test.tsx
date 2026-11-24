@@ -222,4 +222,66 @@ describe('coleta: gravando', () => {
     expect(Haptics.impactAsync).toHaveBeenCalledWith('light')
     expect(await screen.findByTestId('carimbo')).toBeTruthy()
   })
+
+  it('descartar só depois de segurar; a tela volta a preparar, sem carimbo', async () => {
+    jest.mocked(Haptics.impactAsync).mockClear()
+    let aberto = true
+    const { pedidos } = simularApi(
+      rotas(
+        {
+          'GET /api/v1/maquinas/1/ensaios': () => ({ corpo: pagina(aberto ? [ensaio()] : []) }),
+          'GET /api/v1/ensaios/90/resumo': () => ({ corpo: { ensaio_id: 90, janelas: 2, janelas_saturadas: 0, duracao_segundos: 10 } }),
+          'GET /api/v1/ensaios/90/janelas': () => ({ corpo: pagina([]) }),
+          'POST /api/v1/ensaios/90/descartar': () => {
+            aberto = false
+            return { corpo: ensaio({ aberto: false, descartado: true }) }
+          },
+        },
+        true,
+      ),
+    )
+    await montar(<TelaColeta />)
+    expect(await screen.findByTestId('coleta-gravando')).toBeTruthy()
+
+    // soltar antes de 1,5 s não descarta
+    await fireEvent(screen.getByTestId('segurar-descartar'), 'pressIn')
+    await act(async () => {
+      jest.advanceTimersByTime(700)
+    })
+    await fireEvent(screen.getByTestId('segurar-descartar'), 'pressOut')
+    await act(async () => {
+      jest.advanceTimersByTime(1500)
+    })
+    expect(pedidos.some((p) => p.caminho.endsWith('/descartar'))).toBe(false)
+
+    await fireEvent(screen.getByTestId('segurar-descartar'), 'pressIn')
+    await act(async () => {
+      jest.advanceTimersByTime(1500)
+    })
+    await waitFor(() => expect(pedidos.some((p) => p.caminho.endsWith('/descartar'))).toBe(true))
+    expect(await screen.findByTestId('coleta-preparar')).toBeTruthy()
+    expect(screen.queryByTestId('carimbo')).toBeNull()
+    expect(Haptics.impactAsync).not.toHaveBeenCalledWith('light')
+  })
+
+  it('ensaio encerrado fora do celular (tela bloqueada, painel): a consulta seguinte volta a preparar', async () => {
+    let aberto = true
+    simularApi(
+      rotas(
+        {
+          'GET /api/v1/maquinas/1/ensaios': () => ({ corpo: pagina(aberto ? [ensaio()] : []) }),
+          'GET /api/v1/ensaios/90/resumo': () => ({ corpo: { ensaio_id: 90, janelas: 2, janelas_saturadas: 0, duracao_segundos: 10 } }),
+          'GET /api/v1/ensaios/90/janelas': () => ({ corpo: pagina([]) }),
+        },
+        true,
+      ),
+    )
+    await montar(<TelaColeta />)
+    expect(await screen.findByTestId('coleta-gravando')).toBeTruthy()
+    aberto = false
+    await act(async () => {
+      jest.advanceTimersByTime(10_000)
+    })
+    expect(await screen.findByTestId('coleta-preparar')).toBeTruthy()
+  })
 })

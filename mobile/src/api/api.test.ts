@@ -1,4 +1,6 @@
+import { waitFor } from '@testing-library/react-native'
 import * as LocalAuthentication from 'expo-local-authentication'
+import * as Network from 'expo-network'
 import * as SecureStore from 'expo-secure-store'
 
 import { erroDaApi, simularApi } from '@/testes/ajudantes'
@@ -29,7 +31,14 @@ import {
 } from './consultas'
 import { ehNaoEncontrado, ehSemPermissao, ErroApi, ErroRede, lerRetryAfter, mensagemDoErro } from './erros'
 import { assinarEventos, type EstadoEventos } from './eventos'
-import { aoApiVoltar, definirRedeDoAparelho, obterSaude, registrarFalha, reiniciarSaudeParaTeste } from './saude'
+import {
+  aoApiVoltar,
+  definirRedeDoAparelho,
+  obterSaude,
+  registrarFalha,
+  reiniciarSaudeParaTeste,
+  vigiarRedeDoAparelho,
+} from './saude'
 import {
   AVISO_SESSAO_EXPIRADA,
   aoEncerrarSessao,
@@ -413,6 +422,44 @@ describe('saúde da conexão', () => {
     definirRedeDoAparelho(false)
     expect(obterSaude().aparelhoConectado).toBe(false)
     jest.useRealTimers()
+  })
+
+  it('vigia a rede do aparelho: lê o estado ao começar, segue o ouvinte e para quando pedido', async () => {
+    const remover = jest.fn()
+    let ouvinte: (estado: { isConnected: boolean | null }) => void = () => undefined
+    jest.mocked(Network.getNetworkStateAsync).mockResolvedValueOnce({ isConnected: false } as never)
+    jest.mocked(Network.addNetworkStateListener).mockImplementationOnce(((f: typeof ouvinte) => {
+      ouvinte = f
+      return { remove: remover }
+    }) as never)
+    const parar = vigiarRedeDoAparelho()
+    await waitFor(() => expect(obterSaude().aparelhoConectado).toBe(false))
+    // rede voltou com a API falhando: tenta o health na hora, sem esperar a sonda
+    global.fetch = jest.fn(async () => new Response('{"status":"UP"}', { status: 200 })) as unknown as typeof fetch
+    registrarFalha()
+    ouvinte({ isConnected: true })
+    expect(obterSaude().aparelhoConectado).toBe(true)
+    await waitFor(() => expect(obterSaude().falhandoDesdeMs).toBeNull())
+    // "não sei" (null) não é sem rede
+    ouvinte({ isConnected: null })
+    expect(obterSaude().aparelhoConectado).toBe(true)
+    parar()
+    expect(remover).toHaveBeenCalled()
+  })
+
+  it('estado da rede que não pode ser lido não derruba o vigia', async () => {
+    jest.mocked(Network.getNetworkStateAsync).mockRejectedValueOnce(new Error('sem módulo'))
+    const parar = vigiarRedeDoAparelho()
+    await Promise.resolve()
+    expect(obterSaude().aparelhoConectado).toBe(true)
+    parar()
+  })
+})
+
+describe('armazenamento no aparelho', () => {
+  it('chave que não pode ser lida (biometria trocada) vira "sem valor", sem erro', async () => {
+    jest.mocked(SecureStore.getItemAsync).mockRejectedValueOnce(new Error('chave invalidada'))
+    await expect(ler(CHAVES.email)).resolves.toBeNull()
   })
 })
 

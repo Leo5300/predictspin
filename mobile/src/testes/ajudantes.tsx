@@ -46,7 +46,7 @@ export function erroDaApi(status: number, mensagem: string) {
 
 export function novoCliente() {
   return new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
+    defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } },
   })
 }
 
