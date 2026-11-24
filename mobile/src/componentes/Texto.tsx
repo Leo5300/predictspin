@@ -3,7 +3,7 @@ import { Text, type TextProps } from 'react-native'
 /**
  * Texto do app. Variações por propriedade (não por classe solta) para o resultado não depender da
  * ordem das classes. Plex Sans na interface, Plex Mono só em valores, letras de ponto e códigos,
- * Doto (matriz de pontos) só na placa de estado e na rotação. Respeita a fonte do sistema até 130%.
+ * Doto (matriz de pontos) só na placa de estado, na rotação e no cronômetro da coleta. Respeita a fonte do sistema até 130%.
  */
 
 export type Tamanho = '12' | '13' | '15' | '18' | '24' | '32' | '40' | '72'

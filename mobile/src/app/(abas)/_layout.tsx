@@ -15,10 +15,11 @@ import { useNotificacoes } from '@/hooks/useNotificacoes'
 
 type NomeDoIcone = keyof typeof MaterialCommunityIcons.glyphMap
 
-const ICONES: Record<'maquina' | 'alarmes' | 'ordens' | 'conta', { sf: string; md: NomeDoIcone }> = {
+const ICONES: Record<'maquina' | 'alarmes' | 'ordens' | 'coleta' | 'conta', { sf: string; md: NomeDoIcone }> = {
   maquina: { sf: 'gauge.with.dots.needle.33percent', md: 'gauge' },
   alarmes: { sf: 'exclamationmark.triangle', md: 'alert-outline' },
   ordens: { sf: 'wrench.and.screwdriver', md: 'wrench-outline' },
+  coleta: { sf: 'record.circle', md: 'record-circle-outline' },
   conta: { sf: 'person.crop.circle', md: 'account-circle-outline' },
 }
 
@@ -33,7 +34,7 @@ function Icone({ aba }: { aba: keyof typeof ICONES }) {
 }
 
 /**
- * Abas nativas (só as que o papel enxerga): Máquina, Alarmes, OS e Conta; Coleta entra na etapa 4.
+ * Abas nativas (só as que o papel enxerga): Máquina, Alarmes, OS, Coleta (ADMIN e TECNICO) e Conta.
  * Em cima, fixa, a barra de conexão e da última janela, e o pedido de notificação enquanto não for
  * respondido. Uma conexão de eventos ao vivo serve o app inteiro. A troca de aba não anima.
  */
@@ -71,6 +72,10 @@ export default function LayoutAbas() {
           <NativeTabs.Trigger name="ordens" hidden={escondida('ordens')}>
             <NativeTabs.Trigger.Label>OS</NativeTabs.Trigger.Label>
             <Icone aba="ordens" />
+          </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="coleta" hidden={escondida('coleta')}>
+            <NativeTabs.Trigger.Label>Coleta</NativeTabs.Trigger.Label>
+            <Icone aba="coleta" />
           </NativeTabs.Trigger>
           <NativeTabs.Trigger name="conta" hidden={escondida('conta')}>
             <NativeTabs.Trigger.Label>Conta</NativeTabs.Trigger.Label>

@@ -18,6 +18,9 @@ const SAIDA = join(raiz, 'src', 'api', 'enumeracoes.ts')
 const ENUMERACOES = [
   ['CONDICOES_ENCONTRADAS', 'ConclusaoRequisicao', 'condicao_encontrada'],
   ['RETORNOS_TECNICOS', 'ConclusaoRequisicao', 'retorno'],
+  ['ETAPAS', 'NovoEnsaioRequisicao', 'etapa'],
+  ['CONDICOES_DE_ENSAIO', 'NovoEnsaioRequisicao', 'condicao'],
+  ['MOTIVOS_DE_EVENTO', 'NovoEventoMarcadoRequisicao', 'motivo'],
 ]
 
 const esquemas = JSON.parse(readFileSync(CONTRATO, 'utf8')).components.schemas

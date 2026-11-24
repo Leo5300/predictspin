@@ -38,6 +38,7 @@ jest.mock('expo-haptics', () => ({
   notificationAsync: jest.fn(async () => undefined),
   impactAsync: jest.fn(async () => undefined),
   NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
 }))
 
 // push: permissão ainda não perguntada; o token e as respostas de toque são trocados em cada teste

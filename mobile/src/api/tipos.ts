@@ -27,6 +27,11 @@ export type OrdemServicoSse = Esquemas['OrdemServicoEvento']
 export type ModoRapido = Esquemas['ModoRapidoResposta']
 export type OrdemServico = Esquemas['OrdemServicoResposta']
 export type ConclusaoOrdem = Esquemas['ConclusaoRequisicao']
+export type Ensaio = Esquemas['EnsaioResposta']
+export type NovoEnsaio = Esquemas['NovoEnsaioRequisicao']
+export type Cobertura = Esquemas['CoberturaResposta']
+export type ResumoEnsaio = Esquemas['ResumoEnsaioResposta']
+export type ItemCatalogo = Esquemas['ItemCatalogoResposta']
 export type Papel = Usuario['papel']
 
 /** A última janela e o item das listagens têm o mesmo conteúdo; só o nome do identificador muda. */

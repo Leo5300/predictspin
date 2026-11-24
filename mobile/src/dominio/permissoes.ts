@@ -38,7 +38,7 @@ const PAPEIS_DA_ACAO: Record<Acao, readonly Papel[]> = {
 }
 
 /** Abas que existem nesta versão do app. */
-export const ABAS_DO_APP: readonly Aba[] = ['maquina', 'alarmes', 'ordens', 'conta']
+export const ABAS_DO_APP: readonly Aba[] = ['maquina', 'alarmes', 'ordens', 'coleta', 'conta']
 
 export function ehPapel(valor: unknown): valor is Papel {
   return valor === 'ADMIN' || valor === 'TECNICO' || valor === 'OPERADOR'

@@ -52,6 +52,8 @@ module.exports = {
   useReducedMotion: () => false,
   Easing,
   ReduceMotion: { System: 'system', Always: 'always', Never: 'never' },
+  FadeIn: entrada(),
+  ZoomIn: entrada(),
   FadeInUp: entrada(),
   FadeOutUp: entrada(),
 }

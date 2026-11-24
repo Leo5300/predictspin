@@ -153,11 +153,13 @@ describe('conexão', () => {
 })
 
 describe('permissões por papel (espelho da SegurancaConfig)', () => {
-  it('todos veem máquina, alarmes, OS e conta e reconhecem', () => {
+  it('todos veem máquina, alarmes, OS e conta e reconhecem; coleta só ADMIN e TECNICO', () => {
     for (const papel of ['ADMIN', 'TECNICO', 'OPERADOR'] as const) {
-      expect(abasDoPapel(papel)).toEqual(['maquina', 'alarmes', 'ordens', 'conta'])
       expect(pode(papel, 'reconhecer_alarme')).toBe(true)
     }
+    expect(abasDoPapel('OPERADOR')).toEqual(['maquina', 'alarmes', 'ordens', 'conta'])
+    expect(abasDoPapel('TECNICO')).toEqual(['maquina', 'alarmes', 'ordens', 'coleta', 'conta'])
+    expect(abasDoPapel('ADMIN')).toEqual(['maquina', 'alarmes', 'ordens', 'coleta', 'conta'])
   })
   it('suprimir e cancelar supressão só ADMIN; OS ADMIN e TECNICO; coleta sem operador', () => {
     expect(pode('ADMIN', 'suprimir_alarme')).toBe(true)

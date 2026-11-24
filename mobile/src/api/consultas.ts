@@ -17,7 +17,15 @@ import {
 import { api, exigir } from './cliente'
 import { ErroApi } from './erros'
 import { agoraMonotonicoMs } from './relogio'
-import { janelaDaUltima, type Alarme, type ConclusaoOrdem, type Janela, type OrdemServico } from './tipos'
+import {
+  janelaDaUltima,
+  type Alarme,
+  type ConclusaoOrdem,
+  type Ensaio,
+  type Janela,
+  type NovoEnsaio,
+  type OrdemServico,
+} from './tipos'
 
 /** A consulta periódica, enquanto os eventos ao vivo não estão disponíveis. */
 export const INTERVALO_DE_CONSULTA_MS = 5000
@@ -46,6 +54,11 @@ export const chaves = {
   ordens: (simulado: boolean, filtro?: FiltroOrdens) =>
     (filtro === undefined ? ['ordens', simulado] : ['ordens', simulado, filtro]) as readonly unknown[],
   ordem: (id: number) => ['ordem', id] as const,
+  ensaioAberto: (maquinaId: number) => ['ensaio-aberto', maquinaId] as const,
+  cobertura: (maquinaId: number, simulado: boolean) => ['cobertura', maquinaId, simulado] as const,
+  catalogo: (tipo: 'materiais' | 'ferramentas') => ['catalogo', tipo] as const,
+  resumoEnsaio: (id: number) => ['resumo-ensaio', id] as const,
+  janelasEnsaio: (id: number) => ['janelas-ensaio', id] as const,
 }
 
 /** A API devolve no máximo 200 janelas por página; 1 h de janelas de 5 s são 720. */
@@ -316,4 +329,101 @@ export function suprimirAlarme(id: number, motivo: string, minutos: number): Pro
 
 export function cancelarSupressao(id: number): Promise<Alarme> {
   return exigir(api.POST('/api/v1/alertas/{id}/cancelar-supressao', { params: { path: { id } } }))
+}
+
+// ------------------------------------------------------------------ coleta
+
+/** O ensaio aberto na máquina (só pode haver um, real ou simulado), ou nenhum. */
+export function consultaEnsaioAberto(maquinaId: number) {
+  return queryOptions({
+    queryKey: chaves.ensaioAberto(maquinaId),
+    queryFn: async ({ signal }): Promise<Ensaio | null> => {
+      const pagina = await exigir(
+        api.GET('/api/v1/maquinas/{id}/ensaios', {
+          params: { path: { id: maquinaId }, query: { aberto: true, size: 1 } },
+          signal,
+        }),
+      )
+      return pagina.conteudo[0] ?? null
+    },
+  })
+}
+
+/** Ensaios válidos por etapa, condição e rotação, com a meta e as rotações da grade (a API decide). */
+export function consultaCobertura(maquinaId: number, simulado: boolean) {
+  return queryOptions({
+    queryKey: chaves.cobertura(maquinaId, simulado),
+    queryFn: ({ signal }) =>
+      exigir(
+        api.GET('/api/v1/maquinas/{id}/coleta/cobertura', {
+          params: { path: { id: maquinaId }, query: { simulado } },
+          signal,
+        }),
+      ),
+  })
+}
+
+/** Materiais ou ferramentas ativos do catálogo da API. */
+export function consultaCatalogo(tipo: 'materiais' | 'ferramentas') {
+  return queryOptions({
+    queryKey: chaves.catalogo(tipo),
+    queryFn: async ({ signal }) => {
+      const opcoes = { params: { query: { ativos: true, size: 200 } }, signal }
+      const pagina = await exigir(
+        tipo === 'materiais' ? api.GET('/api/v1/materiais', opcoes) : api.GET('/api/v1/ferramentas', opcoes),
+      )
+      return pagina.conteudo
+    },
+    staleTime: 5 * 60_000,
+  })
+}
+
+/** Duração, janelas e saturadas do ensaio, da API (o celular pode ter bloqueado a tela no meio). */
+export function consultaResumoEnsaio(id: number) {
+  return queryOptions({
+    queryKey: chaves.resumoEnsaio(id),
+    queryFn: ({ signal }) =>
+      exigir(api.GET('/api/v1/ensaios/{id}/resumo', { params: { path: { id } }, signal })),
+    refetchInterval: 5000,
+  })
+}
+
+/** As janelas mais recentes do ensaio, para a fita (a última página, até 200). */
+export function consultaJanelasEnsaio(id: number) {
+  return queryOptions({
+    queryKey: chaves.janelasEnsaio(id),
+    queryFn: async ({ signal }) => {
+      const pedir = (page: number) =>
+        exigir(api.GET('/api/v1/ensaios/{id}/janelas', { params: { path: { id }, query: { page, size: 200 } }, signal }))
+      const primeira = await pedir(0)
+      const ultima = primeira.total_paginas > 1 ? await pedir(primeira.total_paginas - 1) : primeira
+      return ultima.conteudo.map((j) => ({ id: j.id, saturou: j.saturou }))
+    },
+    refetchInterval: 5000,
+  })
+}
+
+export function abrirEnsaio(maquinaId: number, corpo: NovoEnsaio): Promise<Ensaio> {
+  return exigir(api.POST('/api/v1/maquinas/{id}/ensaios', { params: { path: { id: maquinaId } }, body: corpo }))
+}
+
+export function encerrarEnsaio(id: number): Promise<Ensaio> {
+  return exigir(api.POST('/api/v1/ensaios/{id}/encerrar', { params: { path: { id } } }))
+}
+
+export function descartarEnsaio(id: number): Promise<Ensaio> {
+  return exigir(api.POST('/api/v1/ensaios/{id}/descartar', { params: { path: { id } } }))
+}
+
+/** "Marcar evento": o instante do toque vai junto, não o da chegada do pedido. */
+export function marcarEvento(id: number, motivo: string, ocorridoEm: Date) {
+  return exigir(
+    api.POST('/api/v1/ensaios/{id}/eventos', {
+      params: { path: { id } },
+      body: {
+        motivo: motivo as 'pancada' | 'cavaco' | 'maquina_vizinha' | 'outro',
+        ocorrido_em: ocorridoEm.toISOString(),
+      },
+    }),
+  )
 }
