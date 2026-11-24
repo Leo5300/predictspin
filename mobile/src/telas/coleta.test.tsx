@@ -106,6 +106,25 @@ afterAll(() => {
 })
 
 describe('coleta: preparar', () => {
+  it('lista de máquinas que falha: diz isso e "Tentar de novo" lê de novo, sem ficar carregando', async () => {
+    let falhar = true
+    const { pedidos } = simularApi(
+      rotas(
+        {
+          'GET /api/v1/maquinas': () =>
+            falhar ? erroDaApi(500, 'Erro interno.') : { corpo: pagina([MAQUINA]) },
+        },
+        true,
+      ),
+    )
+    await montar(<TelaColeta />)
+    expect(await screen.findByText('Não foi possível ler a máquina.')).toBeTruthy()
+    falhar = false
+    await fireEvent.press(screen.getByText('Tentar de novo'))
+    expect(await screen.findByTestId('coleta-preparar')).toBeTruthy()
+    expect(pedidos.filter((p) => p.caminho === '/api/v1/maquinas').length).toBeGreaterThanOrEqual(2)
+  })
+
   it('sem dado vivo, o pré-voo bloqueia e o REC diz por quê', async () => {
     simularApi(rotas({}, false))
     await montar(<TelaColeta />)

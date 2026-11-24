@@ -7,7 +7,7 @@ import { gravarPreferenciaBiometria, nomeDaBiometria } from '@/api/biometria'
 import { ENDERECO_DA_API } from '@/api/configuracao'
 import { ErroApi, ErroRede, mensagemDoErro } from '@/api/erros'
 import { encerrarSessao, useSessao } from '@/api/sessao'
-import { ALVO_DE_TOQUE, Botao, Carregando } from '@/componentes/Basicos'
+import { ALVO_DE_TOQUE, Botao, Carregando, useCoresDoCampo } from '@/componentes/Basicos'
 import { Texto } from '@/componentes/Texto'
 import { esperaDaTentativaS, TEMPO_PARA_ACORDAR_S } from '@/dominio/conexao'
 import { MENSAGEM_DO_ENDERECO } from '@/dominio/endereco'
@@ -202,6 +202,7 @@ function perguntarBiometria(nome: string) {
 
 /** Formulário de entrada: e-mail lembrado (não a senha), mostrar/ocultar senha, erros claros. */
 function Formulario({ aviso }: { aviso: string | null }) {
+  const coresDoCampo = useCoresDoCampo()
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [mostrar, setMostrar] = useState(false)
@@ -273,6 +274,7 @@ function Formulario({ aviso }: { aviso: string | null }) {
             E-mail
           </Texto>
           <TextInput
+            {...coresDoCampo}
             accessibilityLabel="E-mail"
             accessibilityLabelledBy="rotulo-email"
             value={email}
@@ -296,6 +298,7 @@ function Formulario({ aviso }: { aviso: string | null }) {
           </Texto>
           <View className="flex-row">
             <TextInput
+              {...coresDoCampo}
               ref={senhaRef}
               accessibilityLabel="Senha"
               accessibilityLabelledBy="rotulo-senha"

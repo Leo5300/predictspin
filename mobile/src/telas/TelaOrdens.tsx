@@ -6,7 +6,7 @@ import { FlatList, Pressable, RefreshControl, View } from 'react-native'
 import { chaves, consultaOrdens } from '@/api/consultas'
 import { mensagemDoErro } from '@/api/erros'
 import type { OrdemServico } from '@/api/tipos'
-import { ALVO_DE_TOQUE, Botao, Carregando, Escolha, Mensagem } from '@/componentes/Basicos'
+import { ALVO_DE_TOQUE, Botao, Carregando, Escolha, Mensagem, useCoresDoAtualizar } from '@/componentes/Basicos'
 import { Cabecalho } from '@/componentes/Casca'
 import { SeloSim } from '@/componentes/Hachura'
 import { Texto } from '@/componentes/Texto'
@@ -68,6 +68,7 @@ export function LinhaDaOrdem({ ordem, agoraMs }: { ordem: OrdemServico; agoraMs:
 
 /** Ordens de serviço da fonte em uso: abertas sem dono primeiro, depois em andamento e concluídas. */
 export function TelaOrdens() {
+  const coresDoAtualizar = useCoresDoAtualizar()
   const simulado = useFonte() === 'simulado'
   const cliente = useQueryClient()
   const [filtro, setFiltro] = useState<FiltroOrdens>('todas')
@@ -102,7 +103,7 @@ export function TelaOrdens() {
           data={lista}
           keyExtractor={(o) => String(o.id)}
           renderItem={({ item }) => <LinhaDaOrdem ordem={item} agoraMs={agora} />}
-          refreshControl={<RefreshControl refreshing={atualizando} onRefresh={() => void recarregar()} />}
+          refreshControl={<RefreshControl {...coresDoAtualizar} refreshing={atualizando} onRefresh={() => void recarregar()} />}
           ListEmptyComponent={
             <Mensagem titulo="Nenhuma OS aqui.">
               {filtro === 'todas'

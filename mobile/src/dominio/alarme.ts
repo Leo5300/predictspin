@@ -4,6 +4,8 @@
  * e quais ações cabem em cada estado. O app nunca cria, apaga ou muda a prioridade de um alarme.
  */
 import type { Forma, Tom } from './estado'
+import { formatarNumero } from './formato'
+import { GRANDEZAS } from './pontos'
 
 export type EstadoAlarme =
   | 'ativo_nao_reconhecido'
@@ -202,4 +204,10 @@ export function resumoDaOpiniao(
 /** Novo alarme chegou pelo SSE: só "abriu" avisa (piorou, reconheceu etc. só atualizam a lista). */
 export function ehAlarmeNovo(acao: string): boolean {
   return acao === 'abriu'
+}
+
+/** Valor da medida dominante do alarme com as casas e a unidade dela (a unidade vai menor, na tela). */
+export function valorDaMedida(alarme: { metrica: string; valor: number | null }): { valor: string; unidade: string | null } {
+  const g = GRANDEZAS.find((x) => x.chave === alarme.metrica)
+  return { valor: formatarNumero(alarme.valor, g?.casas ?? 3), unidade: g?.unidade || null }
 }

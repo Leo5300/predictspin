@@ -14,7 +14,16 @@ import {
 import { mensagemDoErro } from '@/api/erros'
 import { useSessao } from '@/api/sessao'
 import type { Alarme, AlarmeDetalhe, SegundaOpiniao } from '@/api/tipos'
-import { ALVO_DE_TOQUE, Botao, Carregando, Mensagem, Modulo } from '@/componentes/Basicos'
+import {
+  ALVO_DE_TOQUE,
+  Botao,
+  Carregando,
+  MarcaDaOpcao,
+  Mensagem,
+  Modulo,
+  useCoresDoCampo,
+  ValorEmLinha,
+} from '@/componentes/Basicos'
 import { Cabecalho } from '@/componentes/Casca'
 import { SeloSim } from '@/componentes/Hachura'
 import { IconeDoAlarme } from '@/componentes/IconeDoAlarme'
@@ -30,16 +39,16 @@ import {
   rotuloDaMedida,
   suprimivel,
   supressaoCancelavel,
+  valorDaMedida,
 } from '@/dominio/alarme'
+import { nomeDe, ROTULO_CONDICAO } from '@/dominio/coleta'
 import {
   formatarDataHora,
   formatarMinutos,
-  formatarNumero,
   formatarPercentual,
   formatarZ,
 } from '@/dominio/formato'
 import { pode } from '@/dominio/permissoes'
-import { GRANDEZAS } from '@/dominio/pontos'
 import { avisar } from '@/estado/avisos'
 import { useConexao } from '@/hooks/basicos'
 
@@ -56,13 +65,6 @@ function Linha({ rotulo, children }: { rotulo: string; children: React.ReactNode
       </Texto>
     </View>
   )
-}
-
-/** Valor da medida dominante com as casas e a unidade dela. */
-function valorDaMedida(alarme: Alarme): string {
-  const g = GRANDEZAS.find((x) => x.chave === alarme.metrica)
-  const texto = formatarNumero(alarme.valor, g?.casas ?? 3)
-  return g?.unidade ? `${texto} ${g.unidade}` : texto
 }
 
 /** Segunda opinião do modelo, sem cor de estado: quem acende atenção e alarme é a regra. */
@@ -91,6 +93,7 @@ function FormularioDeSupressao({
   aoCancelar: () => void
   podeEscrever: boolean
 }) {
+  const coresDoCampo = useCoresDoCampo()
   const limites = useQuery(consultaLimites())
   const prazos = limites.data?.alarme.supressao_opcoes_min ?? []
   const [motivo, setMotivo] = useState('')
@@ -104,6 +107,7 @@ function FormularioDeSupressao({
           Motivo
         </Texto>
         <TextInput
+          {...coresDoCampo}
           accessibilityLabel="Motivo da supressão"
           accessibilityLabelledBy="rotulo-motivo"
           value={motivo}
@@ -121,7 +125,13 @@ function FormularioDeSupressao({
       <View className="gap-1">
         <Texto rotulo>Prazo</Texto>
         {limites.isPending ? <Carregando texto="Lendo os prazos da API…" /> : null}
-        <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup">
+        {limites.isError ? (
+          <View className="gap-2">
+            <Texto tom="apoio">Não foi possível ler os prazos da API. {mensagemDoErro(limites.error)}</Texto>
+            <Botao titulo="Tentar de novo" onPress={() => void limites.refetch()} />
+          </View>
+        ) : null}
+        <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup" accessibilityLabel="Prazo da supressão">
           {prazos.map((p) => {
             const marcado = p === minutos
             return (
@@ -137,6 +147,7 @@ function FormularioDeSupressao({
                 <Texto familia="mono" peso={marcado ? 'forte' : 'normal'}>
                   {formatarMinutos(p)}
                 </Texto>
+                {marcado ? <MarcaDaOpcao /> : null}
               </Pressable>
             )
           })}
@@ -243,7 +254,7 @@ export function TelaDetalheAlarme({ alertaId }: { alertaId: number }) {
               ) : null}
               {alerta.durante_ensaio_de_condicao ? (
                 <Texto tamanho="13" tom="apoio">
-                  durante ensaio de {alerta.condicao_ensaio?.replaceAll('_', ' ')}: não abre OS
+                  durante ensaio de {nomeDe(ROTULO_CONDICAO, alerta.condicao_ensaio ?? '').toLowerCase()}: não abre OS
                 </Texto>
               ) : null}
             </View>
@@ -263,11 +274,19 @@ export function TelaDetalheAlarme({ alertaId }: { alertaId: number }) {
 
         <Modulo rotulo="O que disparou">
           {instrumento ? null : <Linha rotulo="Medida">{rotuloDaMedida(alerta.metrica)}</Linha>}
-          {instrumento ? null : <Linha rotulo="Valor">{valorDaMedida(alerta)}</Linha>}
-          {alerta.z !== null ? <Linha rotulo="z agora">{formatarZ(alerta.z)}</Linha> : null}
+          {instrumento ? null : (
+            <Linha rotulo="Valor">
+              <ValorEmLinha {...valorDaMedida(alerta)} />
+            </Linha>
+          )}
+          {alerta.z !== null ? (
+            <Linha rotulo="z agora">
+              <ValorEmLinha valor={formatarZ(alerta.z)} />
+            </Linha>
+          ) : null}
           {alerta.pior_z !== null ? (
             <Linha rotulo="Pior">
-              z {formatarZ(alerta.pior_z)} · {ROTULO_NIVEL[alerta.pior_nivel].toLowerCase()}
+              z <ValorEmLinha valor={formatarZ(alerta.pior_z)} /> · {ROTULO_NIVEL[alerta.pior_nivel].toLowerCase()}
             </Linha>
           ) : null}
           {alerta.componente ? <Linha rotulo="Componente">{alerta.componente}</Linha> : null}
@@ -302,7 +321,7 @@ export function TelaDetalheAlarme({ alertaId }: { alertaId: number }) {
         <Modulo rotulo="Linha do tempo">
           {historico.map((m, i) => (
             <View key={`${m.ocorrido_em}-${i}`} className="flex-row gap-3 border-b border-linha py-2">
-              <Texto tamanho="12" familia="mono" tom="apoio" className="w-24">
+              <Texto tamanho="12" familia="mono" tom="apoio" className="w-28">
                 {formatarDataHora(m.ocorrido_em)}
               </Texto>
               <View className="flex-1">
@@ -348,6 +367,7 @@ export function TelaDetalheAlarme({ alertaId }: { alertaId: number }) {
           {supressaoCancelavel(alerta) && pode(papel, 'cancelar_supressao') ? (
             <Botao
               titulo="Cancelar supressão"
+              dica="O alarme volta a avisar agora"
               carregando={cancelar.isPending}
               desabilitado={!conexao.podeEscrever || ocupado}
               onPress={() => cancelar.mutate()}

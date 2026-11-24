@@ -23,6 +23,7 @@ import { ALVO_DE_TOQUE, Botao, Carregando, Escolha, Mensagem, Modulo } from '@/c
 import { Cabecalho } from '@/componentes/Casca'
 import { Hachura, SeloSim } from '@/componentes/Hachura'
 import { SegurarParaConfirmar } from '@/componentes/SegurarParaConfirmar'
+import { SemMaquina } from '@/componentes/SemMaquina'
 import { Texto } from '@/componentes/Texto'
 import {
   avisosDoPreVoo,
@@ -46,7 +47,7 @@ import { avisar } from '@/estado/avisos'
 import { useFonte } from '@/estado/preferencias'
 import { useAgoraParede, useConexao, useCores } from '@/hooks/basicos'
 import { useUltimaJanela } from '@/hooks/useDadosDaMaquina'
-import { useMaquinaAtual } from '@/hooks/useMaquinaAtual'
+import { useMaquinaAtualComEstado } from '@/hooks/useMaquinaAtual'
 
 const PONTOS = ['A', 'B', 'C'] as const
 const MARCA_DO_ITEM: Record<ItemDoPreVoo['estado'], string> = { ok: '✓', aviso: '▲', bloqueia: '✕' }
@@ -192,7 +193,7 @@ export function Cobertura({ grade, carimbo }: { grade: Celula[]; carimbo: string
     <View testID="cobertura">
       {[...porLinha.entries()].map(([linha, celulas]) => (
         <View key={linha} className="flex-row flex-wrap items-center gap-2 border-b border-linha py-2">
-          <Texto tamanho="13" className="w-44">
+          <Texto tamanho="13" className="w-full">
             {linha}
           </Texto>
           {celulas.map((c) => {
@@ -236,13 +237,25 @@ function Catalogo({
   valor,
   aoMudar,
   testID,
+  erro,
+  tentar,
 }: {
   rotulo: string
   itens: ItemCatalogo[] | undefined
   valor: number | null
   aoMudar: (id: number | null) => void
   testID: string
+  erro: unknown
+  tentar: () => void
 }) {
+  if (!itens && erro) {
+    return (
+      <View className="gap-2">
+        <Texto tom="apoio">{mensagemDoErro(erro)} Dá para gravar sem informar.</Texto>
+        <Botao titulo="Tentar de novo" onPress={tentar} />
+      </View>
+    )
+  }
   if (!itens) return <Carregando texto={`Lendo ${rotulo.toLowerCase()}…`} />
   return (
     <Lista<number>
@@ -372,7 +385,8 @@ function Preparar({ maquinaId, carimbo }: { maquinaId: number; carimbo: string |
                 rotulo="Rotação"
                 valor={String(atual.rotacao ?? '')}
                 aoMudar={(r) => mudar({ rotacao: Number(r) })}
-                opcoes={cobertura.data.rotacoes_rpm.map((r) => ({ valor: String(r), rotulo: `${r}` }))}
+                opcoes={cobertura.data.rotacoes_rpm.map((r) => ({ valor: String(r), rotulo: `${r} rpm` }))}
+                colunas={3}
               />
             ) : (
               <Texto tom="apoio">A API não tem rotações para esta máquina.</Texto>
@@ -383,22 +397,24 @@ function Preparar({ maquinaId, carimbo }: { maquinaId: number; carimbo: string |
           <Texto rotulo className="flex-1">
             Repetição
           </Texto>
-          <Botao
-            compacto
-            titulo="−"
-            rotuloAcessivel="Diminuir repetição"
-            desabilitado={atual.repeticao <= 1}
-            onPress={() => mudar({ repeticao: atual.repeticao - 1 })}
-          />
+          <View style={{ minWidth: ALVO_DE_TOQUE }}>
+            <Botao
+              titulo="−"
+              rotuloAcessivel="Diminuir repetição"
+              desabilitado={atual.repeticao <= 1}
+              onPress={() => mudar({ repeticao: atual.repeticao - 1 })}
+            />
+          </View>
           <Texto familia="mono" peso="forte" tamanho="18" testID="repeticao">
             {atual.repeticao}
           </Texto>
-          <Botao
-            compacto
-            titulo="+"
-            rotuloAcessivel="Aumentar repetição"
-            onPress={() => mudar({ repeticao: atual.repeticao + 1 })}
-          />
+          <View style={{ minWidth: ALVO_DE_TOQUE }}>
+            <Botao
+              titulo="+"
+              rotuloAcessivel="Aumentar repetição"
+              onPress={() => mudar({ repeticao: atual.repeticao + 1 })}
+            />
+          </View>
         </View>
       </Modulo>
       {atual.etapa === 'T3' ? (
@@ -409,6 +425,8 @@ function Preparar({ maquinaId, carimbo }: { maquinaId: number; carimbo: string |
               itens={materiais.data}
               valor={atual.materialId}
               aoMudar={(materialId) => mudar({ materialId })}
+              erro={materiais.error}
+              tentar={() => void materiais.refetch()}
               testID="material"
             />
           </Modulo>
@@ -418,6 +436,8 @@ function Preparar({ maquinaId, carimbo }: { maquinaId: number; carimbo: string |
               itens={ferramentas.data}
               valor={atual.ferramentaId}
               aoMudar={(ferramentaId) => mudar({ ferramentaId })}
+              erro={ferramentas.error}
+              tentar={() => void ferramentas.refetch()}
               testID="ferramenta"
             />
           </Modulo>
@@ -436,7 +456,10 @@ function Preparar({ maquinaId, carimbo }: { maquinaId: number; carimbo: string |
         {cobertura.isPending ? (
           <Carregando />
         ) : cobertura.isError ? (
-          <Texto tom="apoio">{mensagemDoErro(cobertura.error)}</Texto>
+          <View className="gap-2">
+            <Texto tom="apoio">{mensagemDoErro(cobertura.error)}</Texto>
+            <Botao titulo="Tentar de novo" onPress={() => void cobertura.refetch()} />
+          </View>
         ) : (
           <Cobertura grade={grade} carimbo={carimbo} />
         )}
@@ -450,10 +473,13 @@ export function QuadroDaGravacao({
   ensaio,
   segundos,
   resumo,
+  falhou = false,
 }: {
   ensaio: Ensaio
   segundos: number
   resumo: { janelas: number; janelas_saturadas: number } | null
+  /** A última leitura do resumo falhou (a consulta tenta de novo a cada 5 s). */
+  falhou?: boolean
 }) {
   const cores = useCores()
   return (
@@ -477,12 +503,14 @@ export function QuadroDaGravacao({
         tamanho="72"
         className="mt-2"
         accessibilityLabel={`Gravando há ${formatarCronometro(segundos)}`}
+        numberOfLines={1}
+        adjustsFontSizeToFit
         testID="cronometro"
       >
         {formatarCronometro(segundos)}
       </Texto>
       <Texto familia="mono" tamanho="15" testID="contador-janelas">
-        {resumo ? `${resumo.janelas} janelas` : 'contando janelas…'}
+        {resumo ? `${resumo.janelas} janelas` : falhou ? 'janelas: sem resposta da API, tentando de novo' : 'contando janelas…'}
         {resumo && resumo.janelas_saturadas > 0 ? ` · ${resumo.janelas_saturadas} saturadas` : ''}
       </Texto>
     </Modulo>
@@ -490,7 +518,7 @@ export function QuadroDaGravacao({
 }
 
 /** A fita: uma marca por janela; saturada é mais alta e hachurada. */
-export function Fita({ tracos }: { tracos: { id: number; saturou: boolean }[] }) {
+export function Fita({ tracos, falhou = false }: { tracos: { id: number; saturou: boolean }[]; falhou?: boolean }) {
   const cores = useCores()
   return (
     <Modulo rotulo="Fita (uma marca por janela)">
@@ -514,6 +542,11 @@ export function Fita({ tracos }: { tracos: { id: number; saturou: boolean }[] })
       <Texto tamanho="12" tom="fraco" className="mt-1">
         Marca alta e hachurada: janela saturada (fica fora do aprendizado).
       </Texto>
+      {falhou ? (
+        <Texto tamanho="13" tom="apoio" className="mt-1">
+          Sem resposta da API para as janelas; tentando de novo a cada 5 s.
+        </Texto>
+      ) : null}
     </Modulo>
   )
 }
@@ -569,8 +602,8 @@ function Gravando({ ensaio, aoEncerrar }: { ensaio: Ensaio; aoEncerrar: (celula:
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 40 }} testID="coleta-gravando">
-      <QuadroDaGravacao ensaio={ensaio} segundos={segundos} resumo={resumo.data ?? null} />
-      <Fita tracos={tracos} />
+      <QuadroDaGravacao ensaio={ensaio} segundos={segundos} resumo={resumo.data ?? null} falhou={resumo.isError} />
+      <Fita tracos={tracos} falhou={janelas.isError} />
       <Modulo rotulo="Evento fora do plano">
         {marcando ? (
           <View className="gap-2">
@@ -627,14 +660,17 @@ function Gravando({ ensaio, aoEncerrar }: { ensaio: Ensaio; aoEncerrar: (celula:
 
 /** Coleta (ADMIN e TECNICO): o ensaio aberto na máquina, se houver; senão, preparar e gravar. */
 export function TelaColeta() {
-  const maquina = useMaquinaAtual()
+  const estado = useMaquinaAtualComEstado()
+  const maquina = estado.situacao === 'pronta' ? estado.maquina : null
   const aberto = useQuery({ ...consultaEnsaioAberto(maquina?.id ?? 0), enabled: Boolean(maquina), refetchInterval: 10_000 })
   const [carimbo, setCarimbo] = useState<string | null>(null)
 
   return (
     <View className="flex-1 bg-fundo">
       <Cabecalho titulo="Coleta" subtitulo={maquina?.codigo} />
-      {!maquina || aberto.isPending ? (
+      {estado.situacao !== 'pronta' ? (
+        <SemMaquina estado={estado} />
+      ) : !maquina || aberto.isPending ? (
         <Carregando />
       ) : aberto.isError ? (
         <Mensagem

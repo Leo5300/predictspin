@@ -16,13 +16,22 @@ import { CONDICOES_ENCONTRADAS, RETORNOS_TECNICOS } from '@/api/enumeracoes'
 import { mensagemDoErro } from '@/api/erros'
 import { useSessao } from '@/api/sessao'
 import type { ConclusaoOrdem, OrdemServico, SegundaOpiniao } from '@/api/tipos'
-import { ALVO_DE_TOQUE, Botao, Carregando, Escolha, Mensagem, Modulo } from '@/componentes/Basicos'
+import {
+  ALVO_DE_TOQUE,
+  Botao,
+  Carregando,
+  Escolha,
+  Mensagem,
+  Modulo,
+  useCoresDoCampo,
+  ValorEmLinha,
+} from '@/componentes/Basicos'
 import { Cabecalho } from '@/componentes/Casca'
 import { SeloSim } from '@/componentes/Hachura'
 import { SegurarParaConfirmar } from '@/componentes/SegurarParaConfirmar'
 import { TendenciaDoPonto } from '@/componentes/TendenciaDoPonto'
 import { Texto } from '@/componentes/Texto'
-import { resumoDaOpiniao, rotuloDaMedida } from '@/dominio/alarme'
+import { resumoDaOpiniao, rotuloDaMedida, valorDaMedida } from '@/dominio/alarme'
 import { formatarDataHora, formatarNumero, formatarPercentual, formatarZ } from '@/dominio/formato'
 import {
   faltaNaConclusao,
@@ -79,12 +88,21 @@ function AlarmeDeOrigem({ alertaId }: { alertaId: number }) {
       {alerta ? (
         <>
           <Linha rotulo="Medida">{rotuloDaMedida(alerta.metrica)}</Linha>
-          <Linha rotulo="Valor">{formatarNumero(alerta.valor, 3)}</Linha>
-          {alerta.pior_z !== null ? <Linha rotulo="Pior z">{formatarZ(alerta.pior_z)}</Linha> : null}
+          <Linha rotulo="Valor">
+            <ValorEmLinha {...valorDaMedida(alerta)} />
+          </Linha>
+          {alerta.pior_z !== null ? (
+            <Linha rotulo="Pior z">
+              <ValorEmLinha valor={formatarZ(alerta.pior_z)} />
+            </Linha>
+          ) : null}
           <Linha rotulo="Aberto em">{formatarDataHora(alerta.criado_em)}</Linha>
         </>
       ) : detalhe.isError ? (
-        <Texto tom="apoio">{mensagemDoErro(detalhe.error)}</Texto>
+        <View className="gap-2">
+          <Texto tom="apoio">{mensagemDoErro(detalhe.error)}</Texto>
+          <Botao titulo="Tentar de novo" onPress={() => void detalhe.refetch()} />
+        </View>
       ) : (
         <Carregando texto="Lendo o alarme…" />
       )}
@@ -112,6 +130,7 @@ function FormularioDeConclusaoDaOrdem({
   aoConcluir: (corpo: ConclusaoOrdem) => void
   aoCancelar: () => void
 }) {
+  const coresDoCampo = useCoresDoCampo()
   const [form, setForm] = useState<FormularioDeConclusao>({ retorno: null, condicao: null, comentario: '' })
   const falta = faltaNaConclusao(form)
   return (
@@ -160,6 +179,7 @@ function FormularioDeConclusaoDaOrdem({
           Observação (opcional)
         </Texto>
         <TextInput
+          {...coresDoCampo}
           accessibilityLabel="Observação"
           accessibilityLabelledBy="rotulo-observacao"
           value={form.comentario}
@@ -293,7 +313,9 @@ export function TelaDetalheOrdem({ osId }: { osId: number }) {
         <Modulo rotulo="Abertura">
           <Linha rotulo="Aberta em">{formatarDataHora(ordem.aberta_em)}</Linha>
           <Linha rotulo="Motivo">{MOTIVO_DA_ABERTURA[ordem.motivo_abertura]}</Linha>
-          <Linha rotulo="Severidade">{formatarNumero(ordem.severidade_acumulada, 0)} z·s</Linha>
+          <Linha rotulo="Severidade">
+            <ValorEmLinha valor={formatarNumero(ordem.severidade_acumulada, 0)} unidade="z·s" />
+          </Linha>
           {ordem.assumida_em ? <Linha rotulo="Assumida em">{formatarDataHora(ordem.assumida_em)}</Linha> : null}
           {ordem.concluida_em ? <Linha rotulo="Concluída em">{formatarDataHora(ordem.concluida_em)}</Linha> : null}
         </Modulo>

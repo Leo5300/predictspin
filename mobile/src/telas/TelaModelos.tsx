@@ -11,6 +11,7 @@ import { ALVO_DE_TOQUE, Botao, Carregando, Mensagem, Modulo } from '@/componente
 import { Cabecalho } from '@/componentes/Casca'
 import { SeloSim } from '@/componentes/Hachura'
 import { SegurarParaConfirmar } from '@/componentes/SegurarParaConfirmar'
+import { SemMaquina } from '@/componentes/SemMaquina'
 import { Texto } from '@/componentes/Texto'
 import { formatarDataHora, formatarNumero, formatarPercentual } from '@/dominio/formato'
 import {
@@ -25,7 +26,7 @@ import { pode } from '@/dominio/permissoes'
 import { avisar } from '@/estado/avisos'
 import { useFonte } from '@/estado/preferencias'
 import { useConexao } from '@/hooks/basicos'
-import { useMaquinaAtual } from '@/hooks/useMaquinaAtual'
+import { useMaquinaAtualComEstado } from '@/hooks/useMaquinaAtual'
 
 const pct = (v: number | null | undefined) => (v === null || v === undefined ? '—' : formatarPercentual(v, 1))
 
@@ -64,7 +65,12 @@ function LinhaDoModelo({ modelo }: { modelo: ModeloResumo }) {
           ? modelo.classes.length === 0
             ? 'só anomalia, sem classificador'
             : 'sem validação'
-          : `F1 por ensaio ${formatarNumero(modelo.f1_macro_por_ensaio, 2)}`}
+          : 'F1 por ensaio '}
+        {modelo.f1_macro_por_ensaio === null ? null : (
+          <Texto tamanho="13" familia="mono">
+            {formatarNumero(modelo.f1_macro_por_ensaio, 2)}
+          </Texto>
+        )}
       </Texto>
       <Texto tamanho="12" tom="apoio">
         {quemTreinou(modelo)}
@@ -80,13 +86,16 @@ function LinhaDoModelo({ modelo }: { modelo: ModeloResumo }) {
 
 /** Versões da máquina e do tipo de dado em uso. Treinar fica no painel (trabalho de mesa). */
 export function TelaModelos() {
-  const maquina = useMaquinaAtual()
+  const estado = useMaquinaAtualComEstado()
+  const maquina = estado.situacao === 'pronta' ? estado.maquina : null
   const simulado = useFonte() === 'simulado'
   const modelos = useQuery({ ...consultaModelos(maquina?.id ?? 0, simulado), enabled: Boolean(maquina) })
   return (
     <View className="flex-1 bg-fundo">
       <Cabecalho titulo="Modelos da IA" subtitulo={maquina?.codigo} voltar />
-      {!maquina || modelos.isPending ? (
+      {estado.situacao !== 'pronta' ? (
+        <SemMaquina estado={estado} />
+      ) : modelos.isPending ? (
         <Carregando />
       ) : modelos.isError ? (
         <Mensagem
@@ -153,9 +162,11 @@ export function Validacao({ titulo, v }: { titulo: string; v: ValidacaoModelo })
                 <Texto tamanho="12" rotulo>
                   Matriz de confusão (linha = real)
                 </Texto>
+                <ScrollView horizontal showsHorizontalScrollIndicator testID="matriz-confusao">
+                  <View>
                 {c.matriz_confusao.map((linha, i) => (
                   <View key={c.classes[i] ?? i} className="flex-row items-center gap-1 py-0.5">
-                    <Texto tamanho="12" tom="apoio" className="w-28" numberOfLines={1}>
+                    <Texto tamanho="12" tom="apoio" style={{ width: 132 }}>
                       {nomeDaClasse(c.classes[i] ?? '')}
                     </Texto>
                     {linha.map((n, k) => (
@@ -171,6 +182,8 @@ export function Validacao({ titulo, v }: { titulo: string; v: ValidacaoModelo })
                     ))}
                   </View>
                 ))}
+                  </View>
+                </ScrollView>
               </View>
             </>
           ) : (

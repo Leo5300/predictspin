@@ -6,7 +6,7 @@ import { FlatList, Pressable, RefreshControl, View } from 'react-native'
 import { chaves } from '@/api/consultas'
 import { mensagemDoErro } from '@/api/erros'
 import type { Alarme } from '@/api/tipos'
-import { ALVO_DE_TOQUE, Botao, Carregando, Mensagem } from '@/componentes/Basicos'
+import { ALVO_DE_TOQUE, Botao, Carregando, Mensagem, MarcaDaOpcao, useCoresDoAtualizar } from '@/componentes/Basicos'
 import { Cabecalho } from '@/componentes/Casca'
 import { SeloSim } from '@/componentes/Hachura'
 import { IconeDoAlarme } from '@/componentes/IconeDoAlarme'
@@ -90,7 +90,11 @@ function Filtro({ valor, aoMudar }: { valor: FiltroAlarmes; aoMudar: (f: FiltroA
     { valor: 'todos', rotulo: 'Todos' },
   ]
   return (
-    <View className="flex-row border-b border-linha bg-fundo px-4 py-2" accessibilityRole="radiogroup">
+    <View
+      className="flex-row border-b border-linha bg-fundo px-4 py-2"
+      accessibilityRole="radiogroup"
+      accessibilityLabel="Filtrar alarmes"
+    >
       {opcoes.map((o) => {
         const marcado = o.valor === valor
         return (
@@ -107,6 +111,7 @@ function Filtro({ valor, aoMudar }: { valor: FiltroAlarmes; aoMudar: (f: FiltroA
             <Texto peso={marcado ? 'forte' : 'normal'} tom={marcado ? 'texto' : 'apoio'}>
               {o.rotulo}
             </Texto>
+            {marcado ? <MarcaDaOpcao /> : null}
           </Pressable>
         )
       })}
@@ -116,6 +121,7 @@ function Filtro({ valor, aoMudar }: { valor: FiltroAlarmes; aoMudar: (f: FiltroA
 
 /** Alarmes da fonte em uso, ao vivo pelo evento "alerta": em aberto primeiro, por prioridade e hora. */
 export function TelaAlarmes() {
+  const coresDoAtualizar = useCoresDoAtualizar()
   const simulado = useFonte() === 'simulado'
   const cliente = useQueryClient()
   const alarmes = useAlarmes(simulado)
@@ -148,7 +154,7 @@ export function TelaAlarmes() {
           data={lista}
           keyExtractor={(a) => String(a.id)}
           renderItem={({ item }) => <LinhaDoAlarme alarme={item} agoraMs={agora} />}
-          refreshControl={<RefreshControl refreshing={atualizando} onRefresh={() => void recarregar()} />}
+          refreshControl={<RefreshControl {...coresDoAtualizar} refreshing={atualizando} onRefresh={() => void recarregar()} />}
           ListEmptyComponent={
             <Mensagem titulo={filtro === 'ativos' ? 'Nenhum alarme em aberto.' : 'Nenhum alarme.'}>
               Sem referência calculada, a API não chama nada de atenção ou alarme. Com referência, cada

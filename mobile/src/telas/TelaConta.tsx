@@ -14,7 +14,7 @@ import {
 import { ENDERECO_DA_API, URL_API } from '@/api/configuracao'
 import { atualizarRegistro, pedirPermissao, useEstadoDoPush } from '@/api/push'
 import { useSessao } from '@/api/sessao'
-import { Botao, Escolha, Modulo } from '@/componentes/Basicos'
+import { Botao, Carregando, Escolha, Modulo } from '@/componentes/Basicos'
 import { Cabecalho } from '@/componentes/Casca'
 import { Texto } from '@/componentes/Texto'
 import { resumoDoPush, type ResumoDoPush } from '@/dominio/notificacao'
@@ -191,7 +191,9 @@ export function TelaConta() {
           </Texto>
         </Modulo>
         <Modulo rotulo="Entrar com biometria">
-          {biometria === null ? null : biometria.disponivel ? (
+          {biometria === null ? (
+            <Carregando texto="Conferindo a biometria do aparelho…" />
+          ) : biometria.disponivel ? (
             <>
               <Escolha<'ligada' | 'desligada'>
                 rotulo={`Entrar com ${biometria.nome}`}

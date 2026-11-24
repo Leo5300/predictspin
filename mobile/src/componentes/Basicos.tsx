@@ -16,6 +16,18 @@ import { Texto } from './Texto'
 /** Alvo mínimo de toque: 56 dp (luva, mão suja). */
 export const ALVO_DE_TOQUE = 56
 
+/** Cursor e seleção dos campos de texto no cinza do tema (sem a cor de destaque do sistema). */
+export function useCoresDoCampo() {
+  const cores = useCores()
+  return { cursorColor: cores.texto, selectionColor: cores.realce, selectionHandleColor: cores.texto }
+}
+
+/** "Puxar para atualizar" no cinza do tema (sem a cor de destaque do sistema). */
+export function useCoresDoAtualizar() {
+  const cores = useCores()
+  return { colors: [cores.apoio], tintColor: cores.apoio, progressBackgroundColor: cores.modulo }
+}
+
 // ------------------------------------------------------------------ selo de estado
 
 const CLASSE_DO_SELO: Record<Tom, string> = {
@@ -52,7 +64,7 @@ export function SeloEstado({
   const tomDaForma: Tom = tom === 'alarme' || tom === 'atencao' ? 'neutro' : tom
   return (
     <View
-      className={`h-7 flex-row items-center gap-1.5 self-start border px-1.5 ${CLASSE_DO_SELO[tom]}`}
+      className={`min-h-7 shrink flex-row items-center gap-1.5 self-start border px-1.5 py-0.5 ${CLASSE_DO_SELO[tom]}`}
       style={tracejado ? { borderStyle: 'dashed' } : null}
       testID={`selo-${rotulo}`}
     >
@@ -61,7 +73,7 @@ export function SeloEstado({
       ) : (
         <Forma forma={forma} tom={tomDaForma} tamanho={13} vazada={vazada ?? tracejado} />
       )}
-      <Texto tamanho="12" peso="forte" tom={TOM_DO_TEXTO_DO_SELO[tom]} style={{ letterSpacing: 0.8 }}>
+      <Texto tamanho="12" peso="forte" tom={TOM_DO_TEXTO_DO_SELO[tom]} className="shrink" style={{ letterSpacing: 0.8 }}>
         {rotulo}
       </Texto>
     </View>
@@ -141,6 +153,31 @@ export function Leitura({
   )
 }
 
+/**
+ * Número medido dentro de uma linha de texto: Plex Mono no valor, unidade menor e em cinza. Vai dentro
+ * de um Texto (aninhado), como em "Valor 0,412 g".
+ */
+export function ValorEmLinha({ valor, unidade }: { valor: string; unidade?: string | null }) {
+  return (
+    <>
+      <Texto tamanho="13" familia="mono" peso="medio">
+        {valor}
+      </Texto>
+      {unidade ? (
+        <Texto tamanho="12" familia="mono" tom="apoio">
+          {' '}
+          {unidade}
+        </Texto>
+      ) : null}
+    </>
+  )
+}
+
+/** Barra grossa embaixo da opção marcada: a marca não depende só do tom do fundo. */
+export function MarcaDaOpcao() {
+  return <View className="absolute right-0 bottom-0 left-0 h-1 bg-texto" testID="marca-escolhida" />
+}
+
 // ------------------------------------------------------------------ botão
 
 const AnimadoPressionavel = Animated.createAnimatedComponent(Pressable)
@@ -159,7 +196,6 @@ export function Botao({
   dica,
   onPress,
   testID,
-  compacto = false,
 }: {
   titulo: string
   variante?: 'acao' | 'contorno'
@@ -169,9 +205,8 @@ export function Botao({
   dica?: string
   onPress?: PressableProps['onPress']
   testID?: string
-  /** Altura de 48 dp, só em linha com outro alvo grande ao lado. */
-  compacto?: boolean
 }) {
+  const cores = useCores()
   const escala = useSharedValue(1)
   const estilo = useAnimatedStyle(() => ({ transform: [{ scale: escala.value }] }))
   const inativo = desabilitado || carregando
@@ -198,12 +233,12 @@ export function Botao({
       testID={testID}
       className={`flex-row items-center justify-center gap-2 border px-4 ${classe}`}
       style={[
-        { minHeight: compacto ? 48 : ALVO_DE_TOQUE, borderRadius: 2 },
+        { minHeight: ALVO_DE_TOQUE, borderRadius: 2 },
         inativo ? { borderStyle: 'dashed' } : null,
         estilo,
       ]}
     >
-      {carregando ? <ActivityIndicator size="small" /> : null}
+      {carregando ? <ActivityIndicator size="small" color={cores.apoio} /> : null}
       <Texto
         tamanho="15"
         peso="forte"
@@ -219,9 +254,10 @@ export function Botao({
 // ------------------------------------------------------------------ estados da tela
 
 export function Carregando({ texto = 'Carregando…' }: { texto?: string }) {
+  const cores = useCores()
   return (
     <View className="flex-row items-center gap-2 px-4 py-6" accessible accessibilityLabel={texto}>
-      <ActivityIndicator size="small" />
+      <ActivityIndicator size="small" color={cores.apoio} />
       <Texto tom="apoio">{texto}</Texto>
     </View>
   )
@@ -246,20 +282,30 @@ export function Mensagem({
   )
 }
 
-/** Escolha entre poucas opções (tema, fonte dos dados, período): botões lado a lado, um marcado. */
+/**
+ * Escolha entre poucas opções (tema, fonte dos dados, período): botões lado a lado, um marcado. O marcado
+ * leva fundo rebaixado, texto forte e uma barra grossa embaixo: a marca não depende só do tom.
+ */
 export function Escolha<T extends string>({
   opcoes,
   valor,
   aoMudar,
   rotulo,
+  colunas,
 }: {
   opcoes: { valor: T; rotulo: string }[]
   valor: T
   aoMudar: (v: T) => void
   rotulo: string
+  /** Com muitas opções (rotações), quebra em linhas de N; sem isto, todas numa linha. */
+  colunas?: number
 }) {
   return (
-    <View className="flex-row" accessibilityRole="radiogroup" accessibilityLabel={rotulo}>
+    <View
+      className={colunas ? 'flex-row flex-wrap' : 'flex-row'}
+      accessibilityRole="radiogroup"
+      accessibilityLabel={rotulo}
+    >
       {opcoes.map((o) => {
         const marcado = o.valor === valor
         return (
@@ -269,13 +315,14 @@ export function Escolha<T extends string>({
             accessibilityRole="radio"
             accessibilityState={{ checked: marcado }}
             accessibilityLabel={o.rotulo}
-            className={`flex-1 items-center justify-center border ${marcado ? 'border-linha-forte bg-rebaixo' : 'border-linha bg-modulo'}`}
-            style={{ minHeight: ALVO_DE_TOQUE }}
+            className={`${colunas ? '' : 'flex-1 '}items-center justify-center border ${marcado ? 'border-linha-forte bg-rebaixo' : 'border-linha bg-modulo'}`}
+            style={colunas ? { minHeight: ALVO_DE_TOQUE, width: `${100 / colunas}%` } : { minHeight: ALVO_DE_TOQUE }}
             testID={`escolha-${o.valor}`}
           >
             <Texto peso={marcado ? 'forte' : 'normal'} tom={marcado ? 'texto' : 'apoio'}>
               {o.rotulo}
             </Texto>
+            {marcado ? <MarcaDaOpcao /> : null}
           </Pressable>
         )
       })}

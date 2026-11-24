@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { ScrollView, View } from 'react-native'
 
 import { consultaAlarmes, consultaAvaliacao, consultaLimites, consultaPontos } from '@/api/consultas'
-import { Leitura, Modulo, SeloEstado } from '@/componentes/Basicos'
+import { mensagemDoErro } from '@/api/erros'
+import { Botao, Carregando, Leitura, Mensagem, Modulo, SeloEstado } from '@/componentes/Basicos'
 import { Cabecalho } from '@/componentes/Casca'
 import { SeloSim } from '@/componentes/Hachura'
 import { AmostraDoPonto } from '@/componentes/Instrumento'
@@ -22,7 +23,7 @@ import { useUltimaJanela } from '@/hooks/useDadosDaMaquina'
  */
 export function TelaPonto({ maquinaId, codigo }: { maquinaId: number; codigo: string }) {
   const simulado = useFonte() === 'simulado'
-  const { janela, idadeS, frescor } = useUltimaJanela(maquinaId, simulado)
+  const { consulta, janela, idadeS, frescor } = useUltimaJanela(maquinaId, simulado)
   const pontos = useQuery(consultaPontos(maquinaId))
   const avaliacao = useQuery(consultaAvaliacao(maquinaId, simulado))
   const limites = useQuery(consultaLimites())
@@ -55,6 +56,16 @@ export function TelaPonto({ maquinaId, codigo }: { maquinaId: number; codigo: st
         voltar
       />
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }} testID="tela-ponto">
+        {consulta.isPending ? (
+          <Carregando />
+        ) : consulta.isError ? (
+          <Mensagem
+            titulo="Não foi possível ler a última janela."
+            acao={<Botao titulo="Tentar de novo" onPress={() => void consulta.refetch()} />}
+          >
+            {mensagemDoErro(consulta.error)}
+          </Mensagem>
+        ) : null}
         <Modulo>
           <View className="flex-row items-center gap-3">
             <AmostraDoPonto codigo={codigo} apagado={apagado} />
@@ -96,11 +107,19 @@ export function TelaPonto({ maquinaId, codigo }: { maquinaId: number; codigo: st
                   />
                   {medida ? (
                     <Texto tamanho="12" tom={apagado ? 'fraco' : 'apoio'}>
-                      típico {formatarNumero(medida.tipico, g.casas)}
-                      {medida.z !== null ? ` · z ${formatarZ(medida.z)}` : ''}
-                      {medida.diferenca_pct !== null && medida.diferenca_pct !== undefined
-                        ? ` · ${formatarPercentual(medida.diferenca_pct / 100)}`
-                        : ''}
+                      típico <Texto tamanho="12" familia="mono" tom={apagado ? 'fraco' : 'apoio'}>{formatarNumero(medida.tipico, g.casas)}</Texto>
+                      {medida.z !== null ? ' · z ' : ''}
+                      {medida.z !== null ? (
+                        <Texto tamanho="12" familia="mono" tom={apagado ? 'fraco' : 'apoio'}>
+                          {formatarZ(medida.z)}
+                        </Texto>
+                      ) : null}
+                      {medida.diferenca_pct !== null && medida.diferenca_pct !== undefined ? ' · ' : ''}
+                      {medida.diferenca_pct !== null && medida.diferenca_pct !== undefined ? (
+                        <Texto tamanho="12" familia="mono" tom={apagado ? 'fraco' : 'apoio'}>
+                          {formatarPercentual(medida.diferenca_pct / 100)}
+                        </Texto>
+                      ) : null}
                       {desvio ? (desvio === 'alarme' ? ' · ◆ alarme' : ' · ▲ atenção') : ''}
                     </Texto>
                   ) : null}

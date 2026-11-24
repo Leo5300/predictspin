@@ -217,6 +217,8 @@ export function GraficoTendencia({
                 tamanho="12"
                 familia="mono"
                 tom="fraco"
+                numberOfLines={1}
+                adjustsFontSizeToFit
                 style={{ position: 'absolute', left: 0, width: MARGEM.esquerda - 6, top: y(v) - 8, textAlign: 'right' }}
               >
                 {formatarNumero(v, casas)}
@@ -229,6 +231,8 @@ export function GraficoTendencia({
             tamanho="12"
             familia="mono"
             tom="fraco"
+            numberOfLines={1}
+            adjustsFontSizeToFit
             style={{ position: 'absolute', top: altura - MARGEM.base + 4, left: x(t) - 24, width: 48, textAlign: 'center' }}
           >
             {formatarHoraMinuto(t * 1000)}

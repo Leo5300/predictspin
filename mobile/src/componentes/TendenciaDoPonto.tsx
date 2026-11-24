@@ -5,7 +5,7 @@ import { View } from 'react-native'
 import { consultaTendencia, consultaTendenciaEntre } from '@/api/consultas'
 import { mensagemDoErro } from '@/api/erros'
 import type { Avaliacao, Limites } from '@/api/tipos'
-import { Carregando, Escolha } from '@/componentes/Basicos'
+import { Botao, Carregando, Escolha } from '@/componentes/Basicos'
 import { GraficoTendencia } from '@/componentes/GraficoTendencia'
 import { Texto } from '@/componentes/Texto'
 import { formatarRpm } from '@/dominio/formato'
@@ -78,7 +78,10 @@ export function TendenciaDoPonto({
           testID="grafico-tendencia"
         />
       ) : consulta.isError ? (
-        <Texto tom="apoio">{mensagemDoErro(consulta.error)}</Texto>
+        <View className="gap-2">
+          <Texto tom="apoio">{mensagemDoErro(consulta.error)}</Texto>
+          <Botao titulo="Tentar de novo" onPress={() => void consulta.refetch()} />
+        </View>
       ) : (
         <Carregando texto="Carregando a tendência…" />
       )}

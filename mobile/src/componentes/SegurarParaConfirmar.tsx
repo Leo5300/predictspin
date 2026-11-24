@@ -96,6 +96,8 @@ export function SegurarParaConfirmar({
     progresso.set(withTiming(1, {
       duration: DURACAO_SEGURAR_MS,
       easing: Easing.linear,
+      // de propósito: o anel enchendo é o retorno de quanto falta segurar, não enfeite; com "reduzir
+      // movimento" ele continua, linear e sem mola; a volta ao soltar segue o sistema (fica instantânea)
       reduceMotion: ReduceMotion.Never,
     }),
     )

@@ -26,11 +26,10 @@ export function PedidoDeNotificacao({ papel }: { papel: Papel }) {
       </Texto>
       <View className="mt-3 flex-row gap-3">
         <View className="flex-1">
-          <Botao compacto titulo="Agora não" onPress={() => void adiarPedido()} testID="pedido-agora-nao" />
+          <Botao titulo="Agora não" onPress={() => void adiarPedido()} testID="pedido-agora-nao" />
         </View>
         <View className="flex-1">
           <Botao
-            compacto
             variante="acao"
             titulo="Permitir"
             carregando={ocupado}

@@ -13,7 +13,7 @@ import {
 } from '@/api/consultas'
 import { mensagemDoErro } from '@/api/erros'
 import type { Janela, Ponto } from '@/api/tipos'
-import { Botao, Carregando, Leitura, Mensagem, Modulo, SeloEstado } from '@/componentes/Basicos'
+import { Botao, Carregando, Leitura, Mensagem, Modulo, SeloEstado, useCoresDoAtualizar } from '@/componentes/Basicos'
 import { Cabecalho } from '@/componentes/Casca'
 import { SeloSim } from '@/componentes/Hachura'
 import {
@@ -80,12 +80,15 @@ export function LinhaDoPonto({
           </View>
           <Leitura rotulo="RMS" valor={formatarG(ponto.rms)} unidade="g" tamanho="32" apagado={apagado} />
         </View>
-        <SeloEstado
-          rotulo={aparencia.rotulo}
-          forma={aparencia.forma}
-          tom={aparencia.tom}
-          tracejado={aparencia.tracejado}
-        />
+        {/* rótulo longo ("SEM REFERÊNCIA COMPLETA") quebra dentro do selo em vez de espremer o RMS */}
+        <View className="items-end" style={{ maxWidth: '45%' }}>
+          <SeloEstado
+            rotulo={aparencia.rotulo}
+            forma={aparencia.forma}
+            tom={aparencia.tom}
+            tracejado={aparencia.tracejado}
+          />
+        </View>
       </View>
       <ReguaDesvio z={comparado ? ponto.z : null} limites={comparado ? limites : null} apagado={apagado} />
       <Sparkline valores={ponto.serie} codigo={ponto.codigo} apagado={apagado} />
@@ -138,6 +141,7 @@ export function montarPontos(
 
 /** Máquina (equivalente ao L1/L2 do painel): placa de estado, rotação e uma linha por ponto. */
 export function TelaMaquina({ maquinaId, comVoltar = false }: { maquinaId: number; comVoltar?: boolean }) {
+  const coresDoAtualizar = useCoresDoAtualizar()
   const simulado = useFonte() === 'simulado'
   const cliente = useQueryClient()
   const [atualizando, setAtualizando] = useState(false)
@@ -191,7 +195,7 @@ export function TelaMaquina({ maquinaId, comVoltar = false }: { maquinaId: numbe
         voltar={comVoltar}
       />
       <ScrollView
-        refreshControl={<RefreshControl refreshing={atualizando} onRefresh={() => void recarregar()} />}
+        refreshControl={<RefreshControl {...coresDoAtualizar} refreshing={atualizando} onRefresh={() => void recarregar()} />}
         contentContainerStyle={{ paddingBottom: 32 }}
         testID="tela-maquina"
       >
