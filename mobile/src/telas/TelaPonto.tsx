@@ -6,6 +6,7 @@ import { Leitura, Modulo, SeloEstado } from '@/componentes/Basicos'
 import { Cabecalho } from '@/componentes/Casca'
 import { SeloSim } from '@/componentes/Hachura'
 import { AmostraDoPonto } from '@/componentes/Instrumento'
+import { TendenciaDoPonto } from '@/componentes/TendenciaDoPonto'
 import { Texto } from '@/componentes/Texto'
 import { instrumentoPorPonto } from '@/dominio/alarme'
 import { aparenciaDoPonto, desvioDoZ } from '@/dominio/estado'
@@ -17,8 +18,7 @@ import { useUltimaJanela } from '@/hooks/useDadosDaMaquina'
 
 /**
  * Detalhe do ponto: valores atuais de RMS, pico, curtose, 1X, 2X, 3X e velocidade, com o típico e o
- * z de cada medida quando a API comparou com a referência, e o estado. O gráfico de tendência fica
- * para a parte B.
+ * z de cada medida quando a API comparou com a referência, e o estado; abaixo, a tendência do RMS.
  */
 export function TelaPonto({ maquinaId, codigo }: { maquinaId: number; codigo: string }) {
   const simulado = useFonte() === 'simulado'
@@ -112,6 +112,15 @@ export function TelaPonto({ maquinaId, codigo }: { maquinaId: number; codigo: st
             {janela ? `rotação ${formatarNumero(janela.rotacao_rpm, 0)} rpm · janela ${janela.modo === 'rapido' ? 'de 1 s' : 'de 5 s'}` : TRACO}
             {avaliado?.generica ? ' · referência genérica' : ''}
           </Texto>
+        </Modulo>
+        <Modulo rotulo="Tendência do RMS">
+          <TendenciaDoPonto
+            maquinaId={maquinaId}
+            codigo={codigo}
+            simulado={simulado}
+            avaliacao={avaliacao.data}
+            limites={limites.data}
+          />
         </Modulo>
       </ScrollView>
     </View>

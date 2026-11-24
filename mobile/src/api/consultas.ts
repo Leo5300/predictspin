@@ -5,6 +5,13 @@
 import { queryOptions } from '@tanstack/react-query'
 
 import type { Observacao } from '@/dominio/idade'
+import {
+  periodo,
+  tendenciaDeJanelas,
+  tendenciaDeSerie,
+  type ChavePeriodo,
+  type Tendencia,
+} from '@/dominio/tendencia'
 
 import { api, exigir } from './cliente'
 import { ErroApi } from './erros'
@@ -31,6 +38,71 @@ export const chaves = {
   limites: () => ['limites'] as const,
   alarmes: (simulado: boolean) => ['alarmes', simulado] as const,
   alarme: (id: number) => ['alarme', id] as const,
+  tendencia: (maquinaId: number, simulado: boolean, chave: ChavePeriodo) =>
+    ['tendencia', maquinaId, simulado, chave] as const,
+}
+
+/** A API devolve no máximo 200 janelas por página; 1 h de janelas de 5 s são 720. */
+const JANELAS_POR_PAGINA = 200
+const PAGINAS_MAXIMAS = 6
+
+export type DadosDaTendencia = {
+  inicioS: number
+  fimS: number
+  /** Uma tendência por ponto (as janelas e a série trazem todos os pontos de uma vez). */
+  porPonto: (codigo: string) => Tendencia
+}
+
+/**
+ * Tendência do período que termina agora: janelas normais até 1 h (em páginas, da mais antiga para a
+ * mais nova), série agregada da API em 8 h e 24 h. Uma consulta serve os três pontos.
+ */
+export function consultaTendencia(maquinaId: number, simulado: boolean, chave: ChavePeriodo) {
+  const escolhido = periodo(chave)
+  return queryOptions({
+    queryKey: chaves.tendencia(maquinaId, simulado, chave),
+    queryFn: async ({ signal }): Promise<DadosDaTendencia> => {
+      const ate = new Date()
+      const de = new Date(ate.getTime() - escolhido.segundos * 1000)
+      const limites = { inicioS: de.getTime() / 1000, fimS: ate.getTime() / 1000 }
+      if (escolhido.fonte === 'agregado') {
+        const serie = await exigir(
+          api.GET('/api/v1/maquinas/{id}/serie', {
+            params: {
+              path: { id: maquinaId },
+              query: { de: de.toISOString(), ate: ate.toISOString(), simulado, baldes: escolhido.baldes },
+            },
+            signal,
+          }),
+        )
+        return { ...limites, porPonto: (codigo) => tendenciaDeSerie(serie, codigo) }
+      }
+      const janelas: Janela[] = []
+      for (let pagina = 0; pagina < PAGINAS_MAXIMAS; pagina++) {
+        const resposta = await exigir(
+          api.GET('/api/v1/maquinas/{id}/janelas', {
+            params: {
+              path: { id: maquinaId },
+              query: {
+                de: de.toISOString(),
+                ate: ate.toISOString(),
+                simulado,
+                modo: 'normal',
+                ordem: 'asc',
+                page: pagina,
+                size: JANELAS_POR_PAGINA,
+              },
+            },
+            signal,
+          }),
+        )
+        janelas.push(...resposta.conteudo)
+        if (pagina + 1 >= resposta.total_paginas) break
+      }
+      return { ...limites, porPonto: (codigo) => tendenciaDeJanelas(janelas, codigo) }
+    },
+    refetchInterval: escolhido.fonte === 'brutos' ? 15_000 : 60_000,
+  })
 }
 
 export function consultaMaquinas() {

@@ -245,3 +245,40 @@ export function Mensagem({
     </View>
   )
 }
+
+/** Escolha entre poucas opções (tema, fonte dos dados, período): botões lado a lado, um marcado. */
+export function Escolha<T extends string>({
+  opcoes,
+  valor,
+  aoMudar,
+  rotulo,
+}: {
+  opcoes: { valor: T; rotulo: string }[]
+  valor: T
+  aoMudar: (v: T) => void
+  rotulo: string
+}) {
+  return (
+    <View className="flex-row" accessibilityRole="radiogroup" accessibilityLabel={rotulo}>
+      {opcoes.map((o) => {
+        const marcado = o.valor === valor
+        return (
+          <Pressable
+            key={o.valor}
+            onPress={() => aoMudar(o.valor)}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: marcado }}
+            accessibilityLabel={o.rotulo}
+            className={`flex-1 items-center justify-center border ${marcado ? 'border-linha-forte bg-rebaixo' : 'border-linha bg-modulo'}`}
+            style={{ minHeight: ALVO_DE_TOQUE }}
+            testID={`escolha-${o.valor}`}
+          >
+            <Texto peso={marcado ? 'forte' : 'normal'} tom={marcado ? 'texto' : 'apoio'}>
+              {o.rotulo}
+            </Texto>
+          </Pressable>
+        )
+      })}
+    </View>
+  )
+}
