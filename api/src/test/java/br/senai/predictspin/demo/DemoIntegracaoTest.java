@@ -229,6 +229,51 @@ class DemoIntegracaoTest extends AlarmeIntegracaoBase {
         assertThat(candidatasDoTreino()).isEqualTo(antes);
     }
 
+    // ---------------------------------------------------------------- zerar
+
+    @Test
+    void zerarApagaAlertasOsEstadosESeveridadeSimuladosEDeixaOReal() throws Exception {
+        String token = tokenAdmin();
+        prepararReferencia(token);
+        // dado real: só para conferir que nada dele some (sem janela real, que pausaria a demonstração por 60 s)
+        jdbc.update("INSERT INTO estado_ponto (ponto_medicao_id, simulado) SELECT id, false FROM ponto_medicao"
+                + " ON CONFLICT DO NOTHING");
+        long reaisAntes = jdbc.queryForObject("SELECT count(*) FROM estado_ponto WHERE NOT simulado", Long.class);
+        assertThat(reaisAntes).isPositive();
+
+        cenario(token, "ALARME");
+        emitir(agora(), 30);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM alerta WHERE simulado", Long.class)).isPositive();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM ordem_servico WHERE simulado", Long.class)).isPositive();
+        long janelas = contar("janela");
+
+        JsonNode depois = corpo(mvc.perform(comToken(post("/api/v1/demo/zerar"), token)).andExpect(status().isOk()));
+        assertThat(depois.get("nivel").asText()).isEqualTo("PARADA");
+        assertThat(depois.get("mensagem").asText()).startsWith("Zerado:").contains("alerta").contains("OS");
+
+        for (String tabela : List.of("alerta", "ordem_servico", "estado_ponto", "severidade_acumulada")) {
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM " + tabela + " WHERE simulado", Long.class))
+                    .as(tabela).isZero();
+        }
+        assertThat(contar("alerta_historico")).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM estado_ponto WHERE NOT simulado", Long.class))
+                .isEqualTo(reaisAntes);
+        // janelas e referência ficam
+        assertThat(contar("janela")).isEqualTo(janelas);
+        assertThat(estado(token).get("referencia_ok").asBoolean()).isTrue();
+
+        // e a demonstração volta a funcionar do zero
+        cenario(token, "ALARME");
+        emitir(agora().plusSeconds(200), 5);
+        assertThat(estadoDoPonto("A")).isEqualTo(2);
+    }
+
+    @Test
+    void soAdminZera() throws Exception {
+        mvc.perform(comToken(post("/api/v1/demo/zerar"), tokenDe("TECNICO"))).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/demo/zerar")).andExpect(status().isUnauthorized());
+    }
+
     private long candidatasDoTreino() throws Exception {
         return corpo(mvc.perform(get("/api/v1/treino/servico/conjunto/resumo?simulado=true&maquina_id=" + maquinaId)
                 .header("X-Treino-Chave", CHAVE_TREINO)).andExpect(status().isOk())).get("total_candidatas").asLong();

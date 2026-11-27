@@ -2,10 +2,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-import { chaveDoEstadoDemo, consultaEstadoDemo, trocarCenario } from '@/api/demonstracao'
+import {
+  chaveDoEstadoDemo,
+  consultaEstadoDemo,
+  trocarCenario,
+  zerarDemonstracao,
+} from '@/api/demonstracao'
 import { mensagemDoErro } from '@/api/erros'
 import { FormaDeEstado } from '@/componentes/instrumento/FormaDeEstado'
 import type { Forma } from '@/componentes/instrumento/formasDeEstado'
+import { SegurarParaConfirmar } from '@/componentes/instrumento/SegurarParaConfirmar'
 import { Button } from '@/componentes/ui/button'
 import { Kbd } from '@/componentes/ui/kbd'
 import {
@@ -77,6 +83,17 @@ export function BarraDeDemonstracao({ papel }: { papel: Papel }) {
   const [recolhida, setRecolhida] = useState(lerRecolhida)
   const [anuncio, setAnuncio] = useState('')
   const nivelAnterior = useRef<NivelDemo | null>(null)
+
+  // Zerar: apaga os alertas e as OS simulados; depois, toda tela refaz as consultas (listas, estado dos pontos)
+  const zeragem = useMutation({
+    mutationFn: zerarDemonstracao,
+    onSuccess: (resposta) => {
+      cliente.setQueryData(chaveDoEstadoDemo, resposta)
+      void cliente.invalidateQueries({
+        predicate: (consulta) => consulta.queryKey[0] !== chaveDoEstadoDemo[0],
+      })
+    },
+  })
 
   const troca = useMutation({
     mutationFn: trocarCenario,
@@ -293,7 +310,21 @@ export function BarraDeDemonstracao({ papel }: { papel: Papel }) {
               {TECLA_DO_NIVEL.PARADA}
             </Kbd>
           </Button>
+
+          <SegurarParaConfirmar
+            aoConfirmar={() => zeragem.mutate()}
+            disabled={zeragem.isPending}
+            className="max-sm:basis-full sm:self-center"
+          >
+            {zeragem.isPending ? 'Zerando…' : 'Segure para zerar alertas e OS'}
+          </SegurarParaConfirmar>
         </div>
+
+        {zeragem.isError ? (
+          <p role="alert" className="text-13 font-semibold text-alarme-texto">
+            Não consegui zerar: {mensagemDoErro(zeragem.error)}
+          </p>
+        ) : null}
 
         {troca.isError ? (
           <p role="alert" className="text-13 font-semibold text-alarme-texto">

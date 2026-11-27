@@ -189,6 +189,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/demo/zerar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Para a demonstração e apaga os alertas e as OS simulados
+         * @description Apaga, só do dado simulado, ordens de serviço, alertas (com histórico), estado dos pontos e severidade acumulada. Dado real, janelas e referência ficam. Não se desfaz.
+         */
+        post: operations["zerar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ensaios/exportar.csv": {
         parameters: {
             query?: never;
@@ -3859,6 +3879,53 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Estado da demonstração */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstadoDemoResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Demonstração desligada neste ambiente */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    zerar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estado depois de zerar (nível PARADA) */
             200: {
                 headers: {
                     [name: string]: unknown;

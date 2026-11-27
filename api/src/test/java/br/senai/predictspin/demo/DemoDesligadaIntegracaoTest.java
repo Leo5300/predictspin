@@ -23,6 +23,7 @@ class DemoDesligadaIntegracaoTest extends IntegracaoBase {
         mvc.perform(comToken(get("/api/v1/demo/estado"), token)).andExpect(status().isNotFound());
         mvc.perform(comToken(post("/api/v1/demo/cenario"), token).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"nivel\":\"ALARME\"}")).andExpect(status().isNotFound());
+        mvc.perform(comToken(post("/api/v1/demo/zerar"), token)).andExpect(status().isNotFound());
         assertThat(demo.habilitado()).isFalse();
         demo.passo();
         assertThat(contar("janela")).isZero();

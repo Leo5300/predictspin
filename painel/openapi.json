@@ -6337,6 +6337,58 @@
         ]
       }
     },
+    "/api/v1/demo/zerar": {
+      "post": {
+        "description": "Apaga, só do dado simulado, ordens de serviço, alertas (com histórico), estado dos pontos e severidade acumulada. Dado real, janelas e referência ficam. Não se desfaz.",
+        "operationId": "zerar",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoDemoResposta"
+                }
+              }
+            },
+            "description": "Estado depois de zerar (nível PARADA)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Demonstração desligada neste ambiente"
+          }
+        },
+        "summary": "Para a demonstração e apaga os alertas e as OS simulados",
+        "tags": [
+          "Demonstração"
+        ]
+      }
+    },
     "/api/v1/ensaios/exportar.csv": {
       "get": {
         "description": "Uma linha por janela e ponto, só de ensaios encerrados e não descartados, com os rótulos do ensaio e uma coluna por canal; no fim, a receita (ferramenta, profundidade_corte_mm, diametro_peca_mm, fluido_corte) e evento_marcado (janelas que devem ficar fora do treino). Use simulado=false para só dado real.",

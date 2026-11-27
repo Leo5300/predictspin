@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   estado: { current: null as EstadoDemo | null },
   consultas: { current: 0 },
   trocar: { current: null as unknown as (nivel: string) => Promise<unknown> },
+  zerar: { current: null as unknown as () => Promise<unknown> },
 }))
 
 vi.mock('@/api/demonstracao', async () => {
@@ -25,6 +26,7 @@ vi.mock('@/api/demonstracao', async () => {
         retry: false,
       }),
     trocarCenario: (nivel: string) => mocks.trocar.current(nivel),
+    zerarDemonstracao: () => mocks.zerar.current(),
   }
 })
 
@@ -281,6 +283,49 @@ describe('BarraDeDemonstracao: teclado', () => {
     montar()
     await screen.findByTestId('barra-demonstracao')
     expect(botao(/Abrir/)).toHaveAttribute('aria-expanded', 'false')
+  })
+})
+
+describe('BarraDeDemonstracao: zerar', () => {
+  it('só zera segurando, e a mensagem e o nível vêm da resposta da API', async () => {
+    mocks.estado.current = estadoDa({ nivel: 'ALARME', volta_normal_em_s: 200 })
+    mocks.zerar.current = vi.fn(() =>
+      Promise.resolve(
+        estadoDa({ nivel: 'PARADA', mensagem: 'Zerado: 2 alertas e 1 OS simulada apagada.' }),
+      ),
+    )
+    montar()
+    await screen.findByTestId('barra-demonstracao')
+    const zerar = botao(/Segure para zerar/)
+
+    // um clique rápido não zera
+    fireEvent.pointerDown(zerar, { button: 0 })
+    fireEvent.pointerUp(zerar)
+    await act(() => new Promise((r) => setTimeout(r, 1700)))
+    expect(mocks.zerar.current).not.toHaveBeenCalled()
+
+    // segurar 1,5 s zera
+    fireEvent.pointerDown(zerar, { button: 0 })
+    await waitFor(() => expect(mocks.zerar.current).toHaveBeenCalledTimes(1), { timeout: 3000 })
+    fireEvent.pointerUp(zerar)
+    await waitFor(() => expect(botao(/^Parar/)).toHaveAttribute('aria-pressed', 'true'))
+    expect(screen.getByTestId('mensagem-demonstracao')).toHaveTextContent(
+      'Zerado: 2 alertas e 1 OS simulada apagada.',
+    )
+  })
+
+  it('erro ao zerar vira aviso em português', async () => {
+    mocks.zerar.current = vi.fn(() =>
+      Promise.reject(new ErroApi(500, { mensagem: 'Erro interno. Tente de novo.' })),
+    )
+    montar()
+    await screen.findByTestId('barra-demonstracao')
+    const zerar = botao(/Segure para zerar/)
+    fireEvent.pointerDown(zerar, { button: 0 })
+    expect(await screen.findByRole('alert', {}, { timeout: 3000 })).toHaveTextContent(
+      'Não consegui zerar: Erro interno. Tente de novo.',
+    )
+    fireEvent.pointerUp(zerar)
   })
 })
 

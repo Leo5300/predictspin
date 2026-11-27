@@ -23,9 +23,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class DemoController {
 
     private final DemoService demo;
+    private final ZeragemDemoService zeragem;
 
-    public DemoController(DemoService demo) {
+    public DemoController(DemoService demo, ZeragemDemoService zeragem) {
         this.demo = demo;
+        this.zeragem = zeragem;
     }
 
     @GetMapping("/estado")
@@ -48,6 +50,16 @@ public class DemoController {
     public EstadoDemoResposta cenario(@Valid @RequestBody CenarioDemoRequisicao requisicao,
                                       Authentication autenticacao) {
         return demo.definir(requisicao.nivel(), quem(autenticacao));
+    }
+
+    @PostMapping("/zerar")
+    @Operation(summary = "Para a demonstração e apaga os alertas e as OS simulados",
+            description = "Apaga, só do dado simulado, ordens de serviço, alertas (com histórico), estado dos pontos e "
+                    + "severidade acumulada. Dado real, janelas e referência ficam. Não se desfaz.")
+    @ApiResponse(responseCode = "200", description = "Estado depois de zerar (nível PARADA)")
+    @ApiResponse(responseCode = "404", description = "Demonstração desligada neste ambiente")
+    public EstadoDemoResposta zerar(Authentication autenticacao) {
+        return zeragem.zerar(quem(autenticacao));
     }
 
     /** "id 1 (Nome)": só o necessário para o log, nunca o e-mail nem o token. */

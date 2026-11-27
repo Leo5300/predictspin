@@ -111,7 +111,8 @@ test.beforeAll(async ({ request }) => {
     )
     expect(recalculo.status).toBe(201)
   }
-  await definirNivel(request, 'PARADA')
+  // começa do zero: sem alerta, OS nem estado de ponto simulado de execuções anteriores
+  expect((await chamar(request, '/api/v1/demo/zerar', 'POST')).status).toBe(200)
 })
 
 test.beforeEach(() => {
@@ -208,6 +209,38 @@ test('fluxo: atenção, alarme, normal, reconhecer e encerrar', async ({ page, r
   await botao(page, /^Parar/).click()
   await expect(botao(page, /^Parar/)).toHaveAttribute('aria-pressed', 'true')
   await expect(barra(page)).toHaveAttribute('data-nivel', 'PARADA')
+})
+
+test('segurar "zerar" apaga os alertas e as OS simulados e para a demonstração', async ({
+  page,
+  request,
+}) => {
+  await entrarPelaTela(page)
+  await usarFonte(page, 'simulado')
+  await page.goto('/alarmes')
+  await expect(barra(page)).toBeVisible()
+  await botao(page, /^ALARME/).click()
+  await expect
+    .poll(async () => (await listarAlertas(request, 'simulado=true&tipo=maquina')).length, {
+      timeout: 60_000,
+      intervals: [2_000],
+    })
+    .toBeGreaterThan(0)
+
+  const zerar = botao(page, /Segure para zerar/)
+  const caixa = await zerar.boundingBox()
+  if (!caixa) throw new Error('botão sem caixa')
+  await page.mouse.move(caixa.x + caixa.width / 2, caixa.y + caixa.height / 2)
+  await page.mouse.down()
+  await page.waitForTimeout(1800)
+  await page.mouse.up()
+
+  await expect(barra(page)).toHaveAttribute('data-nivel', 'PARADA')
+  await expect(page.getByTestId('mensagem-demonstracao')).toContainText('Zerado:')
+  expect(await listarAlertas(request, 'simulado=true&tipo=maquina')).toHaveLength(0)
+  const ordens = await chamar(request, '/api/v1/ordens-servico?simulado=true&size=200')
+  expect((ordens.corpo as Pagina<OrdemApi>).conteudo).toHaveLength(0)
+  await expect(page.getByTestId('linha-alarme')).toHaveCount(0)
 })
 
 test('a tela da máquina mostra o ponto A em ATENÇÃO', async ({ page, request }) => {

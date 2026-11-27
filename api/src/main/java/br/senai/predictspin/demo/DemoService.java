@@ -132,6 +132,14 @@ public class DemoService {
         return montarEstado(agora, contexto);
     }
 
+    /** Estado atual com um aviso no lugar da mensagem comum (até o próximo comando). Usado pelo "zerar". */
+    public synchronized EstadoDemoResposta avisar(String aviso) {
+        exigirHabilitado();
+        avisoAutomatico = aviso;
+        Instant agora = relogio.instant();
+        return montarEstado(agora, contexto());
+    }
+
     /** Chamado de tempos em tempos: aplica os prazos e envia a janela, se for a hora. */
     @Scheduled(initialDelayString = "${ps.demo.passo-ms:500}", fixedDelayString = "${ps.demo.passo-ms:500}")
     void passo() {

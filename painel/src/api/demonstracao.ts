@@ -36,6 +36,11 @@ export function consultaEstadoDemo() {
   })
 }
 
+/** Para a demonstração e apaga alertas, OS, estado dos pontos e severidade SIMULADOS (não se desfaz). */
+export function zerarDemonstracao(): Promise<EstadoDemo> {
+  return exigir(api.POST('/api/v1/demo/zerar'))
+}
+
 export function trocarCenario(nivel: NivelDemo): Promise<EstadoDemo> {
   return exigir(api.POST('/api/v1/demo/cenario', { body: { nivel } }))
 }
