@@ -33,7 +33,13 @@ public class RecepcaoTelemetriaService {
     }
 
     public IngestaoService.Resultado receber(DispositivoAutenticado dispositivo, TelemetriaRequisicao requisicao) {
-        IngestaoService.Resultado resultado = ingestao.receber(dispositivo, requisicao);
+        return receber(dispositivo, requisicao, false);
+    }
+
+    /** Igual ao POST /telemetria; {@code demonstracao} marca a janela da barra de demonstração (sem ensaio). */
+    public IngestaoService.Resultado receber(DispositivoAutenticado dispositivo, TelemetriaRequisicao requisicao,
+                                             boolean demonstracao) {
+        IngestaoService.Resultado resultado = ingestao.receber(dispositivo, requisicao, demonstracao);
         JanelaRecebida janela = resultado.recebida();
         if (janela != null) {
             fila.enfileirar(janela.maquinaId(), janela.simulado(), () -> {

@@ -83,6 +83,15 @@ public class IngestaoService {
 
     @Transactional
     public Resultado receber(DispositivoAutenticado dispositivo, TelemetriaRequisicao req) {
+        return receber(dispositivo, req, false);
+    }
+
+    /**
+     * Mesmo caminho do POST /telemetria. Com {@code demonstracao}, a janela vem da barra de demonstração: não
+     * entra em ensaio aberto e fica marcada, para nunca virar referência, treino ou deriva.
+     */
+    @Transactional
+    public Resultado receber(DispositivoAutenticado dispositivo, TelemetriaRequisicao req, boolean demonstracao) {
         if (!dispositivo.identificador().equals(req.dispositivo().trim())) {
             throw new OperacaoProibidaException("O campo 'dispositivo' (" + req.dispositivo()
                     + ") não corresponde ao dispositivo autenticado pelo cabeçalho");
@@ -102,10 +111,14 @@ public class IngestaoService {
 
         dispositivos.registrarContato(dispositivo.id(), agora, agora.minus(INTERVALO_CONTATO));
 
-        Long ensaioId = ensaios.idAberto(dispositivo.maquinaId(), dispositivo.simulado()).orElse(null);
+        Long ensaioId = demonstracao ? null
+                : ensaios.idAberto(dispositivo.maquinaId(), dispositivo.simulado()).orElse(null);
         var amostragem = new IngestaoRepository.Amostragem(req.modoOuNormal(), req.amostras(), req.amostrasEsperadas());
-        Optional<Long> novaJanela = ingestao.inserirJanela(dispositivo.id(), ensaioId, medidoEm, agora,
-                req.rotacaoRpm(), req.saturou(), amostragem, rastreio);
+        Optional<Long> novaJanela = demonstracao
+                ? ingestao.inserirJanelaDeDemonstracao(dispositivo.id(), medidoEm, agora, req.rotacaoRpm(),
+                        req.saturou(), amostragem, rastreio)
+                : ingestao.inserirJanela(dispositivo.id(), ensaioId, medidoEm, agora, req.rotacaoRpm(),
+                        req.saturou(), amostragem, rastreio);
         // Vale para envio novo e para reenvio: é assim que o dispositivo fica sabendo do modo rápido
         Instant modoRapidoAte = modoRapido.vigente(dispositivo.maquinaId());
 

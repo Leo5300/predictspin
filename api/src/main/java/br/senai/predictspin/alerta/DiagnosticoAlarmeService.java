@@ -121,7 +121,8 @@ public class DiagnosticoAlarmeService {
                 JOIN janela j ON j.id = a.janela_id
                 JOIN dispositivo d ON d.id = j.dispositivo_id
                 JOIN telemetria t ON t.janela_id = a.janela_id AND t.ponto_medicao_id = a.ponto_medicao_id
-                WHERE d.maquina_id = ? AND d.simulado = ? AND j.ensaio_id IS NULL AND j.medido_em >= ?
+                WHERE d.maquina_id = ? AND d.simulado = ? AND j.ensaio_id IS NULL AND NOT j.demonstracao
+                  AND j.medido_em >= ?
                   AND a.situacao = 0 AND a.estado = 0 AND a.etapa_ref IS NOT NULL
                   AND greatest(coalesce(a.z_rms, 0), coalesce(a.z_pico, 0), coalesce(a.z_o1x, 0),
                                coalesce(a.z_o2x, 0), coalesce(a.z_o3x, 0), coalesce(a.z_vel, 0)) < ?

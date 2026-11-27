@@ -89,7 +89,7 @@ public class ConjuntoTreinoRepository {
                            AND an.estado = 0),
                         jo.medido_em + (os.concluida_em - al.criado_em)) AS fim) periodo
                 JOIN dispositivo d ON d.maquina_id = os.maquina_id AND d.simulado = os.simulado
-                JOIN janela j ON j.dispositivo_id = d.id AND j.ensaio_id IS NULL
+                JOIN janela j ON j.dispositivo_id = d.id AND j.ensaio_id IS NULL AND NOT j.demonstracao
                              AND j.medido_em >= jo.medido_em AND j.medido_em < periodo.fim
                 WHERE os.maquina_id = ? AND os.simulado = ? AND os.status = 'concluida'
                   AND ((os.retorno_tecnico = 'confirmada' AND os.condicao_encontrada IN """ + CLASSES_SQL + """

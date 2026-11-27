@@ -149,6 +149,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/demo/cenario": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Troca o nível da vibração simulada
+         * @description PARADA, NORMAL, ATENCAO ou ALARME. As janelas saem do dispositivo simulado, marcadas como demonstração, e passam pela mesma avaliação, alerta e OS de uma janela real. Sem referência ativa na marcha da demonstração, o nível fica PARADA e a mensagem diz o que falta.
+         */
+        post: operations["cenario"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/demo/estado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Estado da demonstração
+         * @description Nível atual, tempo até voltar a NORMAL, se há referência para a marcha da demonstração e se há hardware real enviando. Só ADMIN; 404 com a demonstração desligada.
+         */
+        get: operations["estado"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ensaios/exportar.csv": {
         parameters: {
             query?: never;
@@ -1443,6 +1483,14 @@ export interface components {
             /** @description false: menos janelas que o mínimo, não gera z */
             suficiente: boolean;
         };
+        CenarioDemoRequisicao: {
+            /**
+             * @description PARADA, NORMAL, ATENCAO ou ALARME
+             * @example ATENCAO
+             * @enum {string}
+             */
+            nivel: "PARADA" | "NORMAL" | "ATENCAO" | "ALARME";
+        };
         ClasseForaDoModelo: {
             classe: string;
             /** Format: int32 */
@@ -1648,6 +1696,26 @@ export interface components {
             status: number;
             /** Format: date-time */
             timestamp: string;
+        };
+        EstadoDemoResposta: {
+            /** @description Sempre verdadeiro: com a demonstração desligada a rota responde 404 */
+            habilitado: boolean;
+            /** @description Chegou janela de dispositivo real (não simulado) nos últimos 60 s: o gerador pausa */
+            hardware_real_ativo: boolean;
+            /** @description Texto em português para a barra mostrar */
+            mensagem: string;
+            /**
+             * @description PARADA, NORMAL, ATENCAO ou ALARME
+             * @enum {string}
+             */
+            nivel: "PARADA" | "NORMAL" | "ATENCAO" | "ALARME";
+            /** @description Há referência ativa suficiente (T1 e T3) na marcha da demonstração, nos pontos A, B e C */
+            referencia_ok: boolean;
+            /**
+             * Format: int64
+             * @description Segundos até ATENÇÃO ou ALARME voltarem sozinhos a NORMAL; nulo nos outros níveis
+             */
+            volta_normal_em_s: number | null;
         };
         EventoMarcadoResposta: {
             /** Format: date-time */
@@ -3712,6 +3780,113 @@ export interface operations {
             };
             /** @description Muitas tentativas com falha */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    cenario: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CenarioDemoRequisicao"];
+            };
+        };
+        responses: {
+            /** @description Estado depois da troca */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstadoDemoResposta"];
+                };
+            };
+            /** @description Requisição inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Demonstração desligada neste ambiente */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+        };
+    };
+    estado: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estado da demonstração */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstadoDemoResposta"];
+                };
+            };
+            /** @description Autenticação ausente ou inválida */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Sem permissão para esta operação */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErroResposta"];
+                };
+            };
+            /** @description Demonstração desligada neste ambiente */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

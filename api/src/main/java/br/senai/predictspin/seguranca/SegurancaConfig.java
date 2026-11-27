@@ -117,6 +117,7 @@ public class SegurancaConfig {
                         .hasAnyRole("ADMIN", "TECNICO")
                         .requestMatchers(HttpMethod.POST, "/api/v1/modelos/*/ativar").hasRole("ADMIN")
                         .requestMatchers("/api/v1/push/diagnostico").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/demo", "/api/v1/demo/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().denyAll())
                 .oauth2ResourceServer(o -> o

@@ -663,6 +663,24 @@
           "suficiente"
         ]
       },
+      "CenarioDemoRequisicao": {
+        "properties": {
+          "nivel": {
+            "description": "PARADA, NORMAL, ATENCAO ou ALARME",
+            "enum": [
+              "PARADA",
+              "NORMAL",
+              "ATENCAO",
+              "ALARME"
+            ],
+            "example": "ATENCAO",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nivel"
+        ]
+      },
       "ClasseForaDoModelo": {
         "properties": {
           "classe": {
@@ -1297,6 +1315,52 @@
           "mensagem",
           "status",
           "timestamp"
+        ]
+      },
+      "EstadoDemoResposta": {
+        "properties": {
+          "habilitado": {
+            "description": "Sempre verdadeiro: com a demonstração desligada a rota responde 404",
+            "type": "boolean"
+          },
+          "hardware_real_ativo": {
+            "description": "Chegou janela de dispositivo real (não simulado) nos últimos 60 s: o gerador pausa",
+            "type": "boolean"
+          },
+          "mensagem": {
+            "description": "Texto em português para a barra mostrar",
+            "type": "string"
+          },
+          "nivel": {
+            "description": "PARADA, NORMAL, ATENCAO ou ALARME",
+            "enum": [
+              "PARADA",
+              "NORMAL",
+              "ATENCAO",
+              "ALARME"
+            ],
+            "type": "string"
+          },
+          "referencia_ok": {
+            "description": "Há referência ativa suficiente (T1 e T3) na marcha da demonstração, nos pontos A, B e C",
+            "type": "boolean"
+          },
+          "volta_normal_em_s": {
+            "description": "Segundos até ATENÇÃO ou ALARME voltarem sozinhos a NORMAL; nulo nos outros níveis",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "habilitado",
+          "hardware_real_ativo",
+          "mensagem",
+          "nivel",
+          "referencia_ok",
+          "volta_normal_em_s"
         ]
       },
       "EventoMarcadoResposta": {
@@ -6146,6 +6210,130 @@
         "summary": "Entra com e-mail e senha e recebe um JWT",
         "tags": [
           "Autenticação"
+        ]
+      }
+    },
+    "/api/v1/demo/cenario": {
+      "post": {
+        "description": "PARADA, NORMAL, ATENCAO ou ALARME. As janelas saem do dispositivo simulado, marcadas como demonstração, e passam pela mesma avaliação, alerta e OS de uma janela real. Sem referência ativa na marcha da demonstração, o nível fica PARADA e a mensagem diz o que falta.",
+        "operationId": "cenario",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CenarioDemoRequisicao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoDemoResposta"
+                }
+              }
+            },
+            "description": "Estado depois da troca"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Requisição inválida"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Demonstração desligada neste ambiente"
+          }
+        },
+        "summary": "Troca o nível da vibração simulada",
+        "tags": [
+          "Demonstração"
+        ]
+      }
+    },
+    "/api/v1/demo/estado": {
+      "get": {
+        "description": "Nível atual, tempo até voltar a NORMAL, se há referência para a marcha da demonstração e se há hardware real enviando. Só ADMIN; 404 com a demonstração desligada.",
+        "operationId": "estado",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoDemoResposta"
+                }
+              }
+            },
+            "description": "Estado da demonstração"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Autenticação ausente ou inválida"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Sem permissão para esta operação"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErroResposta"
+                }
+              }
+            },
+            "description": "Demonstração desligada neste ambiente"
+          }
+        },
+        "summary": "Estado da demonstração",
+        "tags": [
+          "Demonstração"
         ]
       }
     },
@@ -11756,6 +11944,10 @@
     {
       "description": "OS abertas pela regra; assumir e concluir só ADMIN e TECNICO",
       "name": "Ordens de serviço"
+    },
+    {
+      "description": "Nível da vibração simulada para a apresentação (desligado por padrão)",
+      "name": "Demonstração"
     },
     {
       "description": "Cadastro de usuários. Somente ADMIN.",

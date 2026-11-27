@@ -147,6 +147,21 @@ ps:
     lote: 100
     max-aparelhos: 10
 
+  # Barra de demonstração (docs/demo.md): a API gera janelas SIMULADAS no ps-sim-01 para a apresentação.
+  # Desligada por padrão: só o ambiente da apresentação liga (PS_DEMO_HABILITADO=true). Sem a variável, as rotas
+  # /api/v1/demo respondem 404 e nenhuma janela é gerada.
+  demo:
+    habilitado: ${PS_DEMO_HABILITADO:false}
+    # intervalo entre as janelas geradas (s); o padrão é o da janela real
+    janela-s: ${PS_DEMO_JANELA_S:5}
+    # ATENÇÃO e ALARME voltam sozinhos a NORMAL depois disto (s)
+    volta-normal-s: ${PS_DEMO_VOLTA_NORMAL_S:300}
+    # o gerador para sozinho depois disto (min) sem um novo comando
+    parar-min: ${PS_DEMO_PARAR_MIN:20}
+    # marcha da demonstração: precisa ter referência ativa (T1 e T3) simulada
+    rotacao-rpm: 1120
+    dispositivo: ps-sim-01
+
   # ---------------------------------------------------------------- IA parte B (docs/ia.md)
   # Todos os números são PROPOSTA a confirmar com os ensaios rotulados no torno.
   modelo:

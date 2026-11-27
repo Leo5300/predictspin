@@ -32,6 +32,9 @@ services:
       PORT: "8080"
       # vazio = limites normais; "tempos-curtos" só para o Playwright do fluxo de alarme
       SPRING_PROFILES_ACTIVE: ${PERFIL_API:-}
+      # barra de demonstração (docs/demo.md): desligada por padrão; ligue com PS_DEMO_HABILITADO=true
+      PS_DEMO_HABILITADO: ${PS_DEMO_HABILITADO:-false}
+      PS_DEMO_JANELA_S: ${PS_DEMO_JANELA_S:-5}
       # serviço de treino (perfil "treino"): defina TREINO_URL=http://treino:8090 e TREINO_CHAVE no .env
       TREINO_URL: ${TREINO_URL:-}
     ports:

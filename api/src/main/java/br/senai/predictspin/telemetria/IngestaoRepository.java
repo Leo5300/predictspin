@@ -28,15 +28,29 @@ public class IngestaoRepository {
     public Optional<Long> inserirJanela(long dispositivoId, Long ensaioId, Instant medidoEm, Instant recebidoEm,
                                         double rotacaoRpm, boolean saturou, Amostragem amostragem,
                                         Rastreio rastreio) {
+        return inserir(dispositivoId, ensaioId, medidoEm, recebidoEm, rotacaoRpm, saturou, amostragem, rastreio, false);
+    }
+
+    /** Janela da barra de demonstração: sem ensaio e marcada, para ficar fora da referência e do treino. */
+    public Optional<Long> inserirJanelaDeDemonstracao(long dispositivoId, Instant medidoEm, Instant recebidoEm,
+                                                      double rotacaoRpm, boolean saturou, Amostragem amostragem,
+                                                      Rastreio rastreio) {
+        return inserir(dispositivoId, null, medidoEm, recebidoEm, rotacaoRpm, saturou, amostragem, rastreio, true);
+    }
+
+    private Optional<Long> inserir(long dispositivoId, Long ensaioId, Instant medidoEm, Instant recebidoEm,
+                                   double rotacaoRpm, boolean saturou, Amostragem amostragem, Rastreio rastreio,
+                                   boolean demonstracao) {
         List<Long> ids = jdbc.queryForList("""
                 INSERT INTO janela (dispositivo_id, ensaio_id, medido_em, recebido_em, rotacao_rpm, saturou,
-                                    modo, amostras, amostras_esperadas, firmware_versao, calibracao, eixos)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    modo, amostras, amostras_esperadas, firmware_versao, calibracao, eixos,
+                                    demonstracao)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (dispositivo_id, medido_em) DO NOTHING
                 RETURNING id
                 """, Long.class, dispositivoId, ensaioId, utc(medidoEm), utc(recebidoEm), rotacaoRpm, saturou,
                 amostragem.modo().valor(), amostragem.amostras(), amostragem.amostrasEsperadas(),
-                rastreio.firmwareVersao(), rastreio.calibracao(), rastreio.eixos());
+                rastreio.firmwareVersao(), rastreio.calibracao(), rastreio.eixos(), demonstracao);
         return ids.stream().findFirst();
     }
 
