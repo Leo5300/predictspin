@@ -1,4 +1,5 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
+import { EOL } from 'node:os'
 import path from 'node:path'
 
 import { RAIZ_DO_REPOSITORIO, URL_API } from './ambiente'
@@ -52,7 +53,17 @@ export function executarRoteiro(argumentos: readonly string[]): void {
   const resultado = spawnSync(
     'python',
     [path.join('analise', 'simulador.py'), 'roteiro', '--url', URL_API, ...argumentos],
-    { cwd: RAIZ_DO_REPOSITORIO, env: ambienteLimpo(), stdio: 'ignore', windowsHide: true },
+    {
+      cwd: RAIZ_DO_REPOSITORIO,
+      env: ambienteLimpo(),
+      stdio: ['ignore', 'pipe', 'pipe'],
+      encoding: 'utf8',
+      windowsHide: true,
+    },
   )
-  if (resultado.status !== 0) throw new Error(`roteiro do simulador saiu com ${resultado.status}`)
+  if (resultado.status !== 0) {
+    // só o fim da saída, para o erro dizer o que aconteceu (o simulador não imprime a chave)
+    const fim = `${resultado.stdout}${EOL}${resultado.stderr}`.trim().split(EOL).slice(-4).join(' | ')
+    throw new Error(`roteiro do simulador saiu com ${String(resultado.status)}: ${fim.slice(0, 400)}`)
+  }
 }

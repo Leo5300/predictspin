@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, useRouter } from '@tanstack/react-router'
 import { useEffect } from 'react'
 
 import { useSessao } from '@/api/sessao'
+import { BarraDeDemonstracao } from '@/componentes/casca/BarraDeDemonstracao'
 import { BarraSuperior } from '@/componentes/casca/BarraSuperior'
 import { PaletaDeComandos } from '@/componentes/casca/PaletaDeComandos'
 import { FaixaSimulado } from '@/componentes/instrumento/SeloSim'
@@ -57,6 +58,7 @@ function CascaDoPainel() {
       <main id="conteudo" className="min-w-0 flex-1 px-4 py-3 [view-transition-name:conteudo]">
         <Outlet />
       </main>
+      <BarraDeDemonstracao papel={sessao.usuario.papel} />
     </div>
   )
 }
